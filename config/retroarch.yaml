@@ -1,0 +1,33 @@
+retroarch:
+
+  executable: /usr/bin/retroarch
+
+  cores:
+
+    directory: /opt/retropie/libretrocores
+
+
+library:
+
+  sources:
+
+    - id: dev
+
+      name: Development Library
+
+      enabled: true
+
+      type: local
+
+      path: /home/oilcan/roms
+
+
+paths:
+
+  overlays:
+
+    directory: ~/.config/retroarch/overlays
+
+  shaders:
+
+    directory: ~/.config/retroarch/shaders

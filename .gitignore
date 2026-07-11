@@ -1,0 +1,42 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Virtual environments
+.venv/
+venv/
+
+# IDE files
+.vscode/
+.idea/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+
+# RetroVault generated data
+cache/
+downloads/
+
+# ROM files - NEVER upload
+roms/
+ROMs/
+*.zip
+*.7z
+*.chd
+*.iso
+
+# Build files
+build/
+dist/
+
+# Qt generated files
+*.ui~
