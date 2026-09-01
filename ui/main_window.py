@@ -94,7 +94,9 @@ class MainWindow(QMainWindow):
 
         self.pages.add_page(
             "RetroArch",
-            RetroArchPage()
+            RetroArchPage(
+                rvdb_consumer
+            )
         )
 
         self.pages.add_page(
@@ -112,13 +114,25 @@ class MainWindow(QMainWindow):
 
         layout = QHBoxLayout()
 
+        layout.setContentsMargins(
+            0,
+            0,
+            0,
+            0,
+        )
+
+        layout.setSpacing(
+            0
+        )
+
 
         layout.addWidget(
             sidebar
         )
 
         layout.addWidget(
-            self.pages
+            self.pages,
+            1,
         )
 
 
