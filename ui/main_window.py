@@ -22,6 +22,11 @@ from controllers.library_controller import (
     LibraryController
 )
 
+from services.rvdb import (
+    RVDBConsumer,
+    RVDBError,
+)
+
 
 class MainWindow(QMainWindow):
 
@@ -43,6 +48,17 @@ class MainWindow(QMainWindow):
 
         controller = LibraryController()
 
+        rvdb_consumer = None
+
+        try:
+            rvdb_consumer = RVDBConsumer(
+                "data/rvdb/rvdb.bundle.json"
+            )
+        except RVDBError as exc:
+            print(
+                f"RVDB unavailable: {exc}"
+            )
+
 
         self.pages = PageManager()
 
@@ -56,7 +72,9 @@ class MainWindow(QMainWindow):
 
         self.pages.add_page(
             "Systems",
-            SystemsPage()
+            SystemsPage(
+                rvdb_consumer
+            )
         )
 
         self.pages.add_page(
