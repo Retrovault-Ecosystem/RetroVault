@@ -22,3 +22,5 @@ class Game:
     artwork: str = ""
 
     favorite: bool = False
+
+    rvdb_platform_id: str = ""
