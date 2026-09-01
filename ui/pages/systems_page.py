@@ -4,6 +4,8 @@ from PyQt6.QtWidgets import (
     QGridLayout,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
+    QComboBox,
     QListWidget,
     QListWidgetItem,
     QScrollArea,
@@ -36,7 +38,19 @@ class SystemsPage(QWidget):
         )
         self.count_label = QLabel()
 
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText(
+            "Search systems..."
+        )
+
+        self.category_filter = QComboBox()
+        self.category_filter.addItem(
+            "All Categories"
+        )
+
         self.system_list = QListWidget()
+
+        self._platforms = []
 
         self.name_label = QLabel(
             "Select a system"
@@ -103,6 +117,22 @@ class SystemsPage(QWidget):
         )
         main_layout.addWidget(
             self.count_label
+        )
+
+        browser_controls = QHBoxLayout()
+        browser_controls.setSpacing(12)
+
+        browser_controls.addWidget(
+            self.search_input,
+            2,
+        )
+        browser_controls.addWidget(
+            self.category_filter,
+            1,
+        )
+
+        main_layout.addLayout(
+            browser_controls
         )
 
         content_layout = QHBoxLayout()
@@ -341,8 +371,21 @@ class SystemsPage(QWidget):
             self._system_selected
         )
 
+        self.search_input.textChanged.connect(
+            self._apply_filters
+        )
+
+        self.category_filter.currentTextChanged.connect(
+            self._apply_filters
+        )
+
     def _load_systems(self) -> None:
         self.system_list.clear()
+        self.category_filter.clear()
+        self.category_filter.addItem(
+            "All Categories"
+        )
+        self._platforms = []
 
         if self.consumer is None:
             self.count_label.setText(
@@ -373,7 +416,144 @@ class SystemsPage(QWidget):
             )
         )
 
+        self._platforms = platforms
+
+        categories = set()
+
         for platform in platforms:
+            values = (
+                platform.get("category")
+                or []
+            )
+
+            if isinstance(values, str):
+                values = [values]
+
+            for value in values:
+                if value not in (
+                    None,
+                    "",
+                ):
+                    categories.add(
+                        str(value)
+                    )
+
+        for category in sorted(
+            categories,
+            key=str.casefold,
+        ):
+            self.category_filter.addItem(
+                category
+            )
+
+        self.status_label.setText(
+            "RVDB bundle loaded successfully."
+        )
+
+        self._apply_filters()
+
+    def _apply_filters(self) -> None:
+        if self.consumer is None:
+            return
+
+        search_text = (
+            self.search_input.text()
+            .strip()
+            .casefold()
+        )
+
+        selected_category = (
+            self.category_filter
+            .currentText()
+        )
+
+        selected_id = None
+        current = self.system_list.currentItem()
+
+        if current is not None:
+            selected_id = current.data(
+                Qt.ItemDataRole.UserRole
+            )
+
+        matches = []
+
+        for platform in self._platforms:
+            name = str(
+                platform.get(
+                    "name",
+                    platform.get(
+                        "id",
+                        "",
+                    ),
+                )
+            )
+
+            entity_id = str(
+                platform.get(
+                    "id",
+                    "",
+                )
+            )
+
+            aliases = (
+                platform.get("aliases")
+                or []
+            )
+
+            if isinstance(aliases, str):
+                aliases = [aliases]
+
+            searchable = [
+                name,
+                entity_id,
+                *[
+                    str(alias)
+                    for alias in aliases
+                ],
+            ]
+
+            if (
+                search_text
+                and not any(
+                    search_text
+                    in value.casefold()
+                    for value in searchable
+                )
+            ):
+                continue
+
+            categories = (
+                platform.get("category")
+                or []
+            )
+
+            if isinstance(
+                categories,
+                str,
+            ):
+                categories = [
+                    categories
+                ]
+
+            if (
+                selected_category
+                != "All Categories"
+                and selected_category
+                not in categories
+            ):
+                continue
+
+            matches.append(
+                platform
+            )
+
+        self.system_list.clear()
+
+        selected_row = None
+
+        for row, platform in enumerate(
+            matches
+        ):
             item = QListWidgetItem(
                 platform.get(
                     "name",
@@ -390,17 +570,38 @@ class SystemsPage(QWidget):
                 item
             )
 
-        self.count_label.setText(
-            f"{len(platforms)} platforms"
-        )
-        self.status_label.setText(
-            "RVDB bundle loaded successfully."
-        )
+            if (
+                platform["id"]
+                == selected_id
+            ):
+                selected_row = row
 
-        if platforms:
-            self.system_list.setCurrentRow(
-                0
+        total = len(
+            self._platforms
+        )
+        visible = len(matches)
+
+        if (
+            not search_text
+            and selected_category
+            == "All Categories"
+        ):
+            self.count_label.setText(
+                f"{total} platforms"
             )
+        else:
+            self.count_label.setText(
+                f"{visible} of {total} platforms"
+            )
+
+        if matches:
+            self.system_list.setCurrentRow(
+                selected_row
+                if selected_row is not None
+                else 0
+            )
+        else:
+            self._clear_details()
 
     def _system_selected(
         self,

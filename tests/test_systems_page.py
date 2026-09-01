@@ -317,3 +317,138 @@ def test_systems_page_real_snes_contract(
     assert page.frontends_value.text() == (
         "RetroArch"
     )
+
+
+def test_systems_page_searches_by_name(
+    app,
+    consumer,
+):
+    page = SystemsPage(
+        consumer
+    )
+
+    page.search_input.setText(
+        "beta"
+    )
+
+    app.processEvents()
+
+    assert page.system_list.count() == 1
+    assert page.system_list.item(
+        0
+    ).text() == "Beta System"
+    assert page.name_label.text() == (
+        "Beta System"
+    )
+    assert page.count_label.text() == (
+        "1 of 2 platforms"
+    )
+
+
+def test_systems_page_searches_by_alias(
+    app,
+    consumer,
+):
+    page = SystemsPage(
+        consumer
+    )
+
+    page.search_input.setText(
+        "AS"
+    )
+
+    app.processEvents()
+
+    assert page.system_list.count() == 1
+    assert page.system_list.item(
+        0
+    ).text() == "Alpha System"
+
+
+def test_systems_page_filters_by_category(
+    app,
+    consumer,
+):
+    page = SystemsPage(
+        consumer
+    )
+
+    index = page.category_filter.findText(
+        "handheld"
+    )
+
+    assert index >= 0
+
+    page.category_filter.setCurrentIndex(
+        index
+    )
+
+    app.processEvents()
+
+    assert page.system_list.count() == 1
+    assert page.system_list.item(
+        0
+    ).text() == "Beta System"
+    assert page.count_label.text() == (
+        "1 of 2 platforms"
+    )
+
+
+def test_systems_page_combines_search_and_category(
+    app,
+    consumer,
+):
+    page = SystemsPage(
+        consumer
+    )
+
+    index = page.category_filter.findText(
+        "console"
+    )
+
+    assert index >= 0
+
+    page.category_filter.setCurrentIndex(
+        index
+    )
+    page.search_input.setText(
+        "beta"
+    )
+
+    app.processEvents()
+
+    assert page.system_list.count() == 0
+    assert page.count_label.text() == (
+        "0 of 2 platforms"
+    )
+
+
+def test_systems_page_real_category_contract(
+    app,
+):
+    consumer = RVDBConsumer(
+        "data/rvdb/rvdb.bundle.json"
+    )
+
+    page = SystemsPage(
+        consumer
+    )
+
+    expected = {
+        "All Categories",
+        "arcade",
+        "computer",
+        "console",
+        "handheld",
+    }
+
+    actual = {
+        page.category_filter.itemText(
+            index
+        )
+        for index in range(
+            page.category_filter.count()
+        )
+    }
+
+    assert actual == expected
