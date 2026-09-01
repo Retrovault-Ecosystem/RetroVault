@@ -17,12 +17,20 @@ from services.library.randomizer import GameRandomizer
 class GalleryView(QWidget):
 
 
-    def __init__(self, games):
+    def __init__(
+        self,
+        games,
+        rvdb_consumer=None,
+    ):
 
         super().__init__()
 
 
         self.all_games = games
+
+        self.rvdb_consumer = (
+            rvdb_consumer
+        )
 
 
         self.randomizer = GameRandomizer(
@@ -54,7 +62,9 @@ class GalleryView(QWidget):
         content_layout = QHBoxLayout()
 
 
-        self.details = GameDetails()
+        self.details = GameDetails(
+            rvdb_consumer=self.rvdb_consumer
+        )
 
 
         self.grid = GameGrid(

@@ -23,17 +23,26 @@ from services.retroarch import (
 
 from services.retroarch.launcher import RetroArchLauncher
 
+from services.rvdb import RVDBError
+
 
 
 class GameDetails(QWidget):
 
 
-    def __init__(self):
+    def __init__(
+        self,
+        rvdb_consumer=None,
+    ):
 
         super().__init__()
 
 
         self.current_game = None
+
+        self.rvdb_consumer = (
+            rvdb_consumer
+        )
 
 
         self.config = ConfigLoader().load()
@@ -171,16 +180,75 @@ class GameDetails(QWidget):
         )
 
 
+        metadata_lines = [
+            f"System: {game.platform}",
+            f"Core: {game.core}",
+        ]
+
+        rvdb_platform_id = getattr(
+            game,
+            "rvdb_platform_id",
+            None,
+        )
+
+        rvdb_platform = None
+
+        if (
+            rvdb_platform_id
+            and self.rvdb_consumer is not None
+        ):
+            try:
+                view = (
+                    self.rvdb_consumer
+                    .platform_view(
+                        rvdb_platform_id
+                    )
+                )
+            except RVDBError:
+                view = None
+
+            if view is not None:
+                rvdb_platform = view[
+                    "platform"
+                ]
+
+        if rvdb_platform is not None:
+            canonical_name = (
+                rvdb_platform.get("name")
+                or rvdb_platform_id
+            )
+
+            metadata_lines.extend(
+                [
+                    "",
+                    "RVDB Platform:",
+                    canonical_name,
+                    (
+                        "RVDB ID: "
+                        f"{rvdb_platform_id}"
+                    ),
+                ]
+            )
+
+            release_year = (
+                rvdb_platform.get(
+                    "release_year"
+                )
+            )
+
+            if release_year not in (
+                None,
+                "",
+            ):
+                metadata_lines.append(
+                    "Platform Release: "
+                    f"{release_year}"
+                )
+
         self.metadata.setText(
-
-            f"""
-System:
-{game.platform}
-
-Core:
-{game.core}
-"""
-
+            "\n".join(
+                metadata_lines
+            )
         )
 
 

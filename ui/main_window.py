@@ -66,7 +66,8 @@ class MainWindow(QMainWindow):
         self.pages.add_page(
             "Library",
             LibraryPage(
-                controller.get_games()
+                controller.get_games(),
+                rvdb_consumer
             )
         )
 
