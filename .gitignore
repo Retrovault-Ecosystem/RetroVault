@@ -40,3 +40,6 @@ dist/
 
 # Qt generated files
 *.ui~
+
+# RVDB local/downloaded runtime data
+data/rvdb/
