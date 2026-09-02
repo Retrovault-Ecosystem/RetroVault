@@ -43,14 +43,15 @@ class RVDBPlatformSummary:
     """
     Stable RetroVault-facing summary for one Platform.
 
-    This model contains the Platform fields required to populate and
-    filter the Systems page without exposing raw RVDB bundle nodes.
+    This model contains the Platform fields required for application
+    discovery and resolution without exposing raw RVDB bundle nodes.
     """
 
     id: str
     name: str
     aliases: tuple[str, ...]
     categories: tuple[str, ...]
+    extensions: tuple[str, ...]
 
 
 @dataclass(frozen=True, slots=True)

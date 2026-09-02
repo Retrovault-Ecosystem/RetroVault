@@ -187,6 +187,11 @@ class RVDBService:
                             "category"
                         )
                     ),
+                    extensions=self._values(
+                        entity.get(
+                            "extensions"
+                        )
+                    ),
                 )
             )
 

@@ -132,6 +132,10 @@ def test_service_platform_summary_preserves_search_fields(
                         "category": [
                             "console",
                         ],
+                        "extensions": [
+                            "test",
+                            "tst",
+                        ],
                     },
                 },
                 "edges": {},
@@ -153,6 +157,10 @@ def test_service_platform_summary_preserves_search_fields(
             ),
             categories=(
                 "console",
+            ),
+            extensions=(
+                "test",
+                "tst",
             ),
         ),
     )
