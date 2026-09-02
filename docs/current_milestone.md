@@ -138,7 +138,7 @@ Required invariant:
 
 Status:
 
-**READY TO BEGIN**
+**IN PROGRESS**
 
 RVA1-C begins normal RetroVault application development on top of the
 completed RVDB consumer boundary.
@@ -359,3 +359,243 @@ Future application work must preserve:
 4. the tested RetroArch process boundary
 5. the established playable workflow
 6. the current regression baseline unless intentionally expanded
+
+
+---
+
+## RVA1-C.4-E — Configurable Settings Workflow
+
+Status:
+
+**COMPLETE**
+
+RVA1-C.4-E establishes the first controlled user-editable runtime configuration
+workflow in RetroVault.
+
+The Settings page now provides application-owned controls for the active
+RetroArch executable, RetroArch core directory, and ROM library source while
+preserving the protected RVDB consumer boundary.
+
+### Published Technical Checkpoint
+
+RetroVault implementation checkpoint:
+
+`da07161e4c0d38957d2e2c2a048baf82f3f55d28`
+
+Commit:
+
+`feat: refine configurable settings workflow`
+
+The implementation checkpoint contains only:
+
+- `ui/pages/settings_page.py`
+- `tests/test_settings_page.py`
+
+### Settings Workflow
+
+The completed Settings workflow provides:
+
+- editable RetroArch executable path
+- editable RetroArch core directory
+- editable ROM library path
+- compact path editors
+- path descriptions inside the editors
+- Browse controls for all configurable paths
+- dynamic editor sizing for longer paths
+- bounded maximum editor width
+- Restore Default Paths
+- explicit Save Runtime Settings
+- validation controls with actionable status
+- immediate revalidation after restoring defaults
+- responsive native file/directory selection behavior
+- no automatic persistence merely from editing or browsing
+
+The Settings layout intentionally avoids redundant display-only path text where
+the editable controls already communicate the active value.
+
+Every visible path/status control therefore has an application purpose.
+
+### Semantic RetroArch Validation
+
+RetroVault does not accept an arbitrary executable merely because it exists.
+
+The RetroArch executable validation surface verifies that the selected program
+behaves as RetroArch.
+
+The validated real executable remains:
+
+`/usr/bin/retroarch`
+
+A deliberately incorrect executable such as:
+
+`/bin/ls`
+
+is rejected by the semantic validation path.
+
+This prevents a user from accidentally saving an unrelated executable as the
+RetroArch runtime.
+
+### Semantic Core Directory Validation
+
+The configured RetroArch core directory is validated as a usable libretro core
+location rather than merely as an existing directory.
+
+The validated current core root remains:
+
+`/opt/retropie/libretrocores`
+
+The Settings workflow therefore protects the established playable launch path
+while still permitting installations whose valid RetroArch/core locations
+differ from the development defaults.
+
+### Library Configuration
+
+The ROM library source is user configurable.
+
+The current effective development library remains:
+
+`/home/oilcan/roms`
+
+The library source identity is preserved when its path is changed.
+
+The Settings persistence workflow preserves:
+
+- source `id`
+- source `name`
+- source `enabled` state
+- source `type`
+
+while replacing the configured source path.
+
+Library discovery remains recursive through the established scanner workflow.
+The previously verified Duck Tales 2 ROM was successfully discovered below
+nested library directories.
+
+### Configuration Persistence Boundary
+
+Settings writes are routed through `ConfigWriter`.
+
+Editing a field does not write configuration.
+
+Using a Browse control does not write configuration.
+
+Restoring default paths does not write configuration.
+
+Persistence occurs only through the explicit Save Runtime Settings action after
+validation succeeds.
+
+Existing unrelated runtime overrides are preserved by the writer workflow.
+
+### User Configuration Protection
+
+During implementation, regression testing, validation, and final audit, the real
+user runtime configuration remained protected.
+
+Validated runtime file:
+
+`~/.config/retrovault/runtime.json`
+
+Validated SHA-256 at closure:
+
+`3512b4d623d5101ea96a0cf02bb1c76e68a4db8d4bfbdc8bc185abc39af765ff`
+
+Legacy user files also remained preserved:
+
+- `~/.config/retrovault/config.json`
+- `~/.config/retrovault/library.json`
+
+### Settings Regression Coverage
+
+Final Settings-specific regression baseline:
+
+**46 passing tests**
+
+The Settings tests cover the established workflow including:
+
+- effective configuration display
+- runtime override detection
+- no-write initialization
+- explicit runtime persistence
+- preservation of unrelated overrides
+- editable library persistence
+- library source identity preservation
+- invalid library rejection
+- internal path descriptions
+- Browse controls
+- dynamic path editor sizing
+- default restoration
+- actionable path validation
+- semantic RetroArch executable validation
+- semantic libretro core validation
+- no-write Browse behavior
+- no-write Restore Default Paths behavior
+- immediate status revalidation
+- test collection integrity
+
+Duplicate test definitions discovered during the final integrity audit were
+removed before closure so every Settings test has a unique collected identity.
+
+### Regression Baseline
+
+Current complete RetroVault regression baseline:
+
+**143 passing tests**
+
+This supersedes the earlier RVA1-C.3-A baseline of 82 passing tests.
+
+### Protected RVDB Boundary
+
+Protected RVDB checkpoint remains:
+
+`1e8bb5d19014fbd0db5b99bc4da382064a44a438`
+
+Required invariant remains satisfied:
+
+- RVDB local HEAD remains at the protected checkpoint
+- `origin/develop` remains at the same checkpoint
+- the RVDB worktree remains clean
+- Settings configuration does not modify RVDB
+- application code continues consuming RVDB through the protected service boundary
+
+### Closure
+
+RVA1-C.4-E is complete.
+
+RetroVault now has a tested, explicit, user-facing runtime configuration
+workflow without weakening the established playable application path or the
+protected RVDB architecture.
+
+Future application work must preserve:
+
+1. the protected RVDB consumer boundary
+2. the verified playable workflow
+3. semantic RetroArch executable validation
+4. semantic core-directory validation
+5. explicit-only configuration persistence
+6. user configuration protection
+7. recursive library discovery
+8. the current 143-test regression baseline unless intentionally expanded
+
+---
+
+## Next Application Operation
+
+With RVA1-C.4-E complete, the next RetroVault application milestone must begin
+from the published Settings checkpoint and the protected RVDB service boundary.
+
+Before selecting or implementing the next user-facing feature, perform a
+read-only application-state audit covering:
+
+- current page capabilities
+- current Library workflow
+- current Systems workflow
+- current RetroArch workflow
+- current Settings workflow
+- remaining placeholders or non-functional controls
+- the next highest-value user-facing application capability
+
+The audit must preserve the established application invariants and must not
+modify the protected RVDB repository.
+
+The next milestone identifier and scope should be established from that audit
+rather than assumed in advance.
