@@ -26,6 +26,17 @@ class CoreResolver:
     ):
 
 
+        if (
+            not isinstance(
+                name,
+                str,
+            )
+            or not name.strip()
+        ):
+
+            return None
+
+
         if not self.core_directory:
 
             return None
