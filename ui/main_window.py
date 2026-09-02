@@ -72,7 +72,7 @@ class MainWindow(QMainWindow):
             "Library",
             LibraryPage(
                 controller.get_games(),
-                rvdb_consumer
+                rvdb_service
             )
         )
 

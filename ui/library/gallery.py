@@ -20,7 +20,7 @@ class GalleryView(QWidget):
     def __init__(
         self,
         games,
-        rvdb_consumer=None,
+        rvdb_service=None,
     ):
 
         super().__init__()
@@ -28,8 +28,8 @@ class GalleryView(QWidget):
 
         self.all_games = games
 
-        self.rvdb_consumer = (
-            rvdb_consumer
+        self.rvdb_service = (
+            rvdb_service
         )
 
 
@@ -63,7 +63,7 @@ class GalleryView(QWidget):
 
 
         self.details = GameDetails(
-            rvdb_consumer=self.rvdb_consumer
+            rvdb_service=self.rvdb_service
         )
 
 

@@ -5,9 +5,9 @@ class LibraryPage(GalleryView):
     def __init__(
         self,
         games,
-        rvdb_consumer=None,
+        rvdb_service=None,
     ):
         super().__init__(
             games,
-            rvdb_consumer=rvdb_consumer,
+            rvdb_service=rvdb_service,
         )

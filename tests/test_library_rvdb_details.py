@@ -6,6 +6,7 @@ from PyQt6.QtWidgets import QApplication
 
 from services.rvdb import (
     RVDBConsumer,
+    RVDBService,
 )
 
 from ui.library.details.game_details import (
@@ -48,20 +49,23 @@ def make_game(
     )
 
 
-def test_library_page_propagates_rvdb_consumer(
+def test_library_page_propagates_rvdb_service(
     app,
 ):
     consumer = RVDBConsumer(
         "data/rvdb/rvdb.bundle.json"
     )
+    service = RVDBService(
+        consumer
+    )
 
     page = LibraryPage(
         [],
-        consumer,
+        service,
     )
 
-    assert page.rvdb_consumer is consumer
-    assert page.details.rvdb_consumer is consumer
+    assert page.rvdb_service is service
+    assert page.details.rvdb_service is service
 
 
 def test_identified_game_displays_canonical_rvdb_platform(
@@ -72,7 +76,9 @@ def test_identified_game_displays_canonical_rvdb_platform(
     )
 
     details = GameDetails(
-        rvdb_consumer=consumer
+        rvdb_service=RVDBService(
+            consumer
+        )
     )
 
     game = make_game(
@@ -115,7 +121,9 @@ def test_n64_identity_uses_same_production_contract(
     )
 
     details = GameDetails(
-        rvdb_consumer=consumer
+        rvdb_service=RVDBService(
+            consumer
+        )
     )
 
     game = make_game(
@@ -144,7 +152,7 @@ def test_unidentified_game_preserves_fallback_details(
     app,
 ):
     details = GameDetails(
-        rvdb_consumer=None
+        rvdb_service=None
     )
 
     game = make_game(
@@ -168,7 +176,7 @@ def test_identified_game_without_consumer_is_safe(
     app,
 ):
     details = GameDetails(
-        rvdb_consumer=None
+        rvdb_service=None
     )
 
     game = make_game(
@@ -207,7 +215,9 @@ def test_missing_rvdb_entity_preserves_fallback_details(
     app,
 ):
     details = GameDetails(
-        rvdb_consumer=MissingPlatformConsumer()
+        rvdb_service=RVDBService(
+            MissingPlatformConsumer()
+        )
     )
 
     game = make_game(

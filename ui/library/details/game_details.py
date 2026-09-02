@@ -32,7 +32,7 @@ class GameDetails(QWidget):
 
     def __init__(
         self,
-        rvdb_consumer=None,
+        rvdb_service=None,
     ):
 
         super().__init__()
@@ -40,8 +40,8 @@ class GameDetails(QWidget):
 
         self.current_game = None
 
-        self.rvdb_consumer = (
-            rvdb_consumer
+        self.rvdb_service = (
+            rvdb_service
         )
 
 
@@ -195,11 +195,11 @@ class GameDetails(QWidget):
 
         if (
             rvdb_platform_id
-            and self.rvdb_consumer is not None
+            and self.rvdb_service is not None
         ):
             try:
                 view = (
-                    self.rvdb_consumer
+                    self.rvdb_service
                     .platform_view(
                         rvdb_platform_id
                     )
@@ -208,13 +208,13 @@ class GameDetails(QWidget):
                 view = None
 
             if view is not None:
-                rvdb_platform = view[
-                    "platform"
-                ]
+                rvdb_platform = (
+                    view.platform
+                )
 
         if rvdb_platform is not None:
             canonical_name = (
-                rvdb_platform.get("name")
+                rvdb_platform.name
                 or rvdb_platform_id
             )
 
@@ -231,9 +231,7 @@ class GameDetails(QWidget):
             )
 
             release_year = (
-                rvdb_platform.get(
-                    "release_year"
-                )
+                rvdb_platform.release_year
             )
 
             if release_year not in (
