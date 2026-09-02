@@ -2,9 +2,12 @@ from __future__ import annotations
 
 from collections import defaultdict
 from pathlib import Path
-from typing import Any
 
-from services.rvdb import RVDBConsumer
+from services.rvdb import RVDBService
+from services.rvdb.models import (
+    RVDBEntityRef,
+    RVDBPlatformSummary,
+)
 
 
 class RVDBLibraryResolver:
@@ -15,40 +18,31 @@ class RVDBLibraryResolver:
     not choose arbitrary answers for ambiguous file extensions.
 
     It provides a narrow integration boundary between the existing
-    Library scanner and canonical RVDB knowledge.
+    Library scanner and the typed RetroVault RVDB service.
     """
 
     def __init__(
         self,
-        consumer: RVDBConsumer,
+        service: RVDBService,
     ) -> None:
-        self.consumer = consumer
+        self.service = service
 
         self._platforms = sorted(
-            (
-                entity
-                for entity in consumer.nodes.values()
-                if entity.get("type") == "platform"
-            ),
-            key=lambda entity: (
-                str(
-                    entity.get(
-                        "name",
-                        "",
-                    )
-                ).casefold(),
-                entity["id"],
+            service.platforms(),
+            key=lambda platform: (
+                platform.name.casefold(),
+                platform.id,
             ),
         )
 
         self._extension_map: dict[
             str,
-            list[dict[str, Any]],
+            list[RVDBPlatformSummary],
         ] = defaultdict(list)
 
         self._name_map: dict[
             str,
-            list[dict[str, Any]],
+            list[RVDBPlatformSummary],
         ] = defaultdict(list)
 
         self._build_indexes()
@@ -59,7 +53,7 @@ class RVDBLibraryResolver:
         bundle_path: str | Path,
     ) -> "RVDBLibraryResolver":
         return cls(
-            RVDBConsumer(
+            RVDBService.from_bundle(
                 bundle_path
             )
         )
@@ -85,10 +79,7 @@ class RVDBLibraryResolver:
 
     def _build_indexes(self) -> None:
         for platform in self._platforms:
-            for extension in (
-                platform.get("extensions")
-                or []
-            ):
+            for extension in platform.extensions:
                 key = self._normalize_extension(
                     extension
                 )
@@ -101,11 +92,8 @@ class RVDBLibraryResolver:
                     )
 
             names = [
-                platform.get("name"),
-                *(
-                    platform.get("aliases")
-                    or []
-                ),
+                platform.name,
+                *platform.aliases,
             ]
 
             for name in names:
@@ -126,7 +114,7 @@ class RVDBLibraryResolver:
     def platforms_for_extension(
         self,
         extension: str,
-    ) -> list[dict[str, Any]]:
+    ) -> list[RVDBPlatformSummary]:
         key = self._normalize_extension(
             extension
         )
@@ -141,7 +129,7 @@ class RVDBLibraryResolver:
     def platform_for_extension(
         self,
         extension: str,
-    ) -> dict[str, Any] | None:
+    ) -> RVDBPlatformSummary | None:
         """
         Return a platform only when the extension identifies exactly
         one RVDB platform.
@@ -163,7 +151,7 @@ class RVDBLibraryResolver:
     def platforms_for_name(
         self,
         name: str,
-    ) -> list[dict[str, Any]]:
+    ) -> list[RVDBPlatformSummary]:
         key = self._normalize_name(
             name
         )
@@ -178,7 +166,7 @@ class RVDBLibraryResolver:
     def platform_for_name(
         self,
         name: str,
-    ) -> dict[str, Any] | None:
+    ) -> RVDBPlatformSummary | None:
         matches = self.platforms_for_name(
             name
         )
@@ -191,15 +179,22 @@ class RVDBLibraryResolver:
     def supported_cores(
         self,
         platform_id: str,
-    ) -> list[dict[str, Any]]:
-        return self.consumer.supported_cores(
+    ) -> list[RVDBEntityRef]:
+        view = self.service.platform_view(
             platform_id
+        )
+
+        if view is None:
+            return []
+
+        return list(
+            view.cores
         )
 
     def preferred_core(
         self,
         platform_id: str,
-    ) -> dict[str, Any] | None:
+    ) -> RVDBEntityRef | None:
         """
         Return a core only when RVDB currently provides exactly one
         supported core.

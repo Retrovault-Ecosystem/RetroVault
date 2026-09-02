@@ -5,6 +5,12 @@ from services.library.scanner import (
 )
 
 
+@dataclass(frozen=True)
+class FakePlatform:
+    id: str
+    name: str
+
+
 @dataclass
 class Source:
     path: str
@@ -62,14 +68,14 @@ def test_unique_rvdb_resolution_enriches_game(
 
     resolver = FakeResolver(
         {
-            "nes": {
-                "id": (
+            "nes": FakePlatform(
+                id=(
                     "platform.nintendo.nes"
                 ),
-                "name": (
+                name=(
                     "Nintendo Entertainment System"
                 ),
-            },
+            ),
         }
     )
 
@@ -106,14 +112,14 @@ def test_rvdb_canonical_name_drives_existing_core_mapping(
 
     resolver = FakeResolver(
         {
-            "nes": {
-                "id": (
+            "nes": FakePlatform(
+                id=(
                     "platform.nintendo.nes"
                 ),
-                "name": (
+                name=(
                     "Nintendo Entertainment System"
                 ),
-            },
+            ),
         }
     )
 

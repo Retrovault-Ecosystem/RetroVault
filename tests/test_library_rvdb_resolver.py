@@ -99,7 +99,7 @@ def test_unique_extension_resolves_platform(
 
     assert platform is not None
 
-    assert platform["id"] == (
+    assert platform.id == (
         "platform.alpha"
     )
 
@@ -114,7 +114,7 @@ def test_ambiguous_extension_refuses_guess(
     )
 
     assert {
-        platform["id"]
+        platform.id
         for platform in matches
     } == {
         "platform.beta",
@@ -151,7 +151,7 @@ def test_canonical_name_resolves_platform(
 
     assert platform is not None
 
-    assert platform["id"] == (
+    assert platform.id == (
         "platform.alpha"
     )
 
@@ -167,7 +167,7 @@ def test_alias_resolves_platform_case_insensitively(
 
     assert platform is not None
 
-    assert platform["id"] == (
+    assert platform.id == (
         "platform.alpha"
     )
 
@@ -180,7 +180,7 @@ def test_supported_cores_come_from_rvdb(
     )
 
     assert [
-        core["id"]
+        core.id
         for core in cores
     ] == [
         "core.alpha",
@@ -196,7 +196,7 @@ def test_single_supported_core_is_preferred(
 
     assert core is not None
 
-    assert core["id"] == (
+    assert core.id == (
         "core.alpha"
     )
 
@@ -238,11 +238,11 @@ def test_real_rvdb_unique_nes_extension():
 
     assert platform is not None
 
-    assert platform["id"] == (
+    assert platform.id == (
         "platform.nintendo.nes"
     )
 
-    assert platform["name"] == (
+    assert platform.name == (
         "Nintendo Entertainment System"
     )
 
@@ -262,7 +262,7 @@ def test_real_rvdb_snes_alias():
 
     assert platform is not None
 
-    assert platform["id"] == (
+    assert platform.id == (
         "platform.nintendo.snes"
     )
 
@@ -281,7 +281,7 @@ def test_real_rvdb_chd_is_ambiguous():
     )
 
     assert {
-        platform["id"]
+        platform.id
         for platform in matches
     } == {
         "platform.sega.dreamcast",
@@ -308,7 +308,7 @@ def test_real_rvdb_snes_does_not_choose_between_cores():
     )
 
     assert {
-        core["name"]
+        core.name
         for core in cores
     } == {
         "bsnes",

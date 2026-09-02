@@ -98,11 +98,8 @@ class RomScanner:
             )
 
         return (
-            rvdb_platform.get(
-                "name",
-                legacy_platform,
-            ),
-            rvdb_platform["id"],
+            rvdb_platform.name,
+            rvdb_platform.id,
         )
 
     def scan(self, source):
