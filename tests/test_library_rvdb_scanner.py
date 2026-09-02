@@ -4,6 +4,13 @@ from services.library.scanner import (
     RomScanner,
 )
 
+from services.library.rvdb_resolver import (
+    RVDBLibraryResolver,
+)
+from services.rvdb import (
+    RVDBService,
+)
+
 
 @dataclass(frozen=True)
 class FakePlatform:
@@ -56,6 +63,14 @@ def write_rom(
     )
 
     return path
+
+
+def real_rvdb_resolver():
+    return RVDBLibraryResolver(
+        RVDBService.from_bundle(
+            "data/rvdb/rvdb.bundle.json"
+        )
+    )
 
 
 def test_unique_rvdb_resolution_enriches_game(
@@ -188,17 +203,12 @@ def test_ambiguous_rvdb_result_preserves_legacy_platform(
     assert game.rvdb_platform_id == ""
 
 
-def test_missing_rvdb_bundle_falls_back_cleanly(
+def test_missing_rvdb_dependency_falls_back_cleanly(
     tmp_path,
-    monkeypatch,
 ):
     write_rom(
         tmp_path,
         "Sonic.md",
-    )
-
-    monkeypatch.chdir(
-        tmp_path
     )
 
     scanner = RomScanner()
@@ -226,7 +236,9 @@ def test_real_rvdb_enriches_nes(
         "Zelda.nes",
     )
 
-    scanner = RomScanner()
+    scanner = RomScanner(
+        rvdb_resolver=real_rvdb_resolver()
+    )
 
     game = scanner.scan(
         Source(
@@ -251,7 +263,9 @@ def test_real_rvdb_enriches_nintendo_64(
         "Mario64.z64",
     )
 
-    scanner = RomScanner()
+    scanner = RomScanner(
+        rvdb_resolver=real_rvdb_resolver()
+    )
 
     game = scanner.scan(
         Source(
@@ -276,7 +290,9 @@ def test_real_rvdb_ambiguous_iso_preserves_unknown(
         "Disc.iso",
     )
 
-    scanner = RomScanner()
+    scanner = RomScanner(
+        rvdb_resolver=real_rvdb_resolver()
+    )
 
     game = scanner.scan(
         Source(
@@ -297,7 +313,9 @@ def test_real_rvdb_unresolved_sfc_preserves_super_nintendo(
         "SuperMetroid.sfc",
     )
 
-    scanner = RomScanner()
+    scanner = RomScanner(
+        rvdb_resolver=real_rvdb_resolver()
+    )
 
     game = scanner.scan(
         Source(

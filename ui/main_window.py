@@ -28,6 +28,10 @@ from services.rvdb import (
     RVDBService,
 )
 
+from services.library.rvdb_resolver import (
+    RVDBLibraryResolver,
+)
+
 
 class MainWindow(QMainWindow):
 
@@ -47,10 +51,9 @@ class MainWindow(QMainWindow):
         )
 
 
-        controller = LibraryController()
-
         rvdb_consumer = None
         rvdb_service = None
+        rvdb_resolver = None
 
         try:
             rvdb_consumer = RVDBConsumer(
@@ -59,10 +62,17 @@ class MainWindow(QMainWindow):
             rvdb_service = RVDBService(
                 rvdb_consumer
             )
+            rvdb_resolver = RVDBLibraryResolver(
+                rvdb_service
+            )
         except RVDBError as exc:
             print(
                 f"RVDB unavailable: {exc}"
             )
+
+        controller = LibraryController(
+            rvdb_resolver=rvdb_resolver
+        )
 
 
         self.pages = PageManager()

@@ -1,5 +1,4 @@
 import os
-from pathlib import Path
 
 from services.library.core_mapper import CoreMapper
 from services.library.models import Game
@@ -50,27 +49,7 @@ class RomScanner:
 
         self.core_mapper = CoreMapper()
 
-        self.rvdb_resolver = (
-            rvdb_resolver
-            if rvdb_resolver is not None
-            else self._default_rvdb_resolver()
-        )
-
-    @staticmethod
-    def _default_rvdb_resolver():
-
-        bundle = Path(
-            "data/rvdb/rvdb.bundle.json"
-        )
-
-        if not bundle.is_file():
-            return None
-
-        return (
-            RVDBLibraryResolver.from_bundle(
-                bundle
-            )
-        )
+        self.rvdb_resolver = rvdb_resolver
 
     def _resolve_platform(
         self,

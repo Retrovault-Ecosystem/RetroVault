@@ -1,16 +1,19 @@
 from services.library import LibraryService
 
 
-
 class LibraryController:
 
 
-    def __init__(self):
+    def __init__(
+        self,
+        rvdb_resolver=None,
+    ):
 
-        self.library = LibraryService()
+        self.library = LibraryService(
+            rvdb_resolver=rvdb_resolver
+        )
 
         self.library.load()
-
 
 
     def get_games(self):

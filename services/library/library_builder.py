@@ -4,10 +4,14 @@ from services.library.scanner import RomScanner
 class LibraryBuilder:
 
 
-    def __init__(self):
+    def __init__(
+        self,
+        rvdb_resolver=None,
+    ):
 
-        self.scanner = RomScanner()
-
+        self.scanner = RomScanner(
+            rvdb_resolver=rvdb_resolver
+        )
 
 
     def build(self, sources):
