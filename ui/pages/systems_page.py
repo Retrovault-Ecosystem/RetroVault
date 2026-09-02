@@ -14,8 +14,8 @@ from PyQt6.QtWidgets import (
 )
 
 from services.rvdb import (
-    RVDBConsumer,
     RVDBError,
+    RVDBService,
 )
 
 
@@ -26,11 +26,11 @@ class SystemsPage(QWidget):
 
     def __init__(
         self,
-        consumer: RVDBConsumer | None = None,
+        service: RVDBService | None = None,
     ):
         super().__init__()
 
-        self.consumer = consumer
+        self.service = service
 
         self.title_label = QLabel("Systems")
         self.subtitle_label = QLabel(
@@ -387,33 +387,17 @@ class SystemsPage(QWidget):
         )
         self._platforms = []
 
-        if self.consumer is None:
+        if self.service is None:
             self.count_label.setText(
                 "RVDB unavailable"
             )
             self.status_label.setText(
-                "No RVDB consumer was supplied."
+                "No RVDB service was supplied."
             )
             return
 
-        platforms = [
-            entity
-            for entity
-            in self.consumer.nodes.values()
-            if entity.get("type") == "platform"
-        ]
-
-        platforms.sort(
-            key=lambda entity: (
-                entity.get(
-                    "name",
-                    "",
-                ).casefold(),
-                entity.get(
-                    "id",
-                    "",
-                ),
-            )
+        platforms = list(
+            self.service.platforms()
         )
 
         self._platforms = platforms
@@ -421,13 +405,7 @@ class SystemsPage(QWidget):
         categories = set()
 
         for platform in platforms:
-            values = (
-                platform.get("category")
-                or []
-            )
-
-            if isinstance(values, str):
-                values = [values]
+            values = platform.categories
 
             for value in values:
                 if value not in (
@@ -453,7 +431,7 @@ class SystemsPage(QWidget):
         self._apply_filters()
 
     def _apply_filters(self) -> None:
-        if self.consumer is None:
+        if self.service is None:
             return
 
         search_text = (
@@ -478,25 +456,12 @@ class SystemsPage(QWidget):
         matches = []
 
         for platform in self._platforms:
-            name = str(
-                platform.get(
-                    "name",
-                    platform.get(
-                        "id",
-                        "",
-                    ),
-                )
-            )
+            name = platform.name
 
-            entity_id = str(
-                platform.get(
-                    "id",
-                    "",
-                )
-            )
+            entity_id = platform.id
 
             aliases = (
-                platform.get("aliases")
+                platform.aliases
                 or []
             )
 
@@ -523,7 +488,7 @@ class SystemsPage(QWidget):
                 continue
 
             categories = (
-                platform.get("category")
+                platform.categories
                 or []
             )
 
@@ -555,15 +520,12 @@ class SystemsPage(QWidget):
             matches
         ):
             item = QListWidgetItem(
-                platform.get(
-                    "name",
-                    platform["id"],
-                )
+                platform.name
             )
 
             item.setData(
                 Qt.ItemDataRole.UserRole,
-                platform["id"],
+                platform.id,
             )
 
             self.system_list.addItem(
@@ -571,7 +533,7 @@ class SystemsPage(QWidget):
             )
 
             if (
-                platform["id"]
+                platform.id
                 == selected_id
             ):
                 selected_row = row
@@ -614,7 +576,7 @@ class SystemsPage(QWidget):
             self._clear_details()
             return
 
-        if self.consumer is None:
+        if self.service is None:
             self._clear_details()
             return
 
@@ -623,7 +585,7 @@ class SystemsPage(QWidget):
         )
 
         try:
-            view = self.consumer.platform_view(
+            view = self.service.platform_view(
                 platform_id
             )
         except RVDBError as exc:
@@ -633,130 +595,82 @@ class SystemsPage(QWidget):
             )
             return
 
-        platform = view["platform"]
+        platform = view.platform
 
         self.name_label.setText(
-            platform.get(
-                "name",
-                platform["id"],
-            )
+            platform.name
         )
         self.id_label.setText(
-            platform["id"]
+            platform.id
         )
 
         self.category_value.setText(
             self._display_values(
-                platform.get("category")
+                platform.categories
             )
         )
 
         self.manufacturer_value.setText(
-            self._manufacturer_names(
-                platform.get("manufacturer")
+            self._entity_names(
+                platform.manufacturers
             )
         )
 
         self.release_year_value.setText(
             self._display_scalar(
-                platform.get("release_year")
+                platform.release_year
             )
         )
 
         self.generation_value.setText(
             self._display_scalar(
-                platform.get("generation")
+                platform.generation
             )
         )
 
         self.media_value.setText(
             self._display_values(
-                platform.get("media")
+                platform.media
             )
         )
 
         self.extensions_value.setText(
             self._display_extensions(
-                platform.get("extensions")
+                platform.extensions
             )
         )
 
         self.aliases_value.setText(
             self._display_values(
-                platform.get("aliases")
+                platform.aliases
             )
         )
 
-        metadata = platform.get(
-            "metadata"
-        )
-
-        if not isinstance(
-            metadata,
-            dict,
-        ):
-            metadata = {}
-
         self.retroarch_value.setText(
             self._display_boolean(
-                metadata.get(
-                    "retroarch_supported"
-                )
+                platform.retroarch_supported
             )
         )
 
         self.cores_value.setText(
             self._entity_names(
-                view["cores"]
+                view.cores
             )
         )
         self.emulators_value.setText(
             self._entity_names(
-                view["emulators"]
+                view.emulators
             )
         )
         self.frontends_value.setText(
             self._entity_names(
-                view["frontends"]
+                view.frontends
             )
         )
 
         self.status_label.setText(
             "Showing live data from the "
             "local RVDB development bundle."
-        )
-
-    def _manufacturer_names(
-        self,
-        manufacturer_ids,
-    ) -> str:
-        if not manufacturer_ids:
-            return self.EMPTY
-
-        if self.consumer is None:
-            return self.EMPTY
-
-        names = []
-
-        for entity_id in manufacturer_ids:
-            entity = self.consumer.get_entity(
-                entity_id
-            )
-
-            if entity is None:
-                names.append(
-                    entity_id
-                )
-            else:
-                names.append(
-                    entity.get(
-                        "name",
-                        entity_id,
-                    )
-                )
-
-        return self._display_values(
-            names
         )
 
     @classmethod
@@ -838,16 +752,13 @@ class SystemsPage(QWidget):
     @classmethod
     def _entity_names(
         cls,
-        entities: list[dict],
+        entities,
     ) -> str:
         if not entities:
             return cls.EMPTY
 
         names = [
-            entity.get(
-                "name",
-                entity["id"],
-            )
+            entity.name
             for entity in entities
         ]
 

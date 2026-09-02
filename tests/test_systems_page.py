@@ -8,7 +8,10 @@ pytest.importorskip(
 
 from PyQt6.QtWidgets import QApplication
 
-from services.rvdb import RVDBConsumer
+from services.rvdb import (
+    RVDBConsumer,
+    RVDBService,
+)
 from ui.pages.systems_page import SystemsPage
 
 
@@ -23,7 +26,7 @@ def app():
 
 
 @pytest.fixture
-def consumer(tmp_path):
+def service(tmp_path):
     bundle = tmp_path / "rvdb.bundle.json"
 
     data = {
@@ -115,15 +118,17 @@ def consumer(tmp_path):
         encoding="utf-8",
     )
 
-    return RVDBConsumer(bundle)
+    return RVDBService(
+        RVDBConsumer(bundle)
+    )
 
 
 def test_systems_page_lists_platforms(
     app,
-    consumer,
+    service,
 ):
     page = SystemsPage(
-        consumer
+        service
     )
 
     assert page.system_list.count() == 2
@@ -140,10 +145,10 @@ def test_systems_page_lists_platforms(
 
 def test_systems_page_displays_metadata(
     app,
-    consumer,
+    service,
 ):
     page = SystemsPage(
-        consumer
+        service
     )
 
     assert page.name_label.text() == (
@@ -180,10 +185,10 @@ def test_systems_page_displays_metadata(
 
 def test_systems_page_displays_relationships(
     app,
-    consumer,
+    service,
 ):
     page = SystemsPage(
-        consumer
+        service
     )
 
     assert page.cores_value.text() == (
@@ -199,10 +204,10 @@ def test_systems_page_displays_relationships(
 
 def test_systems_page_changes_selection(
     app,
-    consumer,
+    service,
 ):
     page = SystemsPage(
-        consumer
+        service
     )
 
     page.system_list.setCurrentRow(
@@ -256,19 +261,19 @@ def test_systems_page_handles_no_consumer(
         "RVDB unavailable"
     )
     assert page.status_label.text() == (
-        "No RVDB consumer was supplied."
+        "No RVDB service was supplied."
     )
 
 
 def test_systems_page_real_snes_contract(
     app,
 ):
-    consumer = RVDBConsumer(
+    service = RVDBService.from_bundle(
         "data/rvdb/rvdb.bundle.json"
     )
 
     page = SystemsPage(
-        consumer
+        service
     )
 
     target = None
@@ -326,10 +331,10 @@ def test_systems_page_real_snes_contract(
 
 def test_systems_page_searches_by_name(
     app,
-    consumer,
+    service,
 ):
     page = SystemsPage(
-        consumer
+        service
     )
 
     page.search_input.setText(
@@ -352,10 +357,10 @@ def test_systems_page_searches_by_name(
 
 def test_systems_page_searches_by_alias(
     app,
-    consumer,
+    service,
 ):
     page = SystemsPage(
-        consumer
+        service
     )
 
     page.search_input.setText(
@@ -372,10 +377,10 @@ def test_systems_page_searches_by_alias(
 
 def test_systems_page_filters_by_category(
     app,
-    consumer,
+    service,
 ):
     page = SystemsPage(
-        consumer
+        service
     )
 
     index = page.category_filter.findText(
@@ -401,10 +406,10 @@ def test_systems_page_filters_by_category(
 
 def test_systems_page_combines_search_and_category(
     app,
-    consumer,
+    service,
 ):
     page = SystemsPage(
-        consumer
+        service
     )
 
     index = page.category_filter.findText(
@@ -431,12 +436,12 @@ def test_systems_page_combines_search_and_category(
 def test_systems_page_real_category_contract(
     app,
 ):
-    consumer = RVDBConsumer(
+    service = RVDBService.from_bundle(
         "data/rvdb/rvdb.bundle.json"
     )
 
     page = SystemsPage(
-        consumer
+        service
     )
 
     expected = {
