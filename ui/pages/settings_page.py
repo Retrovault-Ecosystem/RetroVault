@@ -6,11 +6,16 @@ from PyQt6.QtWidgets import (
     QGroupBox,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
 
-from config import ConfigLoader
+from config import (
+    ConfigLoader,
+    ConfigWriter,
+)
 
 
 class SettingsPage(QWidget):
@@ -22,12 +27,22 @@ class SettingsPage(QWidget):
     def __init__(
         self,
         config_loader=None,
+        config_writer=None,
     ):
         super().__init__()
 
         self.config_loader = (
             config_loader
             or ConfigLoader()
+        )
+
+        self.config_writer = (
+            config_writer
+            or ConfigWriter(
+                runtime_file=(
+                    self.config_loader.runtime_file
+                )
+            )
         )
 
         self.config = (
@@ -105,6 +120,15 @@ class SettingsPage(QWidget):
             )
         )
 
+        self.retroarch_edit = QLineEdit()
+
+        runtime_layout.addLayout(
+            self._edit_row(
+                "Edit executable",
+                self.retroarch_edit,
+            )
+        )
+
         self.core_directory_value = QLabel()
         self.core_directory_status = QLabel()
 
@@ -114,6 +138,43 @@ class SettingsPage(QWidget):
                 self.core_directory_value,
                 self.core_directory_status,
             )
+        )
+
+        self.core_directory_edit = QLineEdit()
+
+        runtime_layout.addLayout(
+            self._edit_row(
+                "Edit core directory",
+                self.core_directory_edit,
+            )
+        )
+
+        save_layout = QHBoxLayout()
+
+        self.save_button = QPushButton(
+            "Save Runtime Settings"
+        )
+
+        self.save_button.clicked.connect(
+            self.save_runtime_settings
+        )
+
+        self.save_status = QLabel()
+
+        save_layout.addWidget(
+            self.save_button
+        )
+
+        save_layout.addWidget(
+            self.save_status
+        )
+
+        save_layout.addStretch(
+            1
+        )
+
+        runtime_layout.addLayout(
+            save_layout
         )
 
         layout.addWidget(
@@ -229,6 +290,30 @@ class SettingsPage(QWidget):
         layout.addStretch(
             1
         )
+
+    @staticmethod
+    def _edit_row(
+        title,
+        edit,
+    ):
+        frame = QFrame()
+
+        frame_layout = QFormLayout(
+            frame
+        )
+
+        frame_layout.addRow(
+            QLabel(title),
+            edit,
+        )
+
+        wrapper = QVBoxLayout()
+
+        wrapper.addWidget(
+            frame
+        )
+
+        return wrapper
 
     @staticmethod
     def _setting_row(
@@ -354,6 +439,10 @@ class SettingsPage(QWidget):
             )
         )
 
+        self.retroarch_edit.setText(
+            executable
+        )
+
         self.core_directory_value.setText(
             core_directory
             or "Not configured"
@@ -363,6 +452,10 @@ class SettingsPage(QWidget):
             self._directory_status(
                 core_directory
             )
+        )
+
+        self.core_directory_edit.setText(
+            core_directory
         )
 
         sources = (
@@ -508,4 +601,46 @@ class SettingsPage(QWidget):
                 if runtime_file.is_file()
                 else "Defaults active"
             )
+        )
+
+    def save_runtime_settings(self):
+        executable = (
+            self.retroarch_edit
+            .text()
+            .strip()
+        )
+
+        core_directory = (
+            self.core_directory_edit
+            .text()
+            .strip()
+        )
+
+        overrides = {
+            "retroarch": {
+                "executable": executable,
+                "cores": {
+                    "directory": core_directory,
+                },
+            },
+        }
+
+        try:
+            self.config_writer.update(
+                overrides
+            )
+        except ValueError as exc:
+            self.save_status.setText(
+                str(exc)
+            )
+            return
+
+        self.config = (
+            self.config_loader.load()
+        )
+
+        self._populate()
+
+        self.save_status.setText(
+            "Settings saved"
         )
