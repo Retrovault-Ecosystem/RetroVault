@@ -87,3 +87,32 @@ class RVDBPlatformView:
     cores: tuple[RVDBEntityRef, ...]
     emulators: tuple[RVDBEntityRef, ...]
     frontends: tuple[RVDBEntityRef, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class RVDBCoreView:
+    """
+    Application-facing read model for one emulation core.
+
+    The model intentionally contains only the values currently
+    required by RetroVault's RetroArch UI. Raw RVDB compatibility
+    entities and relationship dictionaries do not cross the
+    service boundary.
+    """
+
+    id: str
+    name: str
+    platforms: tuple[str, ...]
+    playability: tuple[str, ...]
+    evidence_count: int
+    frontends: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class RVDBRetroArchView:
+    """
+    Application-facing RetroArch read model.
+    """
+
+    frontend: RVDBEntityRef
+    cores: tuple[RVDBCoreView, ...]

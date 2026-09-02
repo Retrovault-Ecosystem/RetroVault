@@ -3,7 +3,7 @@ import json
 import pytest
 from PyQt6.QtWidgets import QApplication
 
-from services.rvdb import RVDBConsumer
+from services.rvdb import RVDBService
 from ui.pages.retroarch_page import RetroArchPage
 
 
@@ -18,7 +18,7 @@ def app():
 
 
 @pytest.fixture
-def consumer(tmp_path):
+def service(tmp_path):
     bundle = {
         "nodes": {
             "frontend.retroarch": {
@@ -91,15 +91,17 @@ def consumer(tmp_path):
         encoding="utf-8",
     )
 
-    return RVDBConsumer(path)
+    return RVDBService.from_bundle(
+        path
+    )
 
 
 def test_retroarch_page_lists_frontend_cores(
     app,
-    consumer,
+    service,
 ):
     page = RetroArchPage(
-        consumer
+        service
     )
 
     app.processEvents()
@@ -129,10 +131,10 @@ def test_retroarch_page_lists_frontend_cores(
 
 def test_retroarch_page_shows_core_details(
     app,
-    consumer,
+    service,
 ):
     page = RetroArchPage(
-        consumer
+        service
     )
 
     app.processEvents()
@@ -162,10 +164,10 @@ def test_retroarch_page_shows_core_details(
 
 def test_retroarch_page_changes_selection(
     app,
-    consumer,
+    service,
 ):
     page = RetroArchPage(
-        consumer
+        service
     )
 
     page.core_list.setCurrentRow(1)
@@ -191,7 +193,7 @@ def test_retroarch_page_changes_selection(
     )
 
 
-def test_retroarch_page_handles_missing_consumer(
+def test_retroarch_page_handles_missing_service(
     app,
 ):
     page = RetroArchPage(None)
@@ -212,12 +214,12 @@ def test_retroarch_page_handles_missing_consumer(
 def test_retroarch_page_real_rvdb_contract(
     app,
 ):
-    consumer = RVDBConsumer(
+    service = RVDBService.from_bundle(
         "data/rvdb/rvdb.bundle.json"
     )
 
     page = RetroArchPage(
-        consumer
+        service
     )
 
     app.processEvents()
@@ -274,10 +276,10 @@ def test_retroarch_page_real_rvdb_contract(
 
 def test_retroarch_details_are_side_by_side(
     app,
-    consumer,
+    service,
 ):
     page = RetroArchPage(
-        consumer
+        service
     )
 
     pairs = [

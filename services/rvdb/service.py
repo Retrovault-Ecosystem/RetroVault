@@ -5,10 +5,12 @@ from typing import Any, Iterable, Mapping
 
 from services.rvdb.consumer import RVDBConsumer
 from services.rvdb.models import (
+    RVDBCoreView,
     RVDBEntityRef,
     RVDBPlatformMetadata,
     RVDBPlatformSummary,
     RVDBPlatformView,
+    RVDBRetroArchView,
 )
 
 
@@ -292,4 +294,212 @@ class RVDBService:
             cores=cores,
             emulators=emulators,
             frontends=frontends,
+        )
+
+    def retroarch_view(
+        self,
+        frontend_id: str = "frontend.retroarch",
+    ) -> RVDBRetroArchView | None:
+        """
+        Return the typed RetroArch application read model.
+
+        RVDB graph traversal and compatibility aggregation remain
+        inside the application-owned service boundary.
+        """
+
+        frontend = self._consumer.get_entity(
+            frontend_id
+        )
+
+        if (
+            frontend is None
+            or frontend.get("type")
+            != "frontend"
+        ):
+            return None
+
+        relationships = frontend.get(
+            "relationships",
+            {},
+        )
+
+        if not isinstance(
+            relationships,
+            Mapping,
+        ):
+            relationships = {}
+
+        core_ids = self._values(
+            relationships.get(
+                "launches_core"
+            )
+        )
+
+        compatibility_entities = [
+            entity
+            for entity
+            in self._consumer.nodes.values()
+            if entity.get("type")
+            == "compatibility"
+        ]
+
+        cores: list[RVDBCoreView] = []
+
+        for core_id in core_ids:
+            core = self._consumer.get_entity(
+                core_id
+            )
+
+            if (
+                core is None
+                or core.get("type")
+                != "core"
+            ):
+                continue
+
+            compatibility = [
+                entity
+                for entity
+                in compatibility_entities
+                if entity.get("subject")
+                == core_id
+            ]
+
+            compatibility.sort(
+                key=lambda entity: str(
+                    entity.get(
+                        "id",
+                        "",
+                    )
+                )
+            )
+
+            platform_names: list[str] = []
+            playability_values: list[str] = []
+            evidence_count = 0
+
+            for record in compatibility:
+                platform_id = record.get(
+                    "platform"
+                )
+
+                if (
+                    platform_id is not None
+                    and platform_id != ""
+                ):
+                    platform_id = str(
+                        platform_id
+                    )
+
+                    platform = (
+                        self._consumer.get_entity(
+                            platform_id
+                        )
+                    )
+
+                    if platform is None:
+                        platform_name = (
+                            platform_id
+                        )
+                    else:
+                        platform_name = str(
+                            platform.get(
+                                "name",
+                                platform_id,
+                            )
+                        )
+
+                    platform_names.append(
+                        platform_name
+                    )
+
+                playability = record.get(
+                    "playability"
+                )
+
+                if (
+                    playability is not None
+                    and playability != ""
+                ):
+                    playability_values.append(
+                        str(
+                            playability
+                        )
+                    )
+
+                evidence = record.get(
+                    "evidence",
+                    [],
+                )
+
+                if isinstance(
+                    evidence,
+                    (list, tuple),
+                ):
+                    evidence_count += len(
+                        evidence
+                    )
+
+            platform_names = sorted(
+                set(
+                    platform_names
+                ),
+                key=str.casefold,
+            )
+
+            playability_values = sorted(
+                set(
+                    playability_values
+                ),
+                key=str.casefold,
+            )
+
+            frontend_refs = self._refs(
+                self._consumer.frontends_for_core(
+                    core_id
+                )
+            )
+
+            cores.append(
+                RVDBCoreView(
+                    id=core_id,
+                    name=str(
+                        core.get(
+                            "name",
+                            core_id,
+                        )
+                    ),
+                    platforms=tuple(
+                        platform_names
+                    ),
+                    playability=tuple(
+                        playability_values
+                    ),
+                    evidence_count=(
+                        evidence_count
+                    ),
+                    frontends=tuple(
+                        ref.name
+                        for ref
+                        in frontend_refs
+                    ),
+                )
+            )
+
+        cores.sort(
+            key=lambda core: (
+                core.name.casefold(),
+                core.id,
+            )
+        )
+
+        return RVDBRetroArchView(
+            frontend=(
+                RVDBEntityRef.from_entity(
+                    frontend
+                )
+            ),
+            cores=tuple(
+                cores
+            ),
         )

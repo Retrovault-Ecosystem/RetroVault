@@ -369,3 +369,238 @@ def test_service_propagates_consumer_errors(
         service.platform_view(
             "platform.missing"
         )
+
+
+def test_retroarch_view_builds_typed_read_model(
+    tmp_path,
+):
+    bundle = {
+        "nodes": {
+            "frontend.retroarch": {
+                "id": "frontend.retroarch",
+                "type": "frontend",
+                "name": "RetroArch",
+                "aliases": [],
+                "metadata": {},
+                "relationships": {
+                    "launches_core": [
+                        "core.beta",
+                        "core.alpha",
+                    ]
+                },
+            },
+            "core.alpha": {
+                "id": "core.alpha",
+                "type": "core",
+                "name": "Alpha Core",
+            },
+            "core.beta": {
+                "id": "core.beta",
+                "type": "core",
+                "name": "Beta Core",
+            },
+            "platform.alpha": {
+                "id": "platform.alpha",
+                "type": "platform",
+                "name": "Alpha System",
+            },
+            "compatibility.alpha": {
+                "id": "compatibility.alpha",
+                "type": "compatibility",
+                "subject": "core.alpha",
+                "platform": "platform.alpha",
+                "playability": "playable",
+                "evidence": [
+                    {
+                        "source": "one"
+                    },
+                    {
+                        "source": "two"
+                    },
+                ],
+            },
+        },
+        "edges": {
+            "frontend.retroarch": {
+                "launches_core": [
+                    "core.beta",
+                    "core.alpha",
+                ]
+            }
+        },
+    }
+
+    path = (
+        tmp_path
+        / "rvdb.bundle.json"
+    )
+
+    path.write_text(
+        json.dumps(
+            bundle
+        ),
+        encoding="utf-8",
+    )
+
+    service = RVDBService.from_bundle(
+        path
+    )
+
+    view = service.retroarch_view()
+
+    assert view is not None
+
+    assert view.frontend.id == (
+        "frontend.retroarch"
+    )
+
+    assert view.frontend.name == (
+        "RetroArch"
+    )
+
+    assert [
+        core.name
+        for core in view.cores
+    ] == [
+        "Alpha Core",
+        "Beta Core",
+    ]
+
+    alpha = view.cores[0]
+
+    assert alpha.id == (
+        "core.alpha"
+    )
+
+    assert alpha.platforms == (
+        "Alpha System",
+    )
+
+    assert alpha.playability == (
+        "playable",
+    )
+
+    assert alpha.evidence_count == 2
+
+    assert alpha.frontends == (
+        "RetroArch",
+    )
+
+    beta = view.cores[1]
+
+    assert beta.id == (
+        "core.beta"
+    )
+
+    assert beta.platforms == ()
+
+    assert beta.playability == ()
+
+    assert beta.evidence_count == 0
+
+    assert beta.frontends == (
+        "RetroArch",
+    )
+
+
+def test_retroarch_view_missing_frontend(
+    tmp_path,
+):
+    bundle = {
+        "nodes": {},
+        "edges": {},
+    }
+
+    path = (
+        tmp_path
+        / "rvdb.bundle.json"
+    )
+
+    path.write_text(
+        json.dumps(
+            bundle
+        ),
+        encoding="utf-8",
+    )
+
+    service = RVDBService.from_bundle(
+        path
+    )
+
+    assert (
+        service.retroarch_view()
+        is None
+    )
+
+
+def test_retroarch_view_real_bundle():
+    service = RVDBService.from_bundle(
+        REAL_BUNDLE
+    )
+
+    view = service.retroarch_view()
+
+    assert view is not None
+
+    assert view.frontend.id == (
+        "frontend.retroarch"
+    )
+
+    assert view.frontend.name == (
+        "RetroArch"
+    )
+
+    assert [
+        core.name
+        for core in view.cores
+    ] == [
+        "bsnes",
+        "Genesis Plus GX",
+        "Mesen",
+        "Snes9x",
+    ]
+
+    bsnes = next(
+        core
+        for core in view.cores
+        if core.id
+        == "core.bsnes"
+    )
+
+    assert bsnes.platforms == (
+        "Super Nintendo",
+    )
+
+    assert bsnes.playability == (
+        "playable",
+    )
+
+    assert bsnes.evidence_count == 3
+
+    assert bsnes.frontends == (
+        "RetroArch",
+    )
+
+    genesis = next(
+        core
+        for core in view.cores
+        if core.id
+        == "core.genesis.plus.gx"
+    )
+
+    assert genesis.platforms == (
+        "Game Gear",
+        "Sega Genesis",
+        "Sega Master System",
+        "Sega SG-1000",
+    )
+
+    assert genesis.playability == (
+        "playable",
+    )
+
+    assert genesis.evidence_count == 12
+
+    assert genesis.frontends == (
+        "RetroArch",
+    )

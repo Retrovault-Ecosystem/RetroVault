@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from typing import Any
-
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QFrame,
@@ -15,7 +13,8 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from services.rvdb import RVDBConsumer
+from services.rvdb import RVDBService
+from services.rvdb.models import RVDBCoreView
 
 
 class RetroArchPage(QWidget):
@@ -25,13 +24,13 @@ class RetroArchPage(QWidget):
 
     def __init__(
         self,
-        consumer: RVDBConsumer | None = None,
+        service: RVDBService | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
 
-        self.consumer = consumer
-        self._cores: list[dict[str, Any]] = []
+        self.service = service
+        self._cores: list[RVDBCoreView] = []
 
         self._build_ui()
         self._connect_signals()
@@ -390,12 +389,12 @@ class RetroArchPage(QWidget):
         self.core_list.clear()
         self._cores = []
 
-        if self.consumer is None:
+        if self.service is None:
             self.status_label.setText(
                 "RVDB unavailable"
             )
             self.summary_label.setText(
-                "No RVDB consumer was supplied."
+                "No RVDB service was supplied."
             )
             self.core_count_label.setText(
                 "0 cores"
@@ -403,15 +402,11 @@ class RetroArchPage(QWidget):
             self._clear_details()
             return
 
-        frontend = self.consumer.get_entity(
+        view = self.service.retroarch_view(
             self.FRONTEND_ID
         )
 
-        if (
-            frontend is None
-            or frontend.get("type")
-            != "frontend"
-        ):
+        if view is None:
             self.status_label.setText(
                 "RetroArch unavailable"
             )
@@ -425,53 +420,8 @@ class RetroArchPage(QWidget):
             self._clear_details()
             return
 
-        core_ids = (
-            frontend.get(
-                "relationships",
-                {},
-            )
-            .get(
-                "launches_core",
-                [],
-            )
-        )
-
-        cores = []
-
-        for core_id in core_ids:
-            core = self.consumer.get_entity(
-                core_id
-            )
-
-            if (
-                core is None
-                or core.get("type")
-                != "core"
-            ):
-                continue
-
-            cores.append(core)
-
-        cores.sort(
-            key=lambda entity: (
-                str(
-                    entity.get(
-                        "name",
-                        "",
-                    )
-                ).casefold(),
-                entity.get(
-                    "id",
-                    "",
-                ),
-            )
-        )
-
-        self._cores = cores
-
-        frontend_name = frontend.get(
-            "name",
-            self.FRONTEND_ID,
+        self._cores = list(
+            view.cores
         )
 
         self.status_label.setText(
@@ -479,32 +429,29 @@ class RetroArchPage(QWidget):
         )
 
         self.summary_label.setText(
-            f"{frontend_name} launches "
-            f"{len(cores)} RVDB cores."
+            f"{view.frontend.name} launches "
+            f"{len(self._cores)} RVDB cores."
         )
 
         self.core_count_label.setText(
-            f"{len(cores)} cores"
+            f"{len(self._cores)} cores"
         )
 
-        for core in cores:
+        for core in self._cores:
             item = QListWidgetItem(
-                core.get(
-                    "name",
-                    core["id"],
-                )
+                core.name
             )
 
             item.setData(
                 Qt.ItemDataRole.UserRole,
-                core["id"],
+                core.id,
             )
 
             self.core_list.addItem(
                 item
             )
 
-        if cores:
+        if self._cores:
             self.core_list.setCurrentRow(0)
         else:
             self._clear_details()
@@ -516,10 +463,7 @@ class RetroArchPage(QWidget):
     ) -> None:
         del previous
 
-        if (
-            current is None
-            or self.consumer is None
-        ):
+        if current is None:
             self._clear_details()
             return
 
@@ -527,8 +471,14 @@ class RetroArchPage(QWidget):
             Qt.ItemDataRole.UserRole
         )
 
-        core = self.consumer.get_entity(
-            core_id
+        core = next(
+            (
+                candidate
+                for candidate
+                in self._cores
+                if candidate.id == core_id
+            ),
+            None,
         )
 
         if core is None:
@@ -541,141 +491,43 @@ class RetroArchPage(QWidget):
 
     def _show_core(
         self,
-        core: dict[str, Any],
+        core: RVDBCoreView,
     ) -> None:
-        if self.consumer is None:
-            self._clear_details()
-            return
-
-        core_id = core["id"]
-
         self.core_name_label.setText(
-            core.get(
-                "name",
-                core_id,
-            )
+            core.name
         )
+
         self.core_id_label.setText(
-            core_id
-        )
-
-        compatibility = [
-            entity
-            for entity
-            in self.consumer.nodes.values()
-            if (
-                entity.get("type")
-                == "compatibility"
-                and entity.get("subject")
-                == core_id
-            )
-        ]
-
-        compatibility.sort(
-            key=lambda entity: entity.get(
-                "id",
-                "",
-            )
-        )
-
-        platform_names = []
-        playability_values = []
-        evidence_count = 0
-
-        for record in compatibility:
-            platform_id = record.get(
-                "platform"
-            )
-
-            platform = (
-                self.consumer.get_entity(
-                    platform_id
-                )
-                if platform_id
-                else None
-            )
-
-            platform_name = (
-                platform.get(
-                    "name",
-                    platform_id,
-                )
-                if platform is not None
-                else platform_id
-            )
-
-            if platform_name:
-                platform_names.append(
-                    str(platform_name)
-                )
-
-            playability = record.get(
-                "playability"
-            )
-
-            if playability:
-                playability_values.append(
-                    str(playability)
-                )
-
-            evidence = record.get(
-                "evidence",
-                [],
-            )
-
-            if isinstance(evidence, list):
-                evidence_count += len(
-                    evidence
-                )
-
-        platform_names = sorted(
-            set(platform_names),
-            key=str.casefold,
-        )
-
-        playability_values = sorted(
-            set(playability_values),
-            key=str.casefold,
+            core.id
         )
 
         self.platforms_value.setText(
-            "\n".join(platform_names)
-            if platform_names
+            "\n".join(
+                core.platforms
+            )
+            if core.platforms
             else "No compatibility records."
         )
 
         self.playability_value.setText(
-            "\n".join(playability_values)
-            if playability_values
+            "\n".join(
+                core.playability
+            )
+            if core.playability
             else "Unknown"
         )
 
         self.evidence_value.setText(
-            str(evidence_count)
-        )
-
-        frontends = (
-            self.consumer.frontends_for_core(
-                core_id
+            str(
+                core.evidence_count
             )
         )
 
-        frontend_names = sorted(
-            {
-                str(
-                    frontend.get(
-                        "name",
-                        frontend["id"],
-                    )
-                )
-                for frontend in frontends
-            },
-            key=str.casefold,
-        )
-
         self.frontends_value.setText(
-            "\n".join(frontend_names)
-            if frontend_names
+            "\n".join(
+                core.frontends
+            )
+            if core.frontends
             else "None"
         )
 

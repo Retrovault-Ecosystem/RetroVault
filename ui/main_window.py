@@ -101,7 +101,7 @@ class MainWindow(QMainWindow):
         self.pages.add_page(
             "RetroArch",
             RetroArchPage(
-                rvdb_consumer
+                rvdb_service
             )
         )
 
