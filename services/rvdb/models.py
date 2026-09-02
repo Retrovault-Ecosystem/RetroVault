@@ -39,6 +39,39 @@ class RVDBEntityRef:
 
 
 @dataclass(frozen=True, slots=True)
+class RVDBPlatformSummary:
+    """
+    Stable RetroVault-facing summary for one Platform.
+
+    This model contains the Platform fields required to populate and
+    filter the Systems page without exposing raw RVDB bundle nodes.
+    """
+
+    id: str
+    name: str
+    aliases: tuple[str, ...]
+    categories: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
+class RVDBPlatformMetadata:
+    """
+    RetroVault-owned Platform metadata used by the Systems page.
+    """
+
+    id: str
+    name: str
+    aliases: tuple[str, ...]
+    categories: tuple[str, ...]
+    manufacturers: tuple[RVDBEntityRef, ...]
+    release_year: Any
+    generation: Any
+    media: tuple[str, ...]
+    extensions: tuple[str, ...]
+    retroarch_supported: bool | None
+
+
+@dataclass(frozen=True, slots=True)
 class RVDBPlatformView:
     """
     RetroVault-owned read model for one emulation Platform.
@@ -50,7 +83,7 @@ class RVDBPlatformView:
     - multiple Cores may resolve to the same Frontend
     """
 
-    platform: RVDBEntityRef
+    platform: RVDBPlatformMetadata
     cores: tuple[RVDBEntityRef, ...]
     emulators: tuple[RVDBEntityRef, ...]
     frontends: tuple[RVDBEntityRef, ...]

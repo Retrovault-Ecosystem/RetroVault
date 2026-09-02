@@ -1,101 +1,370 @@
-from pathlib import Path
+from __future__ import annotations
+
+import json
 
 import pytest
 
 from services.rvdb.consumer import (
+    RVDBConsumer,
     RVDBError,
 )
 from services.rvdb.models import (
     RVDBEntityRef,
-    RVDBPlatformView,
+    RVDBPlatformMetadata,
+    RVDBPlatformSummary,
 )
 from services.rvdb.service import (
     RVDBService,
 )
 
 
-REAL_BUNDLE = Path(
+REAL_BUNDLE = (
     "data/rvdb/rvdb.bundle.json"
 )
 
 
-def test_real_snes_platform_view_is_typed():
+def test_service_real_snes_contract():
     service = RVDBService.from_bundle(
         REAL_BUNDLE
     )
 
     view = service.platform_view(
         "platform.nintendo.snes"
-    )
-
-    assert isinstance(
-        view,
-        RVDBPlatformView,
     )
 
     assert isinstance(
         view.platform,
-        RVDBEntityRef,
+        RVDBPlatformMetadata,
     )
 
-    assert view.platform == RVDBEntityRef(
-        id="platform.nintendo.snes",
-        entity_type="platform",
-        name="Super Nintendo",
-    )
-
-
-def test_real_snes_preserves_multiple_cores_and_emulators():
-    service = RVDBService.from_bundle(
-        REAL_BUNDLE
-    )
-
-    view = service.platform_view(
+    assert view.platform.id == (
         "platform.nintendo.snes"
     )
 
+    assert view.platform.name == (
+        "Super Nintendo"
+    )
+
+    assert [
+        ref.name
+        for ref in view.platform.manufacturers
+    ] == [
+        "Nintendo"
+    ]
+
+    assert view.platform.retroarch_supported is True
+
     assert {
-        core.id
-        for core in view.cores
+        ref.id
+        for ref in view.cores
     } == {
         "core.bsnes",
         "core.snes9x",
     }
 
     assert {
-        emulator.id
-        for emulator in view.emulators
+        ref.id
+        for ref in view.emulators
     } == {
         "emulator.bsnes",
         "emulator.snes9x",
     }
 
-
-def test_real_snes_frontend_is_deduplicated():
-    service = RVDBService.from_bundle(
-        REAL_BUNDLE
-    )
-
-    view = service.platform_view(
-        "platform.nintendo.snes"
-    )
-
     assert [
-        frontend.id
-        for frontend in view.frontends
+        ref.id
+        for ref in view.frontends
     ] == [
-        "frontend.retroarch",
+        "frontend.retroarch"
     ]
 
 
-def test_missing_platform_preserves_consumer_error():
+def test_service_lists_real_platforms():
     service = RVDBService.from_bundle(
         REAL_BUNDLE
     )
 
+    platforms = service.platforms()
+
+    assert platforms
+
+    assert all(
+        isinstance(
+            platform,
+            RVDBPlatformSummary,
+        )
+        for platform in platforms
+    )
+
+    ids = {
+        platform.id
+        for platform in platforms
+    }
+
+    assert "platform.nintendo.snes" in ids
+
+    names = [
+        platform.name
+        for platform in platforms
+    ]
+
+    assert names == sorted(
+        names,
+        key=str.casefold,
+    )
+
+
+def test_service_platform_summary_preserves_search_fields(
+    tmp_path,
+):
+    bundle = tmp_path / "rvdb.bundle.json"
+
+    bundle.write_text(
+        json.dumps(
+            {
+                "nodes": {
+                    "platform.test": {
+                        "id": "platform.test",
+                        "type": "platform",
+                        "name": "Test Platform",
+                        "aliases": [
+                            "Test Alias",
+                        ],
+                        "category": [
+                            "console",
+                        ],
+                    },
+                },
+                "edges": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    service = RVDBService.from_bundle(
+        bundle
+    )
+
+    assert service.platforms() == (
+        RVDBPlatformSummary(
+            id="platform.test",
+            name="Test Platform",
+            aliases=(
+                "Test Alias",
+            ),
+            categories=(
+                "console",
+            ),
+        ),
+    )
+
+
+def test_service_resolves_manufacturer_refs(
+    tmp_path,
+):
+    bundle = tmp_path / "rvdb.bundle.json"
+
+    bundle.write_text(
+        json.dumps(
+            {
+                "nodes": {
+                    "manufacturer.test": {
+                        "id": "manufacturer.test",
+                        "type": "manufacturer",
+                        "name": "Test Hardware",
+                    },
+                    "platform.test": {
+                        "id": "platform.test",
+                        "type": "platform",
+                        "name": "Test Platform",
+                        "manufacturer": [
+                            "manufacturer.test",
+                        ],
+                        "metadata": {
+                            "retroarch_supported": True,
+                        },
+                    },
+                },
+                "edges": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    service = RVDBService.from_bundle(
+        bundle
+    )
+
+    view = service.platform_view(
+        "platform.test"
+    )
+
+    assert view.platform.manufacturers == (
+        RVDBEntityRef(
+            id="manufacturer.test",
+            entity_type="manufacturer",
+            name="Test Hardware",
+        ),
+    )
+
+    assert view.platform.retroarch_supported is True
+
+
+def test_service_preserves_missing_manufacturer_identity(
+    tmp_path,
+):
+    bundle = tmp_path / "rvdb.bundle.json"
+
+    bundle.write_text(
+        json.dumps(
+            {
+                "nodes": {
+                    "platform.test": {
+                        "id": "platform.test",
+                        "type": "platform",
+                        "name": "Test Platform",
+                        "manufacturer": [
+                            "manufacturer.missing",
+                        ],
+                    },
+                },
+                "edges": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    service = RVDBService.from_bundle(
+        bundle
+    )
+
+    view = service.platform_view(
+        "platform.test"
+    )
+
+    assert view.platform.manufacturers == (
+        RVDBEntityRef(
+            id="manufacturer.missing",
+            entity_type="unknown",
+            name="manufacturer.missing",
+        ),
+    )
+
+
+def test_service_preserves_relationship_cardinality(
+    tmp_path,
+):
+    bundle = tmp_path / "rvdb.bundle.json"
+
+    bundle.write_text(
+        json.dumps(
+            {
+                "nodes": {
+                    "platform.test": {
+                        "id": "platform.test",
+                        "type": "platform",
+                        "name": "Test Platform",
+                    },
+                    "core.a": {
+                        "id": "core.a",
+                        "type": "core",
+                        "name": "Core A",
+                    },
+                    "core.b": {
+                        "id": "core.b",
+                        "type": "core",
+                        "name": "Core B",
+                    },
+                    "emulator.a": {
+                        "id": "emulator.a",
+                        "type": "emulator",
+                        "name": "Emulator A",
+                    },
+                    "frontend.a": {
+                        "id": "frontend.a",
+                        "type": "frontend",
+                        "name": "Frontend A",
+                    },
+                },
+                "edges": {
+                    "platform.test": {
+                        "supports_core": [
+                            "core.a",
+                            "core.b",
+                        ],
+                    },
+                    "core.a": {},
+                    "core.b": {},
+                    "emulator.a": {
+                        "supports_platform": [
+                            "platform.test",
+                        ],
+                    },
+                    "frontend.a": {
+                        "launches_core": [
+                            "core.a",
+                            "core.b",
+                        ],
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    service = RVDBService.from_bundle(
+        bundle
+    )
+
+    view = service.platform_view(
+        "platform.test"
+    )
+
+    assert [
+        ref.id
+        for ref in view.cores
+    ] == [
+        "core.a",
+        "core.b",
+    ]
+
+    assert [
+        ref.id
+        for ref in view.emulators
+    ] == [
+        "emulator.a",
+    ]
+
+    assert [
+        ref.id
+        for ref in view.frontends
+    ] == [
+        "frontend.a",
+    ]
+
+
+def test_service_propagates_consumer_errors(
+    tmp_path,
+):
+    bundle = tmp_path / "rvdb.bundle.json"
+
+    bundle.write_text(
+        json.dumps(
+            {
+                "nodes": {},
+                "edges": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    service = RVDBService(
+        RVDBConsumer(
+            bundle
+        )
+    )
+
     with pytest.raises(
-        RVDBError,
-        match="entity not found",
+        RVDBError
     ):
         service.platform_view(
             "platform.missing"
