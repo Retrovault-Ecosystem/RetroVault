@@ -311,9 +311,14 @@ def test_systems_page_real_snes_contract(
         "Snes9x",
     }
 
-    assert page.emulators_value.text() == (
-        "Snes9x"
-    )
+    assert set(
+        page.emulators_value
+        .text()
+        .splitlines()
+    ) == {
+        "bsnes",
+        "Snes9x",
+    }
     assert page.frontends_value.text() == (
         "RetroArch"
     )
