@@ -599,3 +599,83 @@ modify the protected RVDB repository.
 
 The next milestone identifier and scope should be established from that audit
 rather than assumed in advance.
+
+## RVA1-C.5-B.7 — Artwork Integration Closure
+
+Status:
+
+COMPLETE
+
+RetroVault artwork integration is now established as a
+durable application capability.
+
+Established behavior:
+
+- artwork configuration is exposed through the application
+  Settings surface
+- the effective artwork directory is persisted through the
+  runtime configuration layer
+- artwork discovery is owned by `ArtworkService`
+- artwork discovery recursively indexes supported local image
+  files
+- artwork lookup is based on ROM identity rather than display
+  name alone
+- explicit artwork assignments take precedence over discovery
+- filename matching is case-insensitive
+- ambiguous same-stem artwork is rejected rather than guessed
+- platform-aware disambiguation resolves otherwise ambiguous
+  artwork when the filesystem path supplies a matching platform
+  component
+- artwork lookup results are cached by ROM identity
+- changing the artwork directory invalidates the artwork index
+  and cache
+- library games are enriched with resolved artwork through the
+  library service
+- artwork can be refreshed through the running application
+  without restarting RetroVault
+- Settings artwork-directory changes propagate through the
+  controller and library presentation
+- Game Details renders resolved artwork
+- Gallery game cards render resolved artwork
+- Gallery artwork preserves aspect ratio and uses smooth
+  transformation
+- missing or invalid artwork safely falls back to the existing
+  controller placeholder
+- Gallery reconstruction reflects refreshed artwork
+
+Validation established during B.7 closure:
+
+- direct Gallery artwork presentation regression: 5 passed
+- targeted Gallery/artwork regression: 123 passed
+- targeted artwork closure baseline: 178 passed
+- complete RetroVault regression: 271 passed
+- compile gate: green
+- no genuine artwork TODO/FIXME implementation debt identified
+
+Published implementation checkpoint before documentation closure:
+
+- `f70957e1d2ca16b66ba32085317e3aefa7a3d8c2`
+- `feat: harden gallery artwork presentation`
+
+Protected RVDB consumer boundary:
+
+- RVDB remains unchanged at
+  `1e8bb5d19014fbd0db5b99bc4da382064a44a438`
+- RetroVault continues to consume RVDB without modifying the
+  protected RVDB repository
+
+Closure decision:
+
+RVA1-C.5-B.7 artwork integration is complete.
+
+No additional B.7 production increment is required merely to
+extend the milestone numbering. Future artwork capabilities may
+be introduced as new feature work when justified by application
+requirements.
+
+Next operation:
+
+- begin from the clean post-B.7 application checkpoint
+- determine the next RetroVault application milestone from the
+  current production surface
+- preserve the protected RVDB consumer boundary
