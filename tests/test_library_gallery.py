@@ -1336,3 +1336,601 @@ def test_gallery_grid_packs_sparse_results_top_left():
         alignment
         & Qt.AlignmentFlag.AlignLeft
     )
+
+
+class FakeLaunchValidator:
+    ready = True
+
+    def __init__(
+        self,
+        retroarch,
+        core,
+    ):
+        self.retroarch = retroarch
+        self.core = core
+
+    def validate(
+        self,
+        rom,
+    ):
+        return {
+            "retroarch": self.ready,
+            "core": self.ready,
+            "rom": self.ready,
+            "ready": self.ready,
+        }
+
+
+def test_successful_process_spawn_records_played_game(
+    monkeypatch,
+):
+
+    game = FakeGame(
+        name="Duck Tales 2",
+        rom="/roms/duck-tales-2.nes",
+    )
+
+    recorded = []
+
+    def played_handler(
+        selected_game,
+    ):
+        recorded.append(
+            selected_game
+        )
+
+    view = GalleryView(
+        [game],
+        played_handler=played_handler,
+    )
+
+    view.details.show_game(
+        game
+    )
+
+    monkeypatch.setattr(
+        view.details.core_resolver,
+        "find",
+        lambda core: "/cores/nestopia_libretro.so",
+    )
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        FakeLaunchValidator,
+    )
+
+    monkeypatch.setattr(
+        view.details.launcher,
+        "launch",
+        lambda profile: {
+            "success": True,
+            "command": [
+                "retroarch"
+            ],
+        },
+    )
+
+    view.details.launch_game()
+
+    assert recorded == [
+        game
+    ]
+
+
+def test_process_spawn_failure_does_not_record_played_game(
+    monkeypatch,
+):
+
+    game = FakeGame(
+        name="Duck Tales 2",
+        rom="/roms/duck-tales-2.nes",
+    )
+
+    recorded = []
+
+    view = GalleryView(
+        [game],
+        played_handler=recorded.append,
+    )
+
+    view.details.show_game(
+        game
+    )
+
+    monkeypatch.setattr(
+        view.details.core_resolver,
+        "find",
+        lambda core: "/cores/nestopia_libretro.so",
+    )
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        FakeLaunchValidator,
+    )
+
+    monkeypatch.setattr(
+        view.details.launcher,
+        "launch",
+        lambda profile: {
+            "success": False,
+            "error": "spawn failed",
+        },
+    )
+
+    view.details.launch_game()
+
+    assert recorded == []
+
+
+def test_validation_failure_does_not_record_played_game(
+    monkeypatch,
+):
+
+    game = FakeGame(
+        name="Duck Tales 2",
+        rom="/roms/duck-tales-2.nes",
+    )
+
+    recorded = []
+
+    view = GalleryView(
+        [game],
+        played_handler=recorded.append,
+    )
+
+    view.details.show_game(
+        game
+    )
+
+    monkeypatch.setattr(
+        view.details.core_resolver,
+        "find",
+        lambda core: "/cores/nestopia_libretro.so",
+    )
+
+    class NotReadyValidator(
+        FakeLaunchValidator
+    ):
+        ready = False
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        NotReadyValidator,
+    )
+
+    called = []
+
+    monkeypatch.setattr(
+        view.details.launcher,
+        "launch",
+        lambda profile: (
+            called.append(profile)
+            or {
+                "success": True,
+            }
+        ),
+    )
+
+    view.details.launch_game()
+
+    assert called == []
+    assert recorded == []
+
+
+def test_successful_launch_without_played_handler_is_safe(
+    monkeypatch,
+):
+
+    game = FakeGame(
+        name="Duck Tales 2",
+        rom="/roms/duck-tales-2.nes",
+    )
+
+    view = GalleryView(
+        [game]
+    )
+
+    view.details.show_game(
+        game
+    )
+
+    monkeypatch.setattr(
+        view.details.core_resolver,
+        "find",
+        lambda core: "/cores/nestopia_libretro.so",
+    )
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        FakeLaunchValidator,
+    )
+
+    monkeypatch.setattr(
+        view.details.launcher,
+        "launch",
+        lambda profile: {
+            "success": True,
+        },
+    )
+
+    view.details.launch_game()
+
+
+def test_recently_played_preserves_history_order():
+
+    first = FakeGame(
+        name="Alpha",
+        rom="/roms/alpha.nes",
+    )
+
+    second = FakeGame(
+        name="Zulu",
+        rom="/roms/zulu.nes",
+    )
+
+    view = GalleryView(
+        [first, second],
+        recent_provider=lambda: [
+            second.rom,
+            first.rom,
+        ],
+    )
+
+    view.toolbar.recent_only.setChecked(
+        True
+    )
+
+    assert view.randomizer.games == [
+        second,
+        first,
+    ]
+
+
+def test_recently_played_composes_with_search():
+
+    first = FakeGame(
+        name="Duck Tales 2",
+        rom="/roms/duck.nes",
+    )
+
+    second = FakeGame(
+        name="Adventure Island",
+        rom="/roms/adventure.nes",
+    )
+
+    view = GalleryView(
+        [first, second],
+        recent_provider=lambda: [
+            first.rom,
+            second.rom,
+        ],
+    )
+
+    view.toolbar.recent_only.setChecked(
+        True
+    )
+
+    view.toolbar.search.setText(
+        "Adventure"
+    )
+
+    assert view.randomizer.games == [
+        second
+    ]
+
+
+def test_recently_played_composes_with_system_filter():
+
+    nes = FakeGame(
+        name="NES Game",
+        rom="/roms/nes.nes",
+    )
+
+    arcade = FakeGame(
+        name="Arcade Game",
+        rom="/roms/arcade.zip",
+    )
+
+    nes.platform = "Nintendo Entertainment System"
+    arcade.platform = "Arcade"
+
+    view = GalleryView(
+        [nes, arcade],
+        recent_provider=lambda: [
+            arcade.rom,
+            nes.rom,
+        ],
+    )
+
+    view.toolbar.recent_only.setChecked(
+        True
+    )
+
+    view.toolbar.system_filter.setCurrentText(
+        "Nintendo Entertainment System"
+    )
+
+    assert view.randomizer.games == [
+        nes
+    ]
+
+
+def test_recently_played_composes_with_favorites():
+
+    favorite = FakeGame(
+        name="Favorite",
+        rom="/roms/favorite.nes",
+    )
+
+    other = FakeGame(
+        name="Other",
+        rom="/roms/other.nes",
+    )
+
+    favorite.favorite = True
+    other.favorite = False
+
+    view = GalleryView(
+        [favorite, other],
+        recent_provider=lambda: [
+            other.rom,
+            favorite.rom,
+        ],
+    )
+
+    view.toolbar.recent_only.setChecked(
+        True
+    )
+
+    view.toolbar.favorites_only.setChecked(
+        True
+    )
+
+    assert view.randomizer.games == [
+        favorite
+    ]
+
+
+def test_recently_played_ignores_normal_sorting():
+
+    alpha = FakeGame(
+        name="Alpha",
+        rom="/roms/alpha.nes",
+    )
+
+    zulu = FakeGame(
+        name="Zulu",
+        rom="/roms/zulu.nes",
+    )
+
+    view = GalleryView(
+        [alpha, zulu],
+        recent_provider=lambda: [
+            zulu.rom,
+            alpha.rom,
+        ],
+    )
+
+    view.toolbar.sort.setCurrentText(
+        "Name"
+    )
+
+    view.toolbar.recent_only.setChecked(
+        True
+    )
+
+    assert view.randomizer.games == [
+        zulu,
+        alpha,
+    ]
+
+
+def test_recently_played_without_provider_is_safe():
+
+    game = FakeGame(
+        name="Duck Tales 2",
+        rom="/roms/duck.nes",
+    )
+
+    view = GalleryView(
+        [game]
+    )
+
+    view.toolbar.recent_only.setChecked(
+        True
+    )
+
+    assert view.randomizer.games == []
+
+
+def test_record_played_refreshes_recent_population():
+
+    first = FakeGame(
+        name="First",
+        rom="/roms/first.nes",
+    )
+
+    second = FakeGame(
+        name="Second",
+        rom="/roms/second.nes",
+    )
+
+    history = [
+        first.rom
+    ]
+
+    def played_handler(
+        game,
+    ):
+        if game.rom in history:
+            history.remove(
+                game.rom
+            )
+
+        history.insert(
+            0,
+            game.rom,
+        )
+
+    view = GalleryView(
+        [first, second],
+        played_handler=played_handler,
+        recent_provider=lambda: list(
+            history
+        ),
+    )
+
+    view.toolbar.recent_only.setChecked(
+        True
+    )
+
+    assert view.randomizer.games == [
+        first
+    ]
+
+    view.record_played(
+        second
+    )
+
+    assert view.randomizer.games == [
+        second,
+        first,
+    ]
+
+
+def test_favorites_button_uses_distinct_active_icon():
+
+    view = GalleryView(
+        []
+    )
+
+    assert (
+        view.toolbar.favorites_only.text()
+        == "☆ Favorites"
+    )
+
+    view.toolbar.favorites_only.click()
+
+    assert (
+        view.toolbar.favorites_only.text()
+        == "★ Favorites"
+    )
+
+    view.toolbar.favorites_only.click()
+
+    assert (
+        view.toolbar.favorites_only.text()
+        == "☆ Favorites"
+    )
+
+
+def test_recent_button_uses_distinct_active_icon():
+
+    view = GalleryView(
+        [],
+        recent_provider=lambda: [],
+    )
+
+    assert (
+        view.toolbar.recent_only.text()
+        == "○ Recently Played"
+    )
+
+    view.toolbar.recent_only.click()
+
+    assert (
+        view.toolbar.recent_only.text()
+        == "● Recently Played"
+    )
+
+    view.toolbar.recent_only.click()
+
+    assert (
+        view.toolbar.recent_only.text()
+        == "○ Recently Played"
+    )
+
+
+def test_gallery_view_selector_starts_visibly_active():
+
+    view = GalleryView(
+        []
+    )
+
+    selector = (
+        view.toolbar.view_selector
+    )
+
+    assert selector.gallery.isChecked()
+    assert not selector.details.isChecked()
+    assert not selector.compact.isChecked()
+
+    assert selector.gallery.text().startswith(
+        "● "
+    )
+
+    assert selector.details.text().startswith(
+        "○ "
+    )
+
+    assert selector.compact.text().startswith(
+        "○ "
+    )
+
+
+def test_details_view_selector_changes_active_state():
+
+    view = GalleryView(
+        []
+    )
+
+    selector = (
+        view.toolbar.view_selector
+    )
+
+    selector.details.click()
+
+    assert not selector.gallery.isChecked()
+    assert selector.details.isChecked()
+    assert not selector.compact.isChecked()
+
+    assert selector.gallery.text().startswith(
+        "○ "
+    )
+
+    assert selector.details.text().startswith(
+        "● "
+    )
+
+    assert selector.compact.text().startswith(
+        "○ "
+    )
+
+
+def test_compact_view_selector_changes_active_state():
+
+    view = GalleryView(
+        []
+    )
+
+    selector = (
+        view.toolbar.view_selector
+    )
+
+    selector.compact.click()
+
+    assert not selector.gallery.isChecked()
+    assert not selector.details.isChecked()
+    assert selector.compact.isChecked()
+
+    assert selector.gallery.text().startswith(
+        "○ "
+    )
+
+    assert selector.details.text().startswith(
+        "○ "
+    )
+
+    assert selector.compact.text().startswith(
+        "● "
+    )

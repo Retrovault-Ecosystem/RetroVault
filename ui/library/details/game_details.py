@@ -34,6 +34,7 @@ class GameDetails(QWidget):
         self,
         rvdb_service=None,
         favorite_handler=None,
+        played_handler=None,
     ):
 
         super().__init__()
@@ -47,6 +48,10 @@ class GameDetails(QWidget):
 
         self.favorite_handler = (
             favorite_handler
+        )
+
+        self.played_handler = (
+            played_handler
         )
 
 
@@ -456,8 +461,33 @@ Future:
 
 
 
-        self.launcher.launch(
+        launch_result = self.launcher.launch(
 
             profile
 
         )
+
+
+        if (
+            launch_result.get(
+                "success",
+                False,
+            )
+            and self.played_handler is not None
+        ):
+
+            try:
+
+                self.played_handler(
+                    self.current_game
+                )
+
+            except (
+                OSError,
+                ValueError,
+            ) as exc:
+
+                print(
+                    "Unable to record Recently Played: "
+                    f"{exc}"
+                )

@@ -86,6 +86,12 @@ class MainWindow(QMainWindow):
                 favorite_handler=(
                     controller.set_favorite
                 ),
+                played_handler=(
+                    controller.record_played
+                ),
+                recent_provider=(
+                    controller.recent
+                ),
             )
         )
 

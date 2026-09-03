@@ -59,6 +59,7 @@ class LibraryState:
         if not self.state_file.is_file():
             return {
                 "favorites": [],
+                "recent": [],
             }
 
         try:
@@ -102,10 +103,38 @@ class LibraryState:
                 "must contain string identities."
             )
 
+        recent = data.get(
+            "recent",
+            [],
+        )
+
+        if not isinstance(
+            recent,
+            list,
+        ):
+            raise ValueError(
+                "RetroVault Library recent "
+                "history must contain a JSON list."
+            )
+
+        if not all(
+            isinstance(item, str)
+            for item in recent
+        ):
+            raise ValueError(
+                "RetroVault Library recent "
+                "history must contain string identities."
+            )
+
         return {
             "favorites": list(
                 dict.fromkeys(
                     favorites
+                )
+            ),
+            "recent": list(
+                dict.fromkeys(
+                    recent
                 )
             ),
         }
@@ -152,6 +181,43 @@ class LibraryState:
         finally:
             if temporary.exists():
                 temporary.unlink()
+
+    def recent(
+        self,
+        limit=20,
+    ):
+        return self._read()[
+            "recent"
+        ][:limit]
+
+    def record_played(
+        self,
+        game,
+    ):
+        identity = game_identity(
+            game
+        )
+
+        data = self._read()
+
+        recent = [
+            item
+            for item in data["recent"]
+            if item != identity
+        ]
+
+        recent.insert(
+            0,
+            identity,
+        )
+
+        data["recent"] = recent[:20]
+
+        self._write(
+            data
+        )
+
+        return identity
 
     def favorites(self):
         return set(

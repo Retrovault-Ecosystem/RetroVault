@@ -25,6 +25,8 @@ class GalleryView(QWidget):
         games,
         rvdb_service=None,
         favorite_handler=None,
+        played_handler=None,
+        recent_provider=None,
     ):
 
         super().__init__()
@@ -38,6 +40,14 @@ class GalleryView(QWidget):
 
         self.favorite_handler = (
             favorite_handler
+        )
+
+        self.played_handler = (
+            played_handler
+        )
+
+        self.recent_provider = (
+            recent_provider
         )
 
 
@@ -95,6 +105,7 @@ class GalleryView(QWidget):
         self.details = GameDetails(
             rvdb_service=self.rvdb_service,
             favorite_handler=self.set_favorite,
+            played_handler=self.record_played,
         )
 
 
@@ -166,6 +177,11 @@ class GalleryView(QWidget):
         )
 
 
+        self.toolbar.recent_changed.connect(
+            self.refresh
+        )
+
+
         self.toolbar.sort_changed.connect(
             self.refresh
         )
@@ -208,7 +224,37 @@ class GalleryView(QWidget):
 
     def refresh(self):
 
-        games = self.all_games
+        recent_active = (
+            self.toolbar.recent_only.isChecked()
+        )
+
+        if (
+            recent_active
+            and self.recent_provider is not None
+        ):
+
+            identities = list(
+                self.recent_provider()
+            )
+
+            games_by_identity = {
+                str(game.rom): game
+                for game in self.all_games
+            }
+
+            games = [
+                games_by_identity[identity]
+                for identity in identities
+                if identity in games_by_identity
+            ]
+
+        elif recent_active:
+
+            games = []
+
+        else:
+
+            games = self.all_games
 
 
         text = (
@@ -270,20 +316,22 @@ class GalleryView(QWidget):
         )
 
 
-        if sort == "Name":
+        if not recent_active:
 
-            games = sorted(
-                games,
-                key=lambda g: g.name
-            )
+            if sort == "Name":
+
+                games = sorted(
+                    games,
+                    key=lambda g: g.name
+                )
 
 
-        elif sort == "Year":
+            elif sort == "Year":
 
-            games = sorted(
-                games,
-                key=lambda g: g.year or 0
-            )
+                games = sorted(
+                    games,
+                    key=lambda g: g.year or 0
+                )
 
 
         self.randomizer.games = games
@@ -324,6 +372,24 @@ class GalleryView(QWidget):
         self.library_view_stack.setCurrentWidget(
             self.compact_view
         )
+
+
+    def record_played(
+        self,
+        game,
+    ):
+
+        result = None
+
+        if self.played_handler is not None:
+
+            result = self.played_handler(
+                game
+            )
+
+        self.refresh()
+
+        return result
 
 
     def set_favorite(

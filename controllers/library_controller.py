@@ -21,6 +21,26 @@ class LibraryController:
         return self.library.get_games()
 
 
+    def recent(
+        self,
+        limit=20,
+    ):
+
+        return self.library.recent(
+            limit=limit
+        )
+
+
+    def record_played(
+        self,
+        game,
+    ):
+
+        return self.library.record_played(
+            game
+        )
+
+
     def set_favorite(
         self,
         game,

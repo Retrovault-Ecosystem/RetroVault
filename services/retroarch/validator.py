@@ -91,15 +91,20 @@ class LaunchValidator:
     ):
 
 
-        return (
+        if rom is None:
+            return False
 
+        if not os.path.isfile(
             rom
-            is not None
+        ):
+            return False
 
-            and
-
-            os.path.exists(
-                rom
+        try:
+            return (
+                os.path.getsize(
+                    rom
+                )
+                > 0
             )
-
-        )
+        except OSError:
+            return False

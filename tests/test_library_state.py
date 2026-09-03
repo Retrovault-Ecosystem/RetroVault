@@ -102,7 +102,8 @@ def test_set_favorite_persists_identity(
     assert data == {
         "favorites": [
             game_identity(game)
-        ]
+        ],
+        "recent": [],
     }
 
 
@@ -712,3 +713,449 @@ def test_library_service_can_remove_favorite(
     assert result is False
     assert game.favorite is False
     assert not state.is_favorite(game)
+
+
+def test_missing_state_defaults_to_no_recent_games(
+    tmp_path,
+):
+
+    state = LibraryState(
+        tmp_path
+        / "library-state.json"
+    )
+
+    assert state.recent() == []
+
+
+def test_record_played_persists_game_identity(
+    tmp_path,
+):
+
+    state_file = (
+        tmp_path
+        / "library-state.json"
+    )
+
+    state = LibraryState(
+        state_file
+    )
+
+    game = FakeGame(
+        name="Duck Tales 2",
+        rom=str(
+            tmp_path
+            / "duck-tales-2.nes"
+        )
+    )
+
+    state.record_played(
+        game
+    )
+
+    identity = game_identity(
+        game
+    )
+
+    assert state.recent() == [
+        identity
+    ]
+
+    data = json.loads(
+        state_file.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert data["recent"] == [
+        identity
+    ]
+
+
+def test_record_played_moves_existing_game_to_front(
+    tmp_path,
+):
+
+    state = LibraryState(
+        tmp_path
+        / "library-state.json"
+    )
+
+    first = FakeGame(
+        name="First",
+        rom=str(
+            tmp_path
+            / "first.nes"
+        )
+    )
+
+    second = FakeGame(
+        name="Second",
+        rom=str(
+            tmp_path
+            / "second.nes"
+        )
+    )
+
+    state.record_played(
+        first
+    )
+
+    state.record_played(
+        second
+    )
+
+    state.record_played(
+        first
+    )
+
+    assert state.recent() == [
+        game_identity(first),
+        game_identity(second),
+    ]
+
+
+def test_recent_games_survive_new_state_instance(
+    tmp_path,
+):
+
+    state_file = (
+        tmp_path
+        / "library-state.json"
+    )
+
+    game = FakeGame(
+        name="Persistent",
+        rom=str(
+            tmp_path
+            / "persistent.nes"
+        )
+    )
+
+    first = LibraryState(
+        state_file
+    )
+
+    first.record_played(
+        game
+    )
+
+    second = LibraryState(
+        state_file
+    )
+
+    assert second.recent() == [
+        game_identity(game)
+    ]
+
+
+def test_record_played_preserves_favorites(
+    tmp_path,
+):
+
+    state = LibraryState(
+        tmp_path
+        / "library-state.json"
+    )
+
+    favorite = FakeGame(
+        name="Favorite",
+        rom=str(
+            tmp_path
+            / "favorite.nes"
+        )
+    )
+
+    played = FakeGame(
+        name="Played",
+        rom=str(
+            tmp_path
+            / "played.nes"
+        )
+    )
+
+    state.set_favorite(
+        favorite,
+        True,
+    )
+
+    state.record_played(
+        played
+    )
+
+    assert state.is_favorite(
+        favorite
+    )
+
+    assert state.recent() == [
+        game_identity(played)
+    ]
+
+
+def test_set_favorite_preserves_recent_history(
+    tmp_path,
+):
+
+    state = LibraryState(
+        tmp_path
+        / "library-state.json"
+    )
+
+    played = FakeGame(
+        name="Played",
+        rom=str(
+            tmp_path
+            / "played.nes"
+        )
+    )
+
+    favorite = FakeGame(
+        name="Favorite",
+        rom=str(
+            tmp_path
+            / "favorite.nes"
+        )
+    )
+
+    state.record_played(
+        played
+    )
+
+    state.set_favorite(
+        favorite,
+        True,
+    )
+
+    assert state.recent() == [
+        game_identity(played)
+    ]
+
+
+def test_duplicate_stored_recent_entries_are_normalized(
+    tmp_path,
+):
+
+    state_file = (
+        tmp_path
+        / "library-state.json"
+    )
+
+    identity = str(
+        tmp_path
+        / "duplicate.nes"
+    )
+
+    state_file.write_text(
+        json.dumps(
+            {
+                "favorites": [],
+                "recent": [
+                    identity,
+                    identity,
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    state = LibraryState(
+        state_file
+    )
+
+    assert state.recent() == [
+        identity
+    ]
+
+
+def test_non_list_recent_history_is_rejected(
+    tmp_path,
+):
+
+    state_file = (
+        tmp_path
+        / "library-state.json"
+    )
+
+    state_file.write_text(
+        json.dumps(
+            {
+                "favorites": [],
+                "recent": "wrong",
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    state = LibraryState(
+        state_file
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "RetroVault Library recent "
+            "history must contain a JSON list"
+        ),
+    ):
+        state.recent()
+
+
+def test_non_string_recent_identity_is_rejected(
+    tmp_path,
+):
+
+    state_file = (
+        tmp_path
+        / "library-state.json"
+    )
+
+    state_file.write_text(
+        json.dumps(
+            {
+                "favorites": [],
+                "recent": [
+                    123,
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    state = LibraryState(
+        state_file
+    )
+
+    with pytest.raises(
+        ValueError,
+        match=(
+            "RetroVault Library recent "
+            "history must contain string identities"
+        ),
+    ):
+        state.recent()
+
+
+def test_recent_history_is_bounded(
+    tmp_path,
+):
+
+    state = LibraryState(
+        tmp_path
+        / "library-state.json"
+    )
+
+    games = [
+        FakeGame(
+            name=f"Game {index}",
+            rom=str(
+                tmp_path
+                / f"game-{index}.nes"
+            )
+        )
+        for index in range(30)
+    ]
+
+    for game in games:
+        state.record_played(
+            game
+        )
+
+    recent = state.recent()
+
+    assert len(recent) == 20
+
+    assert recent[0] == (
+        game_identity(
+            games[-1]
+        )
+    )
+
+    assert recent[-1] == (
+        game_identity(
+            games[-20]
+        )
+    )
+
+
+class FakeRecordingState:
+    def __init__(self):
+        self.recorded = []
+
+    def apply(
+        self,
+        games,
+    ):
+        return games
+
+    def record_played(
+        self,
+        game,
+    ):
+        self.recorded.append(
+            game
+        )
+
+        return (
+            f"recorded:{game.name}"
+        )
+
+
+def test_library_service_record_played_delegates_to_state():
+
+    from services.library.library_service import (
+        LibraryService,
+    )
+
+    state = FakeRecordingState()
+
+    service = LibraryService(
+        library_state=state
+    )
+
+    game = FakeGame(
+        name="Duck Tales 2",
+        rom="/roms/duck-tales-2.nes",
+    )
+
+    result = service.record_played(
+        game
+    )
+
+    assert state.recorded == [
+        game
+    ]
+
+    assert result == (
+        "recorded:Duck Tales 2"
+    )
+
+
+def test_library_service_recent_delegates_to_state():
+
+    class RecentState:
+        def apply(
+            self,
+            games,
+        ):
+            return games
+
+        def recent(
+            self,
+            limit=20,
+        ):
+            return [
+                f"recent:{limit}"
+            ]
+
+    from services.library.library_service import (
+        LibraryService,
+    )
+
+    service = LibraryService(
+        library_state=RecentState()
+    )
+
+    assert service.recent(
+        limit=7
+    ) == [
+        "recent:7"
+    ]

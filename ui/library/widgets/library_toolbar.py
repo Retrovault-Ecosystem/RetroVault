@@ -25,6 +25,8 @@ class LibraryToolbar(QWidget):
 
     favorites_changed = pyqtSignal(bool)
 
+    recent_changed = pyqtSignal(bool)
+
 
 
     def __init__(self):
@@ -92,7 +94,20 @@ class LibraryToolbar(QWidget):
         )
 
         self.favorites_only.toggled.connect(
-            self.favorites_changed.emit
+            self._favorites_toggled
+        )
+
+
+        self.recent_only = QPushButton(
+            "○ Recently Played"
+        )
+
+        self.recent_only.setCheckable(
+            True
+        )
+
+        self.recent_only.toggled.connect(
+            self._recent_toggled
         )
 
 
@@ -127,6 +142,11 @@ class LibraryToolbar(QWidget):
 
 
         layout.addWidget(
+            self.recent_only
+        )
+
+
+        layout.addWidget(
             self.view_selector
         )
 
@@ -138,4 +158,40 @@ class LibraryToolbar(QWidget):
 
         self.setLayout(
             layout
+        )
+
+
+    def _favorites_toggled(
+        self,
+        checked,
+    ):
+
+        self.favorites_only.setText(
+            (
+                "★ Favorites"
+                if checked
+                else "☆ Favorites"
+            )
+        )
+
+        self.favorites_changed.emit(
+            checked
+        )
+
+
+    def _recent_toggled(
+        self,
+        checked,
+    ):
+
+        self.recent_only.setText(
+            (
+                "● Recently Played"
+                if checked
+                else "○ Recently Played"
+            )
+        )
+
+        self.recent_changed.emit(
+            checked
         )
