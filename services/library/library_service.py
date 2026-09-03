@@ -1,6 +1,7 @@
 from services.library.source_manager import SourceManager
 from services.library.library_builder import LibraryBuilder
 from services.library.state import LibraryState
+from services.artwork import ArtworkService
 
 
 class LibraryService:
@@ -10,6 +11,7 @@ class LibraryService:
         self,
         rvdb_resolver=None,
         library_state=None,
+        artwork_service=None,
     ):
 
         self.sources = SourceManager()
@@ -24,6 +26,12 @@ class LibraryService:
             else LibraryState()
         )
 
+        self.artwork = (
+            artwork_service
+            if artwork_service is not None
+            else ArtworkService()
+        )
+
         self.games = []
 
 
@@ -36,6 +44,20 @@ class LibraryService:
         self.games = self.state.apply(
             games
         )
+
+        for game in self.games:
+
+            artwork = (
+                self.artwork.get_artwork(
+                    game
+                )
+            )
+
+            game.artwork = (
+                artwork
+                if artwork is not None
+                else ""
+            )
 
         return self.games
 

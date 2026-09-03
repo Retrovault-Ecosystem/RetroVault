@@ -203,6 +203,8 @@ class GameDetails(QWidget):
 
         self._refresh_favorite_button()
 
+        self._refresh_cover()
+
 
         self.title.setText(
             game.name
@@ -298,6 +300,39 @@ Future:
 
         )
 
+
+
+    def _refresh_cover(self):
+
+        self.cover.clear()
+
+        artwork = getattr(
+            self.current_game,
+            "artwork",
+            "",
+        )
+
+        if artwork:
+
+            pixmap = QPixmap(
+                artwork
+            )
+
+            if not pixmap.isNull():
+
+                self.cover.setPixmap(
+                    pixmap.scaled(
+                        self.cover.size(),
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
+                    )
+                )
+
+                return
+
+        self.cover.setText(
+            "🎮"
+        )
 
 
     def _refresh_favorite_button(self):

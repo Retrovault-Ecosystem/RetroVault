@@ -1159,3 +1159,128 @@ def test_library_service_recent_delegates_to_state():
     ) == [
         "recent:7"
     ]
+
+
+class FakeArtworkService:
+
+
+    def __init__(
+        self,
+        artwork=None,
+    ):
+
+        self.artwork = artwork
+
+        self.games = []
+
+
+    def get_artwork(
+        self,
+        game,
+    ):
+
+        self.games.append(
+            game
+        )
+
+        return self.artwork
+
+
+def test_library_service_applies_artwork_after_build(
+    monkeypatch,
+    tmp_path,
+):
+
+    from services.library.library_service import (
+        LibraryService,
+    )
+
+    game = FakeGame(
+        name="Artwork Game",
+        rom=str(
+            tmp_path
+            / "artwork-game.nes"
+        ),
+    )
+
+    builder = FakeBuilder(
+        [
+            game
+        ]
+    )
+
+    artwork_path = str(
+        tmp_path
+        / "cover.png"
+    )
+
+    artwork_service = FakeArtworkService(
+        artwork_path
+    )
+
+    service = LibraryService(
+        library_state=FakeState(),
+        artwork_service=artwork_service,
+    )
+
+    service.builder = builder
+
+    games = service.load()
+
+    assert games == [
+        game
+    ]
+
+    assert (
+        game.artwork
+        == artwork_path
+    )
+
+    assert artwork_service.games == [
+        game
+    ]
+
+
+def test_library_service_clears_invalid_artwork(
+    monkeypatch,
+    tmp_path,
+):
+
+    from services.library.library_service import (
+        LibraryService,
+    )
+
+    game = FakeGame(
+        name="Missing Artwork",
+        rom=str(
+            tmp_path
+            / "missing-artwork.nes"
+        ),
+    )
+
+    game.artwork = "stale.png"
+
+    builder = FakeBuilder(
+        [
+            game
+        ]
+    )
+
+    artwork_service = FakeArtworkService(
+        None
+    )
+
+    service = LibraryService(
+        library_state=FakeState(),
+        artwork_service=artwork_service,
+    )
+
+    service.builder = builder
+
+    games = service.load()
+
+    assert games == [
+        game
+    ]
+
+    assert game.artwork == ""

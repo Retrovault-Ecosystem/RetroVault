@@ -9,24 +9,71 @@ class ArtworkService:
         self.cache = {}
 
 
+    @staticmethod
+    def _identity(game):
+
+        rom = getattr(
+            game,
+            "rom",
+            "",
+        )
+
+        if rom:
+            return str(rom)
+
+        return (
+            getattr(
+                game,
+                "name",
+                "",
+            ),
+            getattr(
+                game,
+                "platform",
+                "",
+            ),
+        )
+
+
     def get_artwork(self, game):
 
-        if game.name in self.cache:
+        identity = self._identity(
+            game
+        )
 
-            return self.cache[game.name]
+        if identity in self.cache:
 
-
-        if game.artwork:
-
-            path = Path(
-                game.artwork
-            )
-
-            if path.exists():
-
-                self.cache[game.name] = str(path)
-
-                return str(path)
+            return self.cache[
+                identity
+            ]
 
 
-        return None
+        artwork = getattr(
+            game,
+            "artwork",
+            "",
+        )
+
+        if not artwork:
+
+            return None
+
+
+        path = Path(
+            artwork
+        )
+
+        if not path.is_file():
+
+            return None
+
+
+        resolved = str(
+            path
+        )
+
+        self.cache[
+            identity
+        ] = resolved
+
+        return resolved
