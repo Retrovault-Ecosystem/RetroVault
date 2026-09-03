@@ -501,6 +501,52 @@ class SettingsPage(QWidget):
             )
         )
 
+        self.artwork_directory_status = ReadyCheckButton(
+            self.STATUS_CHECK_TEXT
+        )
+
+        self.artwork_directory_status.setToolTip(
+            "Validate the artwork directory"
+        )
+
+        self.artwork_directory_status.clicked.connect(
+            self._validate_artwork_directory
+        )
+
+        self.artwork_directory_edit = QLineEdit()
+
+        self.artwork_directory_edit.setPlaceholderText(
+            "Artwork directory"
+        )
+
+        self.artwork_directory_browse_button = QPushButton(
+            "Browse…"
+        )
+
+        self.artwork_directory_browse_button.clicked.connect(
+            self._browse_artwork_directory
+        )
+
+        self._configure_path_editor(
+            self.artwork_directory_edit
+        )
+
+        self.artwork_directory_edit.textEdited.connect(
+            lambda _text:
+                self._mark_status_unchecked(
+                    self.artwork_directory_status,
+                    "Validate the artwork directory",
+                )
+        )
+
+        library_layout.addLayout(
+            self._path_editor_row(
+                self.artwork_directory_edit,
+                self.artwork_directory_browse_button,
+                self.artwork_directory_status,
+            )
+        )
+
         layout.addWidget(
             library_group
         )
@@ -990,6 +1036,13 @@ class SettingsPage(QWidget):
             "Library directory",
         )
 
+    def _validate_artwork_directory(self):
+        return self._validate_directory_control(
+            self.artwork_directory_edit,
+            self.artwork_directory_status,
+            "Artwork directory",
+        )
+
     def _populate(self):
         retroarch = (
             self.config
@@ -1121,6 +1174,27 @@ class SettingsPage(QWidget):
             "paths",
             {},
         )
+
+        artwork_directory = (
+            paths
+            .get(
+                "artwork",
+                {},
+            )
+            .get(
+                "directory",
+                "",
+            )
+        )
+
+        self.artwork_directory_edit.setText(
+            str(
+                artwork_directory
+                or ""
+            )
+        )
+
+        self._validate_artwork_directory()
 
         overlays = (
             paths
@@ -1273,6 +1347,30 @@ class SettingsPage(QWidget):
             library_path
         )
 
+        default_paths = defaults.get(
+            "paths",
+            {},
+        )
+
+        artwork_directory = (
+            default_paths
+            .get(
+                "artwork",
+                {},
+            )
+            .get(
+                "directory",
+                "",
+            )
+        )
+
+        self.artwork_directory_edit.setText(
+            str(
+                artwork_directory
+                or ""
+            )
+        )
+
         self._resize_path_editor(
             self.retroarch_edit
         )
@@ -1285,11 +1383,17 @@ class SettingsPage(QWidget):
             self.library_path_edit
         )
 
+        self._resize_path_editor(
+            self.artwork_directory_edit
+        )
+
         self._validate_retroarch_path()
 
         self._validate_core_directory()
 
         self._validate_library_directory()
+
+        self._validate_artwork_directory()
 
         self.save_status.setText(
             "Default paths restored — save to apply"
@@ -1392,6 +1496,30 @@ class SettingsPage(QWidget):
 
             self._validate_library_directory()
 
+    def _browse_artwork_directory(self):
+        selected = (
+            QFileDialog.getExistingDirectory(
+                self,
+                "Choose artwork directory",
+                self._browse_start_path(
+                    self.artwork_directory_edit.text()
+                ),
+                options=(
+                    QFileDialog.Option.ShowDirsOnly
+                    |
+                    QFileDialog.Option
+                    .DontUseNativeDialog
+                ),
+            )
+        )
+
+        if selected:
+            self.artwork_directory_edit.setText(
+                selected
+            )
+
+            self._validate_artwork_directory()
+
     def save_runtime_settings(self):
         executable = (
             self.retroarch_edit
@@ -1407,6 +1535,12 @@ class SettingsPage(QWidget):
 
         library_path = (
             self.library_path_edit
+            .text()
+            .strip()
+        )
+
+        artwork_directory = (
+            self.artwork_directory_edit
             .text()
             .strip()
         )
@@ -1428,6 +1562,8 @@ class SettingsPage(QWidget):
                 "Library path is not a readable directory"
             )
             return
+
+        self._validate_artwork_directory()
 
         library_directory = (
             Path(
@@ -1483,6 +1619,11 @@ class SettingsPage(QWidget):
                 "sources": [
                     source,
                 ],
+            },
+            "paths": {
+                "artwork": {
+                    "directory": artwork_directory,
+                },
             },
         }
 

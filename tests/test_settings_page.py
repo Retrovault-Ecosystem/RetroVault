@@ -88,6 +88,7 @@ def _write_defaults(
     library: Path,
     overlays: Path,
     shaders: Path,
+    artwork: Path = None,
     semantic_valid=True,
 ) -> Path:
     if semantic_valid:
@@ -97,6 +98,12 @@ def _write_defaults(
 
         _make_valid_core_directory(
             cores
+        )
+
+    if artwork is None:
+        artwork = (
+            tmp_path
+            / "artwork"
         )
 
     path = (
@@ -137,6 +144,11 @@ def _write_defaults(
             "shaders": {
                 "directory": str(
                     shaders
+                ),
+            },
+            "artwork": {
+                "directory": str(
+                    artwork
                 ),
             },
         },
@@ -4176,6 +4188,384 @@ def test_browse_dialogs_use_non_native_qt_dialogs(
     assert (
         library_options
         & show_dirs_only
+    )
+
+    assert not runtime.exists()
+
+
+def test_settings_page_displays_artwork_directory_editor(
+    tmp_path,
+):
+    _app()
+
+    retroarch = tmp_path / "retroarch"
+    cores = tmp_path / "cores"
+    library = tmp_path / "roms"
+    overlays = tmp_path / "overlays"
+    shaders = tmp_path / "shaders"
+    artwork = tmp_path / "artwork"
+
+    library.mkdir()
+    overlays.mkdir()
+    shaders.mkdir()
+    artwork.mkdir()
+
+    defaults = _write_defaults(
+        tmp_path,
+        retroarch=retroarch,
+        cores=cores,
+        library=library,
+        overlays=overlays,
+        shaders=shaders,
+        artwork=artwork,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    page = SettingsPage(
+        config_loader=ConfigLoader(
+            default_file=defaults,
+            runtime_file=runtime,
+        )
+    )
+
+    assert (
+        page.artwork_directory_edit.text()
+        == str(artwork)
+    )
+
+    assert (
+        page.artwork_directory_status.text()
+        == "Ready ✓"
+    )
+
+    assert (
+        page.artwork_directory_browse_button.text()
+        == "Browse…"
+    )
+
+    assert not runtime.exists()
+
+
+def test_settings_page_can_save_artwork_directory_override(
+    tmp_path,
+):
+    _app()
+
+    retroarch = tmp_path / "retroarch"
+    cores = tmp_path / "cores"
+    library = tmp_path / "roms"
+    overlays = tmp_path / "overlays"
+    shaders = tmp_path / "shaders"
+    artwork = tmp_path / "artwork"
+
+    library.mkdir()
+    overlays.mkdir()
+    shaders.mkdir()
+    artwork.mkdir()
+
+    defaults = _write_defaults(
+        tmp_path,
+        retroarch=retroarch,
+        cores=cores,
+        library=library,
+        overlays=overlays,
+        shaders=shaders,
+        artwork=artwork,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    from config import ConfigWriter
+
+    page = SettingsPage(
+        config_loader=ConfigLoader(
+            default_file=defaults,
+            runtime_file=runtime,
+        ),
+        config_writer=ConfigWriter(
+            runtime_file=runtime
+        ),
+    )
+
+    new_artwork = (
+        tmp_path
+        / "custom-artwork"
+    )
+
+    new_artwork.mkdir()
+
+    page.artwork_directory_edit.setText(
+        str(new_artwork)
+    )
+
+    page.save_runtime_settings()
+
+    assert runtime.is_file()
+
+    saved = json.loads(
+        runtime.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert (
+        saved[
+            "paths"
+        ][
+            "artwork"
+        ][
+            "directory"
+        ]
+        == str(new_artwork)
+    )
+
+    assert (
+        page.artwork_directory_edit.text()
+        == str(new_artwork)
+    )
+
+    assert (
+        page.artwork_directory_status.text()
+        == "Ready ✓"
+    )
+
+    assert (
+        page.save_status.text()
+        == "Settings saved"
+    )
+
+
+def test_settings_page_allows_missing_artwork_directory(
+    tmp_path,
+):
+    _app()
+
+    retroarch = tmp_path / "retroarch"
+    cores = tmp_path / "cores"
+    library = tmp_path / "roms"
+    overlays = tmp_path / "overlays"
+    shaders = tmp_path / "shaders"
+    artwork = tmp_path / "artwork"
+
+    library.mkdir()
+    overlays.mkdir()
+    shaders.mkdir()
+    artwork.mkdir()
+
+    defaults = _write_defaults(
+        tmp_path,
+        retroarch=retroarch,
+        cores=cores,
+        library=library,
+        overlays=overlays,
+        shaders=shaders,
+        artwork=artwork,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    from config import ConfigWriter
+
+    page = SettingsPage(
+        config_loader=ConfigLoader(
+            default_file=defaults,
+            runtime_file=runtime,
+        ),
+        config_writer=ConfigWriter(
+            runtime_file=runtime
+        ),
+    )
+
+    missing = (
+        tmp_path
+        / "missing-artwork"
+    )
+
+    page.artwork_directory_edit.setText(
+        str(missing)
+    )
+
+    page.save_runtime_settings()
+
+    assert runtime.is_file()
+
+    saved = json.loads(
+        runtime.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    assert (
+        saved[
+            "paths"
+        ][
+            "artwork"
+        ][
+            "directory"
+        ]
+        == str(missing)
+    )
+
+    assert (
+        page.artwork_directory_status.text()
+        == "Missing !"
+    )
+
+    assert (
+        page.save_status.text()
+        == "Settings saved"
+    )
+
+
+def test_settings_page_browses_artwork_with_non_native_dialog(
+    tmp_path,
+    monkeypatch,
+):
+    _app()
+
+    retroarch = tmp_path / "retroarch"
+    cores = tmp_path / "cores"
+    library = tmp_path / "roms"
+    overlays = tmp_path / "overlays"
+    shaders = tmp_path / "shaders"
+    artwork = tmp_path / "artwork"
+
+    library.mkdir()
+    overlays.mkdir()
+    shaders.mkdir()
+    artwork.mkdir()
+
+    defaults = _write_defaults(
+        tmp_path,
+        retroarch=retroarch,
+        cores=cores,
+        library=library,
+        overlays=overlays,
+        shaders=shaders,
+        artwork=artwork,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    page = SettingsPage(
+        config_loader=ConfigLoader(
+            default_file=defaults,
+            runtime_file=runtime,
+        )
+    )
+
+    selected = (
+        tmp_path
+        / "selected-artwork"
+    )
+
+    selected.mkdir()
+
+    captured = {}
+
+    from PyQt6.QtWidgets import QFileDialog
+
+    def fake_get_existing_directory(
+        parent,
+        caption,
+        directory,
+        *,
+        options,
+    ):
+        captured["parent"] = parent
+        captured["caption"] = caption
+        captured["directory"] = directory
+        captured["options"] = options
+
+        return str(selected)
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        fake_get_existing_directory,
+    )
+
+    page._browse_artwork_directory()
+
+    assert (
+        page.artwork_directory_edit.text()
+        == str(selected)
+    )
+
+    assert (
+        page.artwork_directory_status.text()
+        == "Ready ✓"
+    )
+
+    assert (
+        captured["caption"]
+        == "Choose artwork directory"
+    )
+
+    assert (
+        captured["options"]
+        & QFileDialog.Option.ShowDirsOnly
+    )
+
+    assert (
+        captured["options"]
+        & QFileDialog.Option.DontUseNativeDialog
+    )
+
+    assert not runtime.exists()
+
+
+def test_restore_default_paths_restores_artwork_directory(
+    tmp_path,
+):
+    _app()
+
+    retroarch = tmp_path / "retroarch"
+    cores = tmp_path / "cores"
+    library = tmp_path / "roms"
+    overlays = tmp_path / "overlays"
+    shaders = tmp_path / "shaders"
+    artwork = tmp_path / "artwork"
+
+    library.mkdir()
+    overlays.mkdir()
+    shaders.mkdir()
+    artwork.mkdir()
+
+    defaults = _write_defaults(
+        tmp_path,
+        retroarch=retroarch,
+        cores=cores,
+        library=library,
+        overlays=overlays,
+        shaders=shaders,
+        artwork=artwork,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    page = SettingsPage(
+        config_loader=ConfigLoader(
+            default_file=defaults,
+            runtime_file=runtime,
+        )
+    )
+
+    page.artwork_directory_edit.setText(
+        "/changed/artwork"
+    )
+
+    page.restore_default_paths()
+
+    assert (
+        page.artwork_directory_edit.text()
+        == str(artwork)
+    )
+
+    assert (
+        page.artwork_directory_status.text()
+        == "Ready ✓"
     )
 
     assert not runtime.exists()
