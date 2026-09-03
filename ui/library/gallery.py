@@ -44,6 +44,28 @@ class GalleryView(QWidget):
         self.toolbar = LibraryToolbar()
 
 
+        systems = sorted(
+            {
+                game.platform
+
+                for game in self.all_games
+
+                if game.platform
+            }
+        )
+
+
+        self.toolbar.system_filter.clear()
+
+        self.toolbar.system_filter.addItem(
+            "All Systems"
+        )
+
+        self.toolbar.system_filter.addItems(
+            systems
+        )
+
+
         main_layout.addWidget(
             self.toolbar
         )
@@ -177,6 +199,9 @@ class GalleryView(QWidget):
                 games,
                 key=lambda g: g.year or 0
             )
+
+
+        self.randomizer.games = games
 
 
         self.grid.update_games(
