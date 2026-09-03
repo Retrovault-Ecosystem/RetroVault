@@ -46,12 +46,12 @@ class ViewSelector(QWidget):
 
 
         self.compact.setEnabled(
-            False
+            True
         )
 
 
         self.compact.setToolTip(
-            "Compact Library view is not available yet."
+            "Show the compact Library view."
         )
 
 

@@ -560,7 +560,7 @@ def test_selecting_details_row_updates_game_details():
     )
 
 
-def test_compact_view_is_explicitly_disabled():
+def test_compact_view_is_enabled():
 
     view = GalleryView(
         [
@@ -572,5 +572,133 @@ def test_compact_view_is_explicitly_disabled():
 
     assert (
         view.toolbar.view_selector.compact.isEnabled()
-        is False
+        is True
+    )
+
+
+def test_compact_button_switches_to_compact_view():
+
+    game = FakeGame(
+        name="Adventure Island"
+    )
+
+    view = GalleryView(
+        [game]
+    )
+
+    view.toolbar.view_selector.compact.click()
+
+    assert (
+        view.library_view_stack.currentWidget()
+        is view.compact_view
+    )
+
+
+def test_compact_view_tracks_search_filter():
+
+    adventure = FakeGame(
+        name="Adventure Island",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+    )
+
+    mega_man = FakeGame(
+        name="Mega Man 2",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+    )
+
+    view = GalleryView(
+        [
+            adventure,
+            mega_man,
+        ]
+    )
+
+    view.toolbar.search.setText(
+        "Adventure"
+    )
+
+    assert view.compact_view.list.count() == 1
+
+    item = view.compact_view.list.item(
+        0
+    )
+
+    assert "Adventure Island" in item.text()
+    assert "Mega Man 2" not in item.text()
+
+
+def test_compact_view_tracks_system_filter():
+
+    adventure = FakeGame(
+        name="Adventure Island",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+    )
+
+    chrono = FakeGame(
+        name="Chrono Trigger",
+        platform="Super Nintendo",
+    )
+
+    view = GalleryView(
+        [
+            adventure,
+            chrono,
+        ]
+    )
+
+    index = (
+        view.toolbar.system_filter.findText(
+            "Super Nintendo"
+        )
+    )
+
+    assert index >= 0
+
+    view.toolbar.system_filter.setCurrentIndex(
+        index
+    )
+
+    assert view.compact_view.list.count() == 1
+
+    item = view.compact_view.list.item(
+        0
+    )
+
+    assert "Chrono Trigger" in item.text()
+    assert "Adventure Island" not in item.text()
+
+
+def test_selecting_compact_row_updates_game_details():
+
+    adventure = FakeGame(
+        name="Adventure Island"
+    )
+
+    mega_man = FakeGame(
+        name="Mega Man 2"
+    )
+
+    view = GalleryView(
+        [
+            adventure,
+            mega_man,
+        ]
+    )
+
+    view.toolbar.view_selector.compact.click()
+
+    view.compact_view.list.setCurrentRow(
+        1
+    )
+
+    assert view.details.current_game is mega_man
+
+    assert view.details.title.text() == (
+        "Mega Man 2"
     )

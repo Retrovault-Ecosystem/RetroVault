@@ -11,6 +11,7 @@ from ui.library.widgets.library_toolbar import LibraryToolbar
 
 from ui.library.details.game_details import GameDetails
 from ui.library.views.details_view import DetailsView
+from ui.library.views.compact_view import CompactView
 
 from services.library.randomizer import GameRandomizer
 
@@ -103,6 +104,12 @@ class GalleryView(QWidget):
         )
 
 
+        self.compact_view = CompactView(
+            games,
+            details=self.details,
+        )
+
+
         self.library_view_stack = QStackedWidget()
 
 
@@ -113,6 +120,11 @@ class GalleryView(QWidget):
 
         self.library_view_stack.addWidget(
             self.details_view
+        )
+
+
+        self.library_view_stack.addWidget(
+            self.compact_view
         )
 
 
@@ -165,6 +177,14 @@ class GalleryView(QWidget):
             self.toolbar.view_selector
             .details_selected.connect(
                 self.show_details_view
+            )
+        )
+
+
+        (
+            self.toolbar.view_selector
+            .compact_selected.connect(
+                self.show_compact_view
             )
         )
 
@@ -251,6 +271,11 @@ class GalleryView(QWidget):
         )
 
 
+        self.compact_view.update_games(
+            games
+        )
+
+
 
     def show_gallery_view(self):
 
@@ -263,6 +288,13 @@ class GalleryView(QWidget):
 
         self.library_view_stack.setCurrentWidget(
             self.details_view
+        )
+
+
+    def show_compact_view(self):
+
+        self.library_view_stack.setCurrentWidget(
+            self.compact_view
         )
 
 
