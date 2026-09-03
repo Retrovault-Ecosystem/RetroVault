@@ -194,6 +194,6 @@ class GalleryView(QWidget):
 
         if game:
 
-            print(
-                f"Random game selected: {game.name}"
+            self.details.show_game(
+                game
             )
