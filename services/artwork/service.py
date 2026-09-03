@@ -166,11 +166,71 @@ class ArtworkService:
             )
         )
 
-        if len(matches) != 1:
+        if len(matches) == 1:
+            return str(
+                matches[0]
+            )
+
+        if not matches:
+            return None
+
+        platform = str(
+            getattr(
+                game,
+                "platform",
+                "",
+            )
+            or ""
+        ).strip()
+
+        if (
+            not platform
+            or platform.casefold()
+            == "unknown"
+        ):
+            return None
+
+        platform_key = (
+            platform.casefold()
+        )
+
+        platform_matches = []
+
+        for path in matches:
+
+            try:
+                relative = (
+                    path.relative_to(
+                        self.directory
+                    )
+                )
+            except (
+                TypeError,
+                ValueError,
+            ):
+                continue
+
+            directory_parts = (
+                relative.parts[:-1]
+            )
+
+            if any(
+                part.casefold()
+                == platform_key
+                for part
+                in directory_parts
+            ):
+                platform_matches.append(
+                    path
+                )
+
+        if len(
+            platform_matches
+        ) != 1:
             return None
 
         return str(
-            matches[0]
+            platform_matches[0]
         )
 
 

@@ -423,6 +423,7 @@ def test_ambiguous_same_stem_artwork_is_not_selected(
 
     game = FakeGame(
         name="Same Game",
+        platform="Genesis",
         rom=str(
             tmp_path
             / "Same Game.nes"
@@ -554,3 +555,408 @@ def test_set_directory_replaces_root_and_clears_runtime_state(
     assert service.directory == second
     assert service.cache == {}
     assert service._index is None
+
+
+def test_platform_directory_resolves_ambiguous_same_stem(
+    tmp_path,
+):
+
+    root = (
+        tmp_path
+        / "artwork"
+    )
+
+    nes = (
+        root
+        / "Nintendo Entertainment System"
+        / "Box Front"
+    )
+
+    snes = (
+        root
+        / "Super Nintendo"
+        / "Box Front"
+    )
+
+    nes.mkdir(
+        parents=True
+    )
+
+    snes.mkdir(
+        parents=True
+    )
+
+    nes_cover = (
+        nes
+        / "Same Game.png"
+    )
+
+    snes_cover = (
+        snes
+        / "Same Game.png"
+    )
+
+    nes_cover.write_bytes(
+        b"nes"
+    )
+
+    snes_cover.write_bytes(
+        b"snes"
+    )
+
+    game = FakeGame(
+        name="Same Game",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+        rom=str(
+            tmp_path
+            / "Same Game.nes"
+        ),
+    )
+
+    service = ArtworkService(
+        directory=root
+    )
+
+    assert (
+        service.get_artwork(
+            game
+        )
+        == str(
+            nes_cover
+        )
+    )
+
+
+def test_platform_directory_matching_is_case_insensitive(
+    tmp_path,
+):
+
+    root = (
+        tmp_path
+        / "artwork"
+    )
+
+    nes = (
+        root
+        / "NINTENDO ENTERTAINMENT SYSTEM"
+        / "Box Front"
+    )
+
+    arcade = (
+        root
+        / "Arcade"
+        / "Box Front"
+    )
+
+    nes.mkdir(
+        parents=True
+    )
+
+    arcade.mkdir(
+        parents=True
+    )
+
+    nes_cover = (
+        nes
+        / "Same Game.png"
+    )
+
+    arcade_cover = (
+        arcade
+        / "Same Game.jpg"
+    )
+
+    nes_cover.write_bytes(
+        b"nes"
+    )
+
+    arcade_cover.write_bytes(
+        b"arcade"
+    )
+
+    game = FakeGame(
+        name="Same Game",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+        rom=str(
+            tmp_path
+            / "Same Game.nes"
+        ),
+    )
+
+    service = ArtworkService(
+        directory=root
+    )
+
+    assert (
+        service.get_artwork(
+            game
+        )
+        == str(
+            nes_cover
+        )
+    )
+
+
+def test_platform_disambiguation_requires_exact_component(
+    tmp_path,
+):
+
+    root = (
+        tmp_path
+        / "artwork"
+    )
+
+    first = (
+        root
+        / "Nintendo Entertainment System Covers"
+    )
+
+    second = (
+        root
+        / "Arcade"
+    )
+
+    first.mkdir(
+        parents=True
+    )
+
+    second.mkdir(
+        parents=True
+    )
+
+    (
+        first
+        / "Same Game.png"
+    ).write_bytes(
+        b"first"
+    )
+
+    (
+        second
+        / "Same Game.jpg"
+    ).write_bytes(
+        b"second"
+    )
+
+    game = FakeGame(
+        name="Same Game",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+        rom=str(
+            tmp_path
+            / "Same Game.nes"
+        ),
+    )
+
+    service = ArtworkService(
+        directory=root
+    )
+
+    assert (
+        service.get_artwork(
+            game
+        )
+        is None
+    )
+
+
+def test_unknown_platform_does_not_resolve_ambiguity(
+    tmp_path,
+):
+
+    root = (
+        tmp_path
+        / "artwork"
+    )
+
+    first = (
+        root
+        / "Unknown"
+    )
+
+    second = (
+        root
+        / "Arcade"
+    )
+
+    first.mkdir(
+        parents=True
+    )
+
+    second.mkdir(
+        parents=True
+    )
+
+    (
+        first
+        / "Same Game.png"
+    ).write_bytes(
+        b"unknown"
+    )
+
+    (
+        second
+        / "Same Game.jpg"
+    ).write_bytes(
+        b"arcade"
+    )
+
+    game = FakeGame(
+        name="Same Game",
+        platform="Unknown",
+        rom=str(
+            tmp_path
+            / "Same Game.nes"
+        ),
+    )
+
+    service = ArtworkService(
+        directory=root
+    )
+
+    assert (
+        service.get_artwork(
+            game
+        )
+        is None
+    )
+
+
+def test_multiple_matches_inside_platform_remain_ambiguous(
+    tmp_path,
+):
+
+    root = (
+        tmp_path
+        / "artwork"
+    )
+
+    front = (
+        root
+        / "Nintendo Entertainment System"
+        / "Box Front"
+    )
+
+    title = (
+        root
+        / "Nintendo Entertainment System"
+        / "Title Screen"
+    )
+
+    arcade = (
+        root
+        / "Arcade"
+    )
+
+    front.mkdir(
+        parents=True
+    )
+
+    title.mkdir(
+        parents=True
+    )
+
+    arcade.mkdir(
+        parents=True
+    )
+
+    (
+        front
+        / "Same Game.png"
+    ).write_bytes(
+        b"front"
+    )
+
+    (
+        title
+        / "Same Game.jpg"
+    ).write_bytes(
+        b"title"
+    )
+
+    (
+        arcade
+        / "Same Game.webp"
+    ).write_bytes(
+        b"arcade"
+    )
+
+    game = FakeGame(
+        name="Same Game",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+        rom=str(
+            tmp_path
+            / "Same Game.nes"
+        ),
+    )
+
+    service = ArtworkService(
+        directory=root
+    )
+
+    assert (
+        service.get_artwork(
+            game
+        )
+        is None
+    )
+
+
+def test_unique_same_stem_still_does_not_require_platform_directory(
+    tmp_path,
+):
+
+    root = (
+        tmp_path
+        / "artwork"
+    )
+
+    nested = (
+        root
+        / "Completely Different Folder"
+        / "Box Front"
+    )
+
+    nested.mkdir(
+        parents=True
+    )
+
+    cover = (
+        nested
+        / "Unique Game.png"
+    )
+
+    cover.write_bytes(
+        b"cover"
+    )
+
+    game = FakeGame(
+        name="Unique Game",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+        rom=str(
+            tmp_path
+            / "Unique Game.nes"
+        ),
+    )
+
+    service = ArtworkService(
+        directory=root
+    )
+
+    assert (
+        service.get_artwork(
+            game
+        )
+        == str(
+            cover
+        )
+    )
