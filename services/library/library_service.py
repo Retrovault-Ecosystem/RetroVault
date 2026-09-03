@@ -26,10 +26,28 @@ class LibraryService:
             else LibraryState()
         )
 
+        artwork_directory = (
+            self.sources.config
+            .get(
+                "paths",
+                {},
+            )
+            .get(
+                "artwork",
+                {},
+            )
+            .get(
+                "directory",
+                "",
+            )
+        )
+
         self.artwork = (
             artwork_service
             if artwork_service is not None
-            else ArtworkService()
+            else ArtworkService(
+                directory=artwork_directory
+            )
         )
 
         self.games = []

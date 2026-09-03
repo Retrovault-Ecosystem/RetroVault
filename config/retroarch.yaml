@@ -31,3 +31,7 @@ paths:
   shaders:
 
     directory: ~/.config/retroarch/shaders
+
+  artwork:
+
+    directory: ~/.local/share/retrovault/artwork

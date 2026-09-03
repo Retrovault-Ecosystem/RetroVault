@@ -211,3 +211,312 @@ def test_cached_artwork_uses_same_game_identity(
             artwork
         )
     )
+
+
+def test_discovers_exact_rom_stem_recursively(
+    tmp_path,
+):
+
+    root = (
+        tmp_path
+        / "artwork"
+    )
+
+    nested = (
+        root
+        / "Nintendo Entertainment System"
+    )
+
+    nested.mkdir(
+        parents=True
+    )
+
+    cover = (
+        nested
+        / "Duck Tales 2 (U).png"
+    )
+
+    cover.write_bytes(
+        b"cover"
+    )
+
+    game = FakeGame(
+        name="Duck Tales 2 (U)",
+        rom=str(
+            tmp_path
+            / "Duck Tales 2 (U).nes"
+        ),
+    )
+
+    service = ArtworkService(
+        directory=root
+    )
+
+    assert (
+        service.get_artwork(
+            game
+        )
+        == str(
+            cover
+        )
+    )
+
+
+def test_discovery_is_case_insensitive(
+    tmp_path,
+):
+
+    root = (
+        tmp_path
+        / "artwork"
+    )
+
+    root.mkdir()
+
+    cover = (
+        root
+        / "DUCK TALES 2 (U).JPG"
+    )
+
+    cover.write_bytes(
+        b"cover"
+    )
+
+    game = FakeGame(
+        name="Duck Tales 2 (U)",
+        rom=str(
+            tmp_path
+            / "duck tales 2 (u).nes"
+        ),
+    )
+
+    service = ArtworkService(
+        directory=root
+    )
+
+    assert (
+        service.get_artwork(
+            game
+        )
+        == str(
+            cover
+        )
+    )
+
+
+def test_discovery_ignores_wrong_filename(
+    tmp_path,
+):
+
+    root = (
+        tmp_path
+        / "artwork"
+    )
+
+    root.mkdir()
+
+    (
+        root
+        / "Duck Tales.png"
+    ).write_bytes(
+        b"cover"
+    )
+
+    game = FakeGame(
+        name="Duck Tales 2",
+        rom=str(
+            tmp_path
+            / "Duck Tales 2.nes"
+        ),
+    )
+
+    service = ArtworkService(
+        directory=root
+    )
+
+    assert (
+        service.get_artwork(
+            game
+        )
+        is None
+    )
+
+
+def test_discovery_ignores_unsupported_image_extension(
+    tmp_path,
+):
+
+    root = (
+        tmp_path
+        / "artwork"
+    )
+
+    root.mkdir()
+
+    (
+        root
+        / "Duck Tales 2.bmp"
+    ).write_bytes(
+        b"cover"
+    )
+
+    game = FakeGame(
+        name="Duck Tales 2",
+        rom=str(
+            tmp_path
+            / "Duck Tales 2.nes"
+        ),
+    )
+
+    service = ArtworkService(
+        directory=root
+    )
+
+    assert (
+        service.get_artwork(
+            game
+        )
+        is None
+    )
+
+
+def test_ambiguous_same_stem_artwork_is_not_selected(
+    tmp_path,
+):
+
+    root = (
+        tmp_path
+        / "artwork"
+    )
+
+    first = (
+        root
+        / "NES"
+    )
+
+    second = (
+        root
+        / "Arcade"
+    )
+
+    first.mkdir(
+        parents=True
+    )
+
+    second.mkdir(
+        parents=True
+    )
+
+    (
+        first
+        / "Same Game.png"
+    ).write_bytes(
+        b"first"
+    )
+
+    (
+        second
+        / "Same Game.jpg"
+    ).write_bytes(
+        b"second"
+    )
+
+    game = FakeGame(
+        name="Same Game",
+        rom=str(
+            tmp_path
+            / "Same Game.nes"
+        ),
+    )
+
+    service = ArtworkService(
+        directory=root
+    )
+
+    assert (
+        service.get_artwork(
+            game
+        )
+        is None
+    )
+
+
+def test_explicit_valid_artwork_beats_local_discovery(
+    tmp_path,
+):
+
+    root = (
+        tmp_path
+        / "artwork"
+    )
+
+    root.mkdir()
+
+    discovered = (
+        root
+        / "Duck Tales 2.png"
+    )
+
+    discovered.write_bytes(
+        b"discovered"
+    )
+
+    explicit = (
+        tmp_path
+        / "explicit.png"
+    )
+
+    explicit.write_bytes(
+        b"explicit"
+    )
+
+    game = FakeGame(
+        name="Duck Tales 2",
+        rom=str(
+            tmp_path
+            / "Duck Tales 2.nes"
+        ),
+        artwork=str(
+            explicit
+        ),
+    )
+
+    service = ArtworkService(
+        directory=root
+    )
+
+    assert (
+        service.get_artwork(
+            game
+        )
+        == str(
+            explicit
+        )
+    )
+
+
+def test_missing_artwork_directory_is_safe(
+    tmp_path,
+):
+
+    game = FakeGame(
+        name="Duck Tales 2",
+        rom=str(
+            tmp_path
+            / "Duck Tales 2.nes"
+        ),
+    )
+
+    service = ArtworkService(
+        directory=(
+            tmp_path
+            / "missing"
+        )
+    )
+
+    assert (
+        service.get_artwork(
+            game
+        )
+        is None
+    )

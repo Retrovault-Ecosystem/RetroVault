@@ -1284,3 +1284,90 @@ def test_library_service_clears_invalid_artwork(
     ]
 
     assert game.artwork == ""
+
+
+def test_library_service_uses_configured_artwork_root(
+    monkeypatch,
+    tmp_path,
+):
+
+    import importlib
+
+    module = importlib.import_module(
+        "services.library.library_service"
+    )
+
+    artwork_root = (
+        tmp_path
+        / "artwork"
+    )
+
+    class FakeSources:
+
+        def __init__(
+            self,
+        ):
+
+            self.config = {
+                "paths": {
+                    "artwork": {
+                        "directory": str(
+                            artwork_root
+                        ),
+                    },
+                },
+            }
+
+        def sources(
+            self,
+        ):
+
+            return []
+
+    class CapturedArtworkService:
+
+        def __init__(
+            self,
+            directory=None,
+        ):
+
+            self.directory = directory
+
+        def get_artwork(
+            self,
+            game,
+        ):
+
+            return None
+
+    monkeypatch.setattr(
+        module,
+        "SourceManager",
+        FakeSources,
+    )
+
+    monkeypatch.setattr(
+        module,
+        "ArtworkService",
+        CapturedArtworkService,
+    )
+
+    class PassState:
+
+        def apply(
+            self,
+            games,
+        ):
+
+            return games
+
+    service = module.LibraryService(
+        library_state=PassState()
+    )
+
+    assert (
+        service.artwork.directory
+        == str(
+            artwork_root
+        )
+    )

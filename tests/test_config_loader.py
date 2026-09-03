@@ -304,3 +304,30 @@ def test_runtime_root_must_be_mapping(
         match="must contain a JSON object",
     ):
         loader.load()
+
+
+def test_default_config_exposes_artwork_directory(
+    tmp_path,
+):
+
+    from config import ConfigLoader
+
+    loader = ConfigLoader(
+        runtime_file=(
+            tmp_path
+            / "missing-runtime.json"
+        )
+    )
+
+    config = loader.load()
+
+    assert (
+        config[
+            "paths"
+        ][
+            "artwork"
+        ][
+            "directory"
+        ]
+        == "~/.local/share/retrovault/artwork"
+    )
