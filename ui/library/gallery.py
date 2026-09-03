@@ -3,12 +3,14 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
     QHBoxLayout,
     QLabel,
+    QStackedWidget,
 )
 
 from ui.library.widgets.game_grid import GameGrid
 from ui.library.widgets.library_toolbar import LibraryToolbar
 
 from ui.library.details.game_details import GameDetails
+from ui.library.views.details_view import DetailsView
 
 from services.library.randomizer import GameRandomizer
 
@@ -95,8 +97,27 @@ class GalleryView(QWidget):
         )
 
 
+        self.details_view = DetailsView(
+            games,
+            details=self.details,
+        )
+
+
+        self.library_view_stack = QStackedWidget()
+
+
+        self.library_view_stack.addWidget(
+            self.grid
+        )
+
+
+        self.library_view_stack.addWidget(
+            self.details_view
+        )
+
+
         content_layout.addWidget(
-            self.grid,
+            self.library_view_stack,
             3
         )
 
@@ -129,6 +150,22 @@ class GalleryView(QWidget):
 
         self.toolbar.random_requested.connect(
             self.random_game
+        )
+
+
+        (
+            self.toolbar.view_selector
+            .gallery_selected.connect(
+                self.show_gallery_view
+            )
+        )
+
+
+        (
+            self.toolbar.view_selector
+            .details_selected.connect(
+                self.show_details_view
+            )
         )
 
 
@@ -208,6 +245,25 @@ class GalleryView(QWidget):
             games
         )
 
+
+        self.details_view.update_games(
+            games
+        )
+
+
+
+    def show_gallery_view(self):
+
+        self.library_view_stack.setCurrentWidget(
+            self.grid
+        )
+
+
+    def show_details_view(self):
+
+        self.library_view_stack.setCurrentWidget(
+            self.details_view
+        )
 
 
     def random_game(self):

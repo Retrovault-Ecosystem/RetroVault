@@ -390,3 +390,187 @@ def test_random_game_is_safe_when_filters_match_nothing():
     view.random_game()
 
     assert view.details.current_game is None
+
+
+def test_library_starts_in_gallery_view():
+
+    game = FakeGame(
+        name="Adventure Island"
+    )
+
+    view = GalleryView(
+        [game]
+    )
+
+    assert (
+        view.library_view_stack.currentWidget()
+        is view.grid
+    )
+
+
+def test_details_button_switches_to_details_view():
+
+    game = FakeGame(
+        name="Adventure Island"
+    )
+
+    view = GalleryView(
+        [game]
+    )
+
+    view.toolbar.view_selector.details.click()
+
+    assert (
+        view.library_view_stack.currentWidget()
+        is view.details_view
+    )
+
+
+def test_gallery_button_restores_gallery_view():
+
+    game = FakeGame(
+        name="Adventure Island"
+    )
+
+    view = GalleryView(
+        [game]
+    )
+
+    view.toolbar.view_selector.details.click()
+
+    assert (
+        view.library_view_stack.currentWidget()
+        is view.details_view
+    )
+
+    view.toolbar.view_selector.gallery.click()
+
+    assert (
+        view.library_view_stack.currentWidget()
+        is view.grid
+    )
+
+
+def test_details_view_tracks_search_filter():
+
+    adventure = FakeGame(
+        name="Adventure Island",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+    )
+
+    mega_man = FakeGame(
+        name="Mega Man 2",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+    )
+
+    view = GalleryView(
+        [
+            adventure,
+            mega_man,
+        ]
+    )
+
+    view.toolbar.search.setText(
+        "Adventure"
+    )
+
+    assert view.details_view.list.count() == 1
+
+    item = view.details_view.list.item(
+        0
+    )
+
+    assert "Adventure Island" in item.text()
+    assert "Mega Man 2" not in item.text()
+
+
+def test_details_view_tracks_system_filter():
+
+    adventure = FakeGame(
+        name="Adventure Island",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+    )
+
+    chrono = FakeGame(
+        name="Chrono Trigger",
+        platform="Super Nintendo",
+    )
+
+    view = GalleryView(
+        [
+            adventure,
+            chrono,
+        ]
+    )
+
+    index = (
+        view.toolbar.system_filter.findText(
+            "Super Nintendo"
+        )
+    )
+
+    assert index >= 0
+
+    view.toolbar.system_filter.setCurrentIndex(
+        index
+    )
+
+    assert view.details_view.list.count() == 1
+
+    item = view.details_view.list.item(
+        0
+    )
+
+    assert "Chrono Trigger" in item.text()
+    assert "Adventure Island" not in item.text()
+
+
+def test_selecting_details_row_updates_game_details():
+
+    adventure = FakeGame(
+        name="Adventure Island"
+    )
+
+    mega_man = FakeGame(
+        name="Mega Man 2"
+    )
+
+    view = GalleryView(
+        [
+            adventure,
+            mega_man,
+        ]
+    )
+
+    view.toolbar.view_selector.details.click()
+
+    view.details_view.list.setCurrentRow(
+        1
+    )
+
+    assert view.details.current_game is mega_man
+    assert view.details.title.text() == (
+        "Mega Man 2"
+    )
+
+
+def test_compact_view_is_explicitly_disabled():
+
+    view = GalleryView(
+        [
+            FakeGame(
+                name="Adventure Island"
+            )
+        ]
+    )
+
+    assert (
+        view.toolbar.view_selector.compact.isEnabled()
+        is False
+    )

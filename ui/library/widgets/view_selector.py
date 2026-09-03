@@ -45,6 +45,16 @@ class ViewSelector(QWidget):
         )
 
 
+        self.compact.setEnabled(
+            False
+        )
+
+
+        self.compact.setToolTip(
+            "Compact Library view is not available yet."
+        )
+
+
 
         self.gallery.clicked.connect(
             self.gallery_selected.emit
