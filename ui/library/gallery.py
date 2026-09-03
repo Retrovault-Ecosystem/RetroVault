@@ -24,6 +24,7 @@ class GalleryView(QWidget):
         self,
         games,
         rvdb_service=None,
+        favorite_handler=None,
     ):
 
         super().__init__()
@@ -33,6 +34,10 @@ class GalleryView(QWidget):
 
         self.rvdb_service = (
             rvdb_service
+        )
+
+        self.favorite_handler = (
+            favorite_handler
         )
 
 
@@ -88,7 +93,8 @@ class GalleryView(QWidget):
 
 
         self.details = GameDetails(
-            rvdb_service=self.rvdb_service
+            rvdb_service=self.rvdb_service,
+            favorite_handler=self.set_favorite,
         )
 
 
@@ -151,6 +157,11 @@ class GalleryView(QWidget):
 
 
         self.toolbar.system_changed.connect(
+            self.refresh
+        )
+
+
+        self.toolbar.favorites_changed.connect(
             self.refresh
         )
 
@@ -237,6 +248,23 @@ class GalleryView(QWidget):
             ]
 
 
+        if self.toolbar.favorites_only.isChecked():
+
+            games = [
+
+                game
+
+                for game in games
+
+                if getattr(
+                    game,
+                    "favorite",
+                    False,
+                )
+
+            ]
+
+
         sort = (
             self.toolbar.sort.currentText()
         )
@@ -296,6 +324,36 @@ class GalleryView(QWidget):
         self.library_view_stack.setCurrentWidget(
             self.compact_view
         )
+
+
+    def set_favorite(
+        self,
+        game,
+        favorite,
+    ):
+
+        if self.favorite_handler is not None:
+
+            self.favorite_handler(
+                game,
+                favorite,
+            )
+
+        else:
+
+            game.favorite = bool(
+                favorite
+            )
+
+
+        self.refresh()
+
+
+        if self.details.current_game is game:
+
+            self.details.show_game(
+                game
+            )
 
 
     def random_game(self):

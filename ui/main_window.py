@@ -82,7 +82,10 @@ class MainWindow(QMainWindow):
             "Library",
             LibraryPage(
                 controller.get_games(),
-                rvdb_service
+                rvdb_service=rvdb_service,
+                favorite_handler=(
+                    controller.set_favorite
+                ),
             )
         )
 

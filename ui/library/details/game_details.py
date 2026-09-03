@@ -33,6 +33,7 @@ class GameDetails(QWidget):
     def __init__(
         self,
         rvdb_service=None,
+        favorite_handler=None,
     ):
 
         super().__init__()
@@ -42,6 +43,10 @@ class GameDetails(QWidget):
 
         self.rvdb_service = (
             rvdb_service
+        )
+
+        self.favorite_handler = (
+            favorite_handler
         )
 
 
@@ -145,6 +150,23 @@ class GameDetails(QWidget):
 
 
 
+        self.favorite_button = QPushButton(
+            "☆ Add to Favorites"
+        )
+
+        self.favorite_button.setEnabled(
+            False
+        )
+
+        self.favorite_button.clicked.connect(
+            self.toggle_favorite
+        )
+
+        main.addWidget(
+            self.favorite_button
+        )
+
+
         self.launch_button = QPushButton(
             "▶ Launch Game"
         )
@@ -173,6 +195,8 @@ class GameDetails(QWidget):
 
 
         self.current_game = game
+
+        self._refresh_favorite_button()
 
 
         self.title.setText(
@@ -269,6 +293,89 @@ Future:
 
         )
 
+
+
+    def _refresh_favorite_button(self):
+
+        if self.current_game is None:
+
+            self.favorite_button.setEnabled(
+                False
+            )
+
+            self.favorite_button.setText(
+                "☆ Add to Favorites"
+            )
+
+            return
+
+
+        self.favorite_button.setEnabled(
+            True
+        )
+
+
+        if getattr(
+            self.current_game,
+            "favorite",
+            False,
+        ):
+
+            self.favorite_button.setText(
+                "★ Remove from Favorites"
+            )
+
+        else:
+
+            self.favorite_button.setText(
+                "☆ Add to Favorites"
+            )
+
+
+    def toggle_favorite(self):
+
+        if self.current_game is None:
+            return
+
+
+        favorite = not bool(
+            getattr(
+                self.current_game,
+                "favorite",
+                False,
+            )
+        )
+
+
+        try:
+
+            if self.favorite_handler is not None:
+
+                self.favorite_handler(
+                    self.current_game,
+                    favorite,
+                )
+
+            else:
+
+                self.current_game.favorite = (
+                    favorite
+                )
+
+        except (
+            OSError,
+            ValueError,
+        ) as exc:
+
+            print(
+                "Unable to update Favorite: "
+                f"{exc}"
+            )
+
+            return
+
+
+        self._refresh_favorite_button()
 
 
     def launch_game(self):

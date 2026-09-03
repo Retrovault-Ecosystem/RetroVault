@@ -5,6 +5,8 @@ from PyQt6.QtWidgets import (
     QVBoxLayout,
 )
 
+from PyQt6.QtCore import Qt
+
 from ui.library.widgets.game_card import GameCard
 
 
@@ -24,6 +26,11 @@ class GameGrid(QWidget):
 
 
         self.layout = QGridLayout()
+
+        self.layout.setAlignment(
+            Qt.AlignmentFlag.AlignTop
+            | Qt.AlignmentFlag.AlignLeft
+        )
 
 
         self.container.setLayout(

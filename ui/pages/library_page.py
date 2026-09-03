@@ -6,8 +6,10 @@ class LibraryPage(GalleryView):
         self,
         games,
         rvdb_service=None,
+        favorite_handler=None,
     ):
         super().__init__(
             games,
             rvdb_service=rvdb_service,
+            favorite_handler=favorite_handler,
         )

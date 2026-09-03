@@ -702,3 +702,637 @@ def test_selecting_compact_row_updates_game_details():
     assert view.details.title.text() == (
         "Mega Man 2"
     )
+
+
+def test_favorite_button_disabled_without_selection():
+
+    view = GalleryView(
+        [
+            FakeGame(
+                name="Adventure Island"
+            )
+        ]
+    )
+
+    assert (
+        view.details.favorite_button.isEnabled()
+        is False
+    )
+
+
+def test_selecting_game_enables_favorite_button():
+
+    game = FakeGame(
+        name="Adventure Island"
+    )
+
+    view = GalleryView(
+        [game]
+    )
+
+    view.details.show_game(
+        game
+    )
+
+    assert (
+        view.details.favorite_button.isEnabled()
+        is True
+    )
+
+    assert (
+        "Add to Favorites"
+        in view.details.favorite_button.text()
+    )
+
+
+def test_favorite_button_uses_injected_handler():
+
+    game = FakeGame(
+        name="Adventure Island"
+    )
+
+    calls = []
+
+    def favorite_handler(
+        selected_game,
+        favorite,
+    ):
+        calls.append(
+            (
+                selected_game,
+                favorite,
+            )
+        )
+
+        selected_game.favorite = favorite
+
+    view = GalleryView(
+        [game],
+        favorite_handler=favorite_handler,
+    )
+
+    view.details.show_game(
+        game
+    )
+
+    view.details.favorite_button.click()
+
+    assert calls == [
+        (
+            game,
+            True,
+        )
+    ]
+
+    assert game.favorite is True
+
+    assert (
+        "Remove from Favorites"
+        in view.details.favorite_button.text()
+    )
+
+
+def test_favorite_button_can_remove_favorite():
+
+    game = FakeGame(
+        name="Adventure Island",
+        favorite=True,
+    )
+
+    calls = []
+
+    def favorite_handler(
+        selected_game,
+        favorite,
+    ):
+        calls.append(
+            favorite
+        )
+
+        selected_game.favorite = favorite
+
+    view = GalleryView(
+        [game],
+        favorite_handler=favorite_handler,
+    )
+
+    view.details.show_game(
+        game
+    )
+
+    view.details.favorite_button.click()
+
+    assert calls == [
+        False
+    ]
+
+    assert game.favorite is False
+
+    assert (
+        "Add to Favorites"
+        in view.details.favorite_button.text()
+    )
+
+
+def test_gallery_refreshes_favorite_star_after_toggle():
+
+    game = FakeGame(
+        name="Adventure Island"
+    )
+
+    def favorite_handler(
+        selected_game,
+        favorite,
+    ):
+        selected_game.favorite = favorite
+
+    view = GalleryView(
+        [game],
+        favorite_handler=favorite_handler,
+    )
+
+    view.details.show_game(
+        game
+    )
+
+    view.details.favorite_button.click()
+
+    card = (
+        view.grid.layout
+        .itemAt(0)
+        .widget()
+    )
+
+    assert "⭐" in card.info.text()
+
+
+def test_favorites_filter_exists_and_starts_off():
+
+    view = GalleryView(
+        [
+            FakeGame(
+                name="Adventure Island"
+            )
+        ]
+    )
+
+    assert (
+        view.toolbar.favorites_only.isCheckable()
+        is True
+    )
+
+    assert (
+        view.toolbar.favorites_only.isChecked()
+        is False
+    )
+
+
+def test_favorites_filter_shows_only_favorite_games():
+
+    favorite = FakeGame(
+        name="Adventure Island",
+        favorite=True,
+    )
+
+    ordinary = FakeGame(
+        name="Mega Man 2",
+        favorite=False,
+    )
+
+    view = GalleryView(
+        [
+            favorite,
+            ordinary,
+        ]
+    )
+
+    view.toolbar.favorites_only.click()
+
+    assert _visible_game_names(
+        view
+    ) == [
+        "Adventure Island"
+    ]
+
+
+def test_favorites_filter_composes_with_search():
+
+    adventure = FakeGame(
+        name="Adventure Island",
+        favorite=True,
+    )
+
+    mega_man = FakeGame(
+        name="Mega Man 2",
+        favorite=True,
+    )
+
+    ordinary = FakeGame(
+        name="Adventure II",
+        favorite=False,
+    )
+
+    view = GalleryView(
+        [
+            adventure,
+            mega_man,
+            ordinary,
+        ]
+    )
+
+    view.toolbar.favorites_only.click()
+
+    view.toolbar.search.setText(
+        "Adventure"
+    )
+
+    assert _visible_game_names(
+        view
+    ) == [
+        "Adventure Island"
+    ]
+
+
+def test_favorites_filter_composes_with_system():
+
+    nes = FakeGame(
+        name="Adventure Island",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+        favorite=True,
+    )
+
+    snes = FakeGame(
+        name="Chrono Trigger",
+        platform="Super Nintendo",
+        favorite=True,
+    )
+
+    ordinary_nes = FakeGame(
+        name="Mega Man 2",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+        favorite=False,
+    )
+
+    view = GalleryView(
+        [
+            nes,
+            snes,
+            ordinary_nes,
+        ]
+    )
+
+    view.toolbar.favorites_only.click()
+
+    index = (
+        view.toolbar.system_filter.findText(
+            "Nintendo Entertainment System"
+        )
+    )
+
+    assert index >= 0
+
+    view.toolbar.system_filter.setCurrentIndex(
+        index
+    )
+
+    assert _visible_game_names(
+        view
+    ) == [
+        "Adventure Island"
+    ]
+
+
+def test_favorites_filter_composes_with_search_and_system():
+
+    target = FakeGame(
+        name="Adventure Island",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+        favorite=True,
+    )
+
+    wrong_system = FakeGame(
+        name="Adventure Island II",
+        platform="Super Nintendo",
+        favorite=True,
+    )
+
+    not_favorite = FakeGame(
+        name="Adventure Quest",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+        favorite=False,
+    )
+
+    view = GalleryView(
+        [
+            target,
+            wrong_system,
+            not_favorite,
+        ]
+    )
+
+    view.toolbar.favorites_only.click()
+
+    index = (
+        view.toolbar.system_filter.findText(
+            "Nintendo Entertainment System"
+        )
+    )
+
+    assert index >= 0
+
+    view.toolbar.system_filter.setCurrentIndex(
+        index
+    )
+
+    view.toolbar.search.setText(
+        "Adventure"
+    )
+
+    assert _visible_game_names(
+        view
+    ) == [
+        "Adventure Island"
+    ]
+
+
+def test_details_view_tracks_favorites_filter():
+
+    favorite = FakeGame(
+        name="Adventure Island",
+        favorite=True,
+    )
+
+    ordinary = FakeGame(
+        name="Mega Man 2",
+        favorite=False,
+    )
+
+    view = GalleryView(
+        [
+            favorite,
+            ordinary,
+        ]
+    )
+
+    view.toolbar.favorites_only.click()
+
+    assert view.details_view.list.count() == 1
+
+    assert (
+        "Adventure Island"
+        in view.details_view.list.item(0).text()
+    )
+
+
+def test_compact_view_tracks_favorites_filter():
+
+    favorite = FakeGame(
+        name="Adventure Island",
+        favorite=True,
+    )
+
+    ordinary = FakeGame(
+        name="Mega Man 2",
+        favorite=False,
+    )
+
+    view = GalleryView(
+        [
+            favorite,
+            ordinary,
+        ]
+    )
+
+    view.toolbar.favorites_only.click()
+
+    assert view.compact_view.list.count() == 1
+
+    assert (
+        "Adventure Island"
+        in view.compact_view.list.item(0).text()
+    )
+
+
+def test_random_game_respects_favorites_filter(
+    monkeypatch,
+):
+
+    favorite = FakeGame(
+        name="Adventure Island",
+        favorite=True,
+    )
+
+    ordinary = FakeGame(
+        name="Mega Man 2",
+        favorite=False,
+    )
+
+    view = GalleryView(
+        [
+            favorite,
+            ordinary,
+        ]
+    )
+
+    view.toolbar.favorites_only.click()
+
+    monkeypatch.setattr(
+        view.randomizer,
+        "random_game",
+        lambda: (
+            view.randomizer.games[0]
+            if view.randomizer.games
+            else None
+        ),
+    )
+
+    view.random_game()
+
+    assert view.randomizer.games == [
+        favorite
+    ]
+
+    assert (
+        view.details.current_game
+        is favorite
+    )
+
+
+def test_random_game_respects_favorites_search_and_system(
+    monkeypatch,
+):
+
+    target = FakeGame(
+        name="Adventure Island",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+        favorite=True,
+    )
+
+    other_favorite = FakeGame(
+        name="Chrono Trigger",
+        platform="Super Nintendo",
+        favorite=True,
+    )
+
+    ordinary = FakeGame(
+        name="Adventure II",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+        favorite=False,
+    )
+
+    view = GalleryView(
+        [
+            target,
+            other_favorite,
+            ordinary,
+        ]
+    )
+
+    view.toolbar.favorites_only.click()
+
+    index = (
+        view.toolbar.system_filter.findText(
+            "Nintendo Entertainment System"
+        )
+    )
+
+    assert index >= 0
+
+    view.toolbar.system_filter.setCurrentIndex(
+        index
+    )
+
+    view.toolbar.search.setText(
+        "Adventure"
+    )
+
+    monkeypatch.setattr(
+        view.randomizer,
+        "random_game",
+        lambda: (
+            view.randomizer.games[0]
+            if view.randomizer.games
+            else None
+        ),
+    )
+
+    view.random_game()
+
+    assert view.randomizer.games == [
+        target
+    ]
+
+    assert (
+        view.details.current_game
+        is target
+    )
+
+
+def test_favorites_filter_empty_result_is_safe():
+
+    ordinary = FakeGame(
+        name="Mega Man 2",
+        favorite=False,
+    )
+
+    view = GalleryView(
+        [ordinary]
+    )
+
+    view.toolbar.favorites_only.click()
+
+    assert _visible_game_names(
+        view
+    ) == []
+
+    assert view.randomizer.games == []
+
+    view.random_game()
+
+    assert view.details.current_game is None
+
+
+def test_removing_favorite_while_filter_active_removes_game():
+
+    game = FakeGame(
+        name="Adventure Island",
+        favorite=True,
+    )
+
+    def favorite_handler(
+        selected_game,
+        favorite,
+    ):
+        selected_game.favorite = favorite
+
+    view = GalleryView(
+        [game],
+        favorite_handler=favorite_handler,
+    )
+
+    view.toolbar.favorites_only.click()
+
+    assert _visible_game_names(
+        view
+    ) == [
+        "Adventure Island"
+    ]
+
+    view.details.show_game(
+        game
+    )
+
+    view.details.favorite_button.click()
+
+    assert game.favorite is False
+
+    assert _visible_game_names(
+        view
+    ) == []
+
+
+def test_gallery_grid_packs_sparse_results_top_left():
+
+    from PyQt6.QtCore import Qt
+
+    game = FakeGame(
+        name="Duck Tales 2 (U)",
+        platform=(
+            "Nintendo Entertainment System"
+        ),
+        favorite=True,
+    )
+
+    view = GalleryView(
+        [game]
+    )
+
+    view.toolbar.search.setText(
+        "Duck Tales 2"
+    )
+
+    alignment = (
+        view.grid.layout.alignment()
+    )
+
+    assert (
+        alignment
+        & Qt.AlignmentFlag.AlignTop
+    )
+
+    assert (
+        alignment
+        & Qt.AlignmentFlag.AlignLeft
+    )

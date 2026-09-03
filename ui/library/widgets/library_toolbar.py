@@ -23,6 +23,8 @@ class LibraryToolbar(QWidget):
 
     random_requested = pyqtSignal()
 
+    favorites_changed = pyqtSignal(bool)
+
 
 
     def __init__(self):
@@ -81,6 +83,19 @@ class LibraryToolbar(QWidget):
         self.view_selector = ViewSelector()
 
 
+        self.favorites_only = QPushButton(
+            "☆ Favorites"
+        )
+
+        self.favorites_only.setCheckable(
+            True
+        )
+
+        self.favorites_only.toggled.connect(
+            self.favorites_changed.emit
+        )
+
+
         self.random_button = QPushButton(
             "🎲 Random Game"
         )
@@ -103,6 +118,11 @@ class LibraryToolbar(QWidget):
 
         layout.addWidget(
             self.sort
+        )
+
+
+        layout.addWidget(
+            self.favorites_only
         )
 
 

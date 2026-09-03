@@ -19,3 +19,15 @@ class LibraryController:
     def get_games(self):
 
         return self.library.get_games()
+
+
+    def set_favorite(
+        self,
+        game,
+        favorite,
+    ):
+
+        return self.library.set_favorite(
+            game,
+            favorite,
+        )
