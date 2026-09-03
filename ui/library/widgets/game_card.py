@@ -172,7 +172,8 @@ class GameCard(QWidget):
 
                         200,
 
-                        Qt.AspectRatioMode.KeepAspectRatio
+                        Qt.AspectRatioMode.KeepAspectRatio,
+                        Qt.TransformationMode.SmoothTransformation,
 
                     )
 
