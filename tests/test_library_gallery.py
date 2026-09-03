@@ -1934,3 +1934,55 @@ def test_compact_view_selector_changes_active_state():
     assert selector.compact.text().startswith(
         "● "
     )
+
+
+def test_set_games_replaces_library_and_preserves_active_filters():
+    first = FakeGame(
+        name="Alpha",
+        platform="NES",
+        year=1985,
+        rom="/tmp/alpha.nes",
+        favorite=False,
+    )
+
+    replacement = FakeGame(
+        name="Alpha Replacement",
+        platform="NES",
+        year=1986,
+        rom="/tmp/alpha-replacement.nes",
+        favorite=False,
+    )
+
+    view = GalleryView(
+        [first]
+    )
+
+    view.toolbar.search.setText(
+        "alpha"
+    )
+
+    view.toolbar.system_filter.setCurrentText(
+        "NES"
+    )
+
+    view.set_games(
+        [replacement]
+    )
+
+    assert view.all_games == [
+        replacement
+    ]
+
+    assert (
+        view.toolbar.search.text()
+        == "alpha"
+    )
+
+    assert (
+        view.toolbar.system_filter.currentText()
+        == "NES"
+    )
+
+    assert view.randomizer.games == [
+        replacement
+    ]

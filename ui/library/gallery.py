@@ -222,6 +222,55 @@ class GalleryView(QWidget):
 
 
 
+    def set_games(
+        self,
+        games,
+    ):
+        current_system = (
+            self.toolbar.system_filter.currentText()
+        )
+
+        self.all_games = games
+
+        systems = sorted(
+            {
+                game.platform
+                for game in self.all_games
+                if game.platform
+            }
+        )
+
+        self.toolbar.system_filter.blockSignals(
+            True
+        )
+
+        try:
+            self.toolbar.system_filter.clear()
+
+            self.toolbar.system_filter.addItem(
+                "All Systems"
+            )
+
+            self.toolbar.system_filter.addItems(
+                systems
+            )
+
+            if current_system in systems:
+                self.toolbar.system_filter.setCurrentText(
+                    current_system
+                )
+            else:
+                self.toolbar.system_filter.setCurrentText(
+                    "All Systems"
+                )
+        finally:
+            self.toolbar.system_filter.blockSignals(
+                False
+            )
+
+        self.refresh()
+
+
     def refresh(self):
 
         recent_active = (

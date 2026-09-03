@@ -30,6 +30,23 @@ class ArtworkService:
         self._index = None
 
 
+    def set_directory(
+        self,
+        directory,
+    ):
+
+        self.directory = (
+            Path(
+                directory
+            ).expanduser()
+            if directory
+            else None
+        )
+
+        self.cache.clear()
+        self._index = None
+
+
     @staticmethod
     def _identity(game):
 

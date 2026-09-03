@@ -5,6 +5,7 @@ from pathlib import Path
 
 from PyQt6.QtCore import (
     Qt,
+    pyqtSignal,
 )
 from PyQt6.QtGui import (
     QColor,
@@ -200,6 +201,9 @@ class ReadyCheckButton(QPushButton):
 
 
 class SettingsPage(QWidget):
+
+    artwork_directory_saved = pyqtSignal(str)
+
     """Read-only view of RetroVault's effective runtime configuration."""
 
     READY = "Ready"
@@ -1642,6 +1646,29 @@ class SettingsPage(QWidget):
         )
 
         self._populate()
+
+        effective_artwork_directory = (
+            self.config
+            .get(
+                "paths",
+                {},
+            )
+            .get(
+                "artwork",
+                {},
+            )
+            .get(
+                "directory",
+                "",
+            )
+        )
+
+        self.artwork_directory_saved.emit(
+            str(
+                effective_artwork_directory
+                or ""
+            )
+        )
 
         self.save_status.setText(
             "Settings saved"

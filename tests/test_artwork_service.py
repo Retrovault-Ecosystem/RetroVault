@@ -520,3 +520,37 @@ def test_missing_artwork_directory_is_safe(
         )
         is None
     )
+
+
+def test_set_directory_replaces_root_and_clears_runtime_state(
+    tmp_path,
+):
+
+    from services.artwork.service import (
+        ArtworkService,
+    )
+
+    first = tmp_path / "first"
+    second = tmp_path / "second"
+
+    first.mkdir()
+    second.mkdir()
+
+    service = ArtworkService(
+        directory=first
+    )
+
+    service.cache["game"] = "cover.png"
+    service._index = {
+        "game": [
+            first / "cover.png"
+        ]
+    }
+
+    service.set_directory(
+        second
+    )
+
+    assert service.directory == second
+    assert service.cache == {}
+    assert service._index is None

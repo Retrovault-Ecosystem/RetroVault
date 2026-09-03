@@ -4569,3 +4569,100 @@ def test_restore_default_paths_restores_artwork_directory(
     )
 
     assert not runtime.exists()
+
+
+def test_successful_save_emits_effective_artwork_directory(
+    tmp_path,
+    monkeypatch,
+):
+    _app()
+
+    retroarch = (
+        tmp_path
+        / "retroarch"
+    )
+    retroarch.write_text(
+        "",
+        encoding="utf-8",
+    )
+
+    cores = (
+        tmp_path
+        / "cores"
+    )
+    cores.mkdir()
+
+    library = (
+        tmp_path
+        / "roms"
+    )
+    library.mkdir()
+
+    overlays = (
+        tmp_path
+        / "overlays"
+    )
+    overlays.mkdir()
+
+    shaders = (
+        tmp_path
+        / "shaders"
+    )
+    shaders.mkdir()
+
+    artwork = (
+        tmp_path
+        / "artwork"
+    )
+    artwork.mkdir()
+
+    defaults = _write_defaults(
+        tmp_path,
+        retroarch=retroarch,
+        cores=cores,
+        library=library,
+        overlays=overlays,
+        shaders=shaders,
+    )
+
+    runtime = (
+        tmp_path
+        / "runtime.json"
+    )
+
+    loader = ConfigLoader(
+        default_file=defaults,
+        runtime_file=runtime,
+    )
+
+    from config import ConfigWriter
+
+    writer = ConfigWriter(
+        runtime_file=runtime
+    )
+
+    page = SettingsPage(
+        config_loader=loader,
+        config_writer=writer,
+    )
+
+    page.artwork_directory_edit.setText(
+        str(artwork)
+    )
+
+    emitted = []
+
+    page.artwork_directory_saved.connect(
+        emitted.append
+    )
+
+    page.save_runtime_settings()
+
+    assert (
+        page.save_status.text()
+        == "Settings saved"
+    )
+
+    assert emitted == [
+        str(artwork)
+    ]

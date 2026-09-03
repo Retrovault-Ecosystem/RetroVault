@@ -78,21 +78,23 @@ class MainWindow(QMainWindow):
         self.pages = PageManager()
 
 
+        library_page = LibraryPage(
+            controller.get_games(),
+            rvdb_service=rvdb_service,
+            favorite_handler=(
+                controller.set_favorite
+            ),
+            played_handler=(
+                controller.record_played
+            ),
+            recent_provider=(
+                controller.recent
+            ),
+        )
+
         self.pages.add_page(
             "Library",
-            LibraryPage(
-                controller.get_games(),
-                rvdb_service=rvdb_service,
-                favorite_handler=(
-                    controller.set_favorite
-                ),
-                played_handler=(
-                    controller.record_played
-                ),
-                recent_provider=(
-                    controller.recent
-                ),
-            )
+            library_page
         )
 
         self.pages.add_page(
@@ -124,9 +126,21 @@ class MainWindow(QMainWindow):
             )
         )
 
+        settings_page = SettingsPage()
+
+        settings_page.artwork_directory_saved.connect(
+            lambda directory: (
+                library_page.set_games(
+                    controller.refresh_artwork(
+                        directory
+                    )
+                )
+            )
+        )
+
         self.pages.add_page(
             "Settings",
-            SettingsPage()
+            settings_page
         )
 
 

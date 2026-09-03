@@ -80,6 +80,34 @@ class LibraryService:
         return self.games
 
 
+    def refresh_artwork(
+        self,
+        directory,
+    ):
+
+        self.artwork.set_directory(
+            directory
+        )
+
+        for game in self.games:
+
+            game.artwork = ""
+
+            artwork = (
+                self.artwork.get_artwork(
+                    game
+                )
+            )
+
+            game.artwork = (
+                artwork
+                if artwork is not None
+                else ""
+            )
+
+        return self.games
+
+
     def get_games(self):
 
         return self.games

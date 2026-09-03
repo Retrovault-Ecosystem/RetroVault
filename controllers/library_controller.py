@@ -21,6 +21,18 @@ class LibraryController:
         return self.library.get_games()
 
 
+    def refresh_artwork(
+        self,
+        directory,
+    ):
+
+        return self.library.refresh_artwork(
+            directory
+        )
+
+
+
+
     def recent(
         self,
         limit=20,

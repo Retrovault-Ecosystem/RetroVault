@@ -1371,3 +1371,133 @@ def test_library_service_uses_configured_artwork_root(
             artwork_root
         )
     )
+
+
+def test_library_service_refresh_artwork_reenriches_existing_games(
+    tmp_path,
+):
+
+    from dataclasses import dataclass
+
+    from services.artwork.service import (
+        ArtworkService,
+    )
+
+    from services.library.library_service import (
+        LibraryService,
+    )
+
+    @dataclass
+    class Game:
+        name: str
+        rom: str
+        artwork: str = ""
+
+    old_root = tmp_path / "old"
+    new_root = tmp_path / "new"
+
+    old_root.mkdir()
+    new_root.mkdir()
+
+    rom = tmp_path / "DuckTales2.nes"
+
+    old_cover = (
+        old_root / "DuckTales2.png"
+    )
+
+    new_cover = (
+        new_root / "DuckTales2.png"
+    )
+
+    old_cover.write_bytes(
+        b"old"
+    )
+
+    new_cover.write_bytes(
+        b"new"
+    )
+
+    game = Game(
+        name="Duck Tales 2",
+        rom=str(rom),
+    )
+
+    artwork = ArtworkService(
+        directory=old_root
+    )
+
+    service = LibraryService(
+        artwork_service=artwork
+    )
+
+    service.games = [
+        game
+    ]
+
+    first = artwork.get_artwork(
+        game
+    )
+
+    game.artwork = first or ""
+
+    assert game.artwork == str(
+        old_cover
+    )
+
+    games = service.refresh_artwork(
+        new_root
+    )
+
+    assert games == [
+        game
+    ]
+
+    assert games[0] is game
+
+    assert game.artwork == str(
+        new_cover
+    )
+
+    assert artwork.directory == new_root
+
+
+def test_library_controller_refresh_artwork_delegates():
+
+    from controllers.library_controller import (
+        LibraryController,
+    )
+
+    class FakeLibrary:
+
+        def __init__(self):
+            self.calls = []
+
+        def refresh_artwork(
+            self,
+            directory,
+        ):
+            self.calls.append(
+                directory
+            )
+
+            return [
+                "updated"
+            ]
+
+    controller = object.__new__(
+        LibraryController
+    )
+
+    controller.library = FakeLibrary()
+
+    result = controller.refresh_artwork(
+        "/artwork/new"
+    )
+
+    assert result == [
+        "updated"
+    ]
+
+    assert controller.library.calls == [
+        "/artwork/new"
+    ]
