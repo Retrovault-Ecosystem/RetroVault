@@ -205,6 +205,10 @@ class GameDetails(QWidget):
             "▶ Launch Game"
         )
 
+        self.launch_button.setEnabled(
+            False
+        )
+
 
         self.launch_button.clicked.connect(
             self.launch_game
@@ -232,6 +236,7 @@ class GameDetails(QWidget):
 
         self._refresh_favorite_button()
         self._refresh_collection_button()
+        self._refresh_launch_button()
 
         self._refresh_cover()
 
@@ -644,3 +649,45 @@ Future:
                 f'to "{name}".'
             ),
         )
+
+    def _refresh_launch_button(
+        self,
+    ):
+        enabled = (
+            self.current_game is not None
+            and bool(
+                getattr(
+                    self.current_game,
+                    "rom",
+                    "",
+                )
+            )
+        )
+
+        self.launch_button.setEnabled(
+            enabled
+        )
+
+
+    def clear_game(
+        self,
+    ):
+        self.current_game = None
+
+        self.title.setText(
+            "Select a game"
+        )
+        self.metadata.clear()
+        self.description.clear()
+        self.profile.setText(
+            "Launch Profile"
+        )
+
+        self.cover.clear()
+        self.cover.setText(
+            "🎮"
+        )
+
+        self._refresh_favorite_button()
+        self._refresh_collection_button()
+        self._refresh_launch_button()
