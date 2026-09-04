@@ -679,3 +679,198 @@ Next operation:
 - determine the next RetroVault application milestone from the
   current production surface
 - preserve the protected RVDB consumer boundary
+
+---
+
+## RVA1-C.6-A — Manual Named Collections
+
+Status:
+
+**COMPLETE**
+
+RVA1-C.6-A establishes the first complete manual
+collection and playlist workflow in RetroVault.
+
+### Established User Workflow
+
+RetroVault now supports:
+
+- creating named manual collections
+- case-insensitive collection-name uniqueness
+- renaming collections while preserving membership
+- guarded collection deletion
+- adding the selected Library game to a collection
+- preventing duplicate game membership
+- preserving insertion order within a collection
+- removing selected games without deleting them from the Library
+- persistent collections across application restarts
+- collection browsing through the Playlists page
+- full Game Details for selected playlist games
+- artwork rendering or safe controller fallback
+- favorite management from playlist Game Details
+- adding a playlist game to another collection
+- launching playlist games through the established RetroArch path
+- safe clearing when a collection or game selection becomes empty
+
+The live workflow was verified with the user-owned collection:
+
+`NES Favorites`
+
+The collection persisted across restart and contained the
+verified Duck Tales 2 game without duplicate membership.
+
+### Collection Persistence Boundary
+
+Collection persistence is owned by:
+
+`services.library.collections.CollectionStore`
+
+The application-owned persistence file is:
+
+`~/.config/retrovault/collections.json`
+
+The format is versioned independently from favorites and
+Recently Played state.
+
+Collection membership uses the existing normalized ROM identity
+contract supplied by `game_identity`.
+
+Writes are atomic and use a temporary file followed by
+`os.replace`.
+
+The collection store rejects:
+
+- empty collection names
+- case-insensitive duplicate names
+- invalid JSON structures
+- unsupported persistence versions
+- non-string game identities
+- duplicate persisted collection names
+
+### Application Boundary
+
+Collection operations are exposed through:
+
+`CollectionStore`
+→ `LibraryService`
+→ `LibraryController`
+→ application UI
+
+The Playlists page and Game Details do not open or interpret the
+collection JSON file.
+
+Saved identities are resolved back to the current Library
+`Game` objects by `LibraryService`.
+
+Persisted members whose ROMs are no longer in the current Library
+are ignored safely rather than converted into stale launchable
+objects.
+
+Games without ROM identities cannot be persisted or launched from
+collections.
+
+### Shared Game Details and Launch Path
+
+Playlists reuses the established `GameDetails` component.
+
+Playlist launches therefore continue through the existing:
+
+`CoreResolver`
+→ `LaunchValidator`
+→ `RetroArchLauncher`
+
+No second playlist-specific launch implementation was introduced.
+
+The reusable Game Details selection state now guarantees:
+
+- Launch begins disabled with no selected game
+- Favorite and collection actions begin disabled
+- ROM-less games remain non-launchable
+- changing to an empty collection clears stale details
+- removing the selected member clears stale details
+- valid selection restores applicable actions
+
+The live Duck Tales 2 launch from Playlists was confirmed
+successful.
+
+### Published Checkpoints
+
+- `a10cd10` — add manual collection persistence
+- `064d90f` — expose collections through the Library boundary
+- `128bccd` — add the Playlists management page
+- `eb432e4` — add Library games to manual collections
+- `c498ef1` — remove games from manual collections
+- `1df4bfe` — add reusable Game Details selection safety
+- `827307e` — add Game Details and launch to Playlists
+
+Published implementation checkpoint before documentation closure:
+
+`827307e761894d74f6e6847975193a99dd8c4abf`
+
+### Validation
+
+Dedicated collection closure baseline:
+
+**53 passing tests**
+
+Complete RetroVault regression baseline:
+
+**324 passing tests**
+
+Compile gate:
+
+**GREEN**
+
+Live application verification confirmed:
+
+- collection creation
+- collection rename
+- guarded collection deletion
+- persistent membership
+- duplicate prevention
+- safe member removal
+- full playlist Game Details
+- stale-selection clearing
+- successful RetroArch launch from Playlists
+- clean normal application exit
+
+No genuine collection TODO, FIXME, stub, or unimplemented
+production debt was identified during closure.
+
+### Protected RVDB Boundary
+
+Protected RVDB remains unchanged at:
+
+`1e8bb5d19014fbd0db5b99bc4da382064a44a438`
+
+The collection implementation introduces no RVDB schema,
+validator, relationship, build, or release change.
+
+RetroVault continues consuming RVDB through the protected service
+boundary.
+
+### Closure Decision
+
+RVA1-C.6-A manual named collections is complete.
+
+No additional collection increment is required merely to extend
+the milestone numbering.
+
+Potential future enhancements such as collection reordering,
+smart collections, export, or richer playlist presentation may
+be introduced as new feature work when justified.
+
+### Next Operation
+
+Begin from the clean post-RVA1-C.6-A checkpoint.
+
+Determine the next RetroVault application milestone from the
+current production surface while preserving:
+
+1. the protected RVDB consumer boundary
+2. the verified Library launch workflow
+3. the verified Playlists launch workflow
+4. explicit application-owned persistence
+5. safe ROM-identity resolution
+6. user configuration protection
+7. the 324-test regression baseline unless intentionally expanded
