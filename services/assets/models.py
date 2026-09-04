@@ -63,3 +63,28 @@ class AssetExecutionResult:
             for move in self.moved
             if move.category == "shader"
         )
+
+@dataclass(frozen=True)
+class AssetPackagePlan:
+    category: str
+    source: Path
+    destination: Path
+    file_count: int
+    total_bytes: int
+    errors: tuple[str, ...]
+
+    @property
+    def ready(self) -> bool:
+        return (
+            self.file_count > 0
+            and not self.errors
+        )
+
+
+@dataclass(frozen=True)
+class AssetPackageResult:
+    category: str
+    source: Path
+    destination: Path
+    file_count: int
+    total_bytes: int

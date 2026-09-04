@@ -4,6 +4,8 @@ from pathlib import Path
 from .models import (
     AssetExecutionResult,
     AssetMove,
+    AssetPackagePlan,
+    AssetPackageResult,
     AssetPlan,
 )
 
@@ -212,6 +214,263 @@ class AssetOrganizer:
                     errors
                 )
             ),
+        )
+
+    def plan_shader_package(
+        self,
+        source_directory,
+        shader_directory,
+    ):
+        source = Path(
+            source_directory
+        ).expanduser().resolve(
+            strict=False
+        )
+        shader_root = Path(
+            shader_directory
+        ).expanduser().resolve(
+            strict=False
+        )
+        destination = (
+            shader_root
+            / source.name
+        )
+
+        errors = []
+
+        if not source.is_dir():
+            errors.append(
+                "Shader package source is not "
+                "a readable directory."
+            )
+
+            return AssetPackagePlan(
+                category="shader",
+                source=source,
+                destination=destination,
+                file_count=0,
+                total_bytes=0,
+                errors=tuple(errors),
+            )
+
+        if self._overlaps(
+            source,
+            destination,
+        ):
+            errors.append(
+                "Shader destination overlaps "
+                "the package source."
+            )
+
+        if destination.exists():
+            errors.append(
+                "Shader package destination "
+                f"already exists: {destination}"
+            )
+
+        symbolic_links = [
+            path
+            for path in source.rglob("*")
+            if path.is_symlink()
+        ]
+
+        if symbolic_links:
+            errors.append(
+                "Shader package contains "
+                "symbolic links."
+            )
+
+        files = sorted(
+            (
+                path
+                for path in source.rglob("*")
+                if path.is_file()
+                and not path.is_symlink()
+            ),
+            key=lambda path: (
+                str(
+                    path.relative_to(source)
+                ).casefold()
+            ),
+        )
+
+        presets = [
+            path
+            for path in files
+            if path.suffix.casefold()
+            in {
+                ".cgp",
+                ".glslp",
+                ".slangp",
+            }
+        ]
+
+        if not presets:
+            errors.append(
+                "Directory contains no supported "
+                "shader presets."
+            )
+
+        overlay_descriptors = [
+            path
+            for path in files
+            if (
+                path.suffix.casefold() == ".cfg"
+                and self._overlay_references(path)
+            )
+        ]
+
+        if overlay_descriptors:
+            errors.append(
+                "Directory also contains overlay "
+                "descriptors and is not a pure "
+                "shader package."
+            )
+
+        total_bytes = 0
+
+        for file_path in files:
+            try:
+                total_bytes += (
+                    file_path.stat().st_size
+                )
+            except OSError:
+                errors.append(
+                    "Shader package file cannot "
+                    f"be read: {file_path}"
+                )
+
+        return AssetPackagePlan(
+            category="shader",
+            source=source,
+            destination=destination,
+            file_count=len(files),
+            total_bytes=total_bytes,
+            errors=tuple(
+                dict.fromkeys(
+                    errors
+                )
+            ),
+        )
+
+    def execute_package(
+        self,
+        plan,
+    ):
+        if not isinstance(
+            plan,
+            AssetPackagePlan,
+        ):
+            raise TypeError(
+                "Expected an AssetPackagePlan."
+            )
+
+        if not plan.ready:
+            raise ValueError(
+                "Asset package plan is not ready."
+            )
+
+        if not plan.source.is_dir():
+            raise ValueError(
+                "Package source no longer exists."
+            )
+
+        if plan.destination.exists():
+            raise ValueError(
+                "Package destination now exists."
+            )
+
+        current_files = [
+            path
+            for path in plan.source.rglob("*")
+            if path.is_file()
+            and not path.is_symlink()
+        ]
+
+        if len(current_files) != plan.file_count:
+            raise ValueError(
+                "Package contents changed after "
+                "planning."
+            )
+
+        current_bytes = sum(
+            path.stat().st_size
+            for path in current_files
+        )
+
+        if current_bytes != plan.total_bytes:
+            raise ValueError(
+                "Package contents changed after "
+                "planning."
+            )
+
+        plan.destination.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        try:
+            shutil.move(
+                str(plan.source),
+                str(plan.destination),
+            )
+        except Exception as exc:
+            rollback_error = None
+
+            if (
+                plan.destination.exists()
+                and not plan.source.exists()
+            ):
+                try:
+                    shutil.move(
+                        str(plan.destination),
+                        str(plan.source),
+                    )
+                except Exception as rollback_exc:
+                    rollback_error = (
+                        rollback_exc
+                    )
+
+            if rollback_error is not None:
+                raise RuntimeError(
+                    "Shader package move and "
+                    "rollback failed."
+                ) from rollback_error
+
+            raise RuntimeError(
+                "Shader package move failed."
+            ) from exc
+
+        if (
+            plan.source.exists()
+            or not plan.destination.is_dir()
+        ):
+            try:
+                if (
+                    plan.destination.exists()
+                    and not plan.source.exists()
+                ):
+                    shutil.move(
+                        str(plan.destination),
+                        str(plan.source),
+                    )
+            except Exception as rollback_exc:
+                raise RuntimeError(
+                    "Shader package verification "
+                    "and rollback failed."
+                ) from rollback_exc
+
+            raise RuntimeError(
+                "Shader package move could not "
+                "be verified and was rolled back."
+            )
+
+        return AssetPackageResult(
+            category=plan.category,
+            source=plan.source,
+            destination=plan.destination,
+            file_count=plan.file_count,
+            total_bytes=plan.total_bytes,
         )
 
     def execute(

@@ -1,6 +1,8 @@
 from .models import (
     AssetExecutionResult,
     AssetMove,
+    AssetPackagePlan,
+    AssetPackageResult,
     AssetPlan,
 )
 from .organizer import (
@@ -12,5 +14,7 @@ __all__ = [
     "AssetExecutionResult",
     "AssetMove",
     "AssetOrganizer",
+    "AssetPackagePlan",
+    "AssetPackageResult",
     "AssetPlan",
 ]
