@@ -88,3 +88,50 @@ class AssetPackageResult:
     destination: Path
     file_count: int
     total_bytes: int
+
+@dataclass(frozen=True)
+class AssetLayoutMove:
+    component: str
+    source: Path
+    destination: Path
+    file_count: int
+    total_bytes: int
+
+
+@dataclass(frozen=True)
+class AssetLayoutPlan:
+    source_root: Path
+    moves: tuple[AssetLayoutMove, ...]
+    errors: tuple[str, ...]
+
+    @property
+    def ready(self) -> bool:
+        return bool(
+            self.moves
+        ) and not self.errors
+
+    @property
+    def file_count(self) -> int:
+        return sum(
+            move.file_count
+            for move in self.moves
+        )
+
+    @property
+    def total_bytes(self) -> int:
+        return sum(
+            move.total_bytes
+            for move in self.moves
+        )
+
+
+@dataclass(frozen=True)
+class AssetLayoutResult:
+    moves: tuple[AssetLayoutMove, ...]
+
+    @property
+    def file_count(self) -> int:
+        return sum(
+            move.file_count
+            for move in self.moves
+        )

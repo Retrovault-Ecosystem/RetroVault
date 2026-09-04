@@ -3,6 +3,9 @@ from pathlib import Path
 
 from .models import (
     AssetExecutionResult,
+    AssetLayoutMove,
+    AssetLayoutPlan,
+    AssetLayoutResult,
     AssetMove,
     AssetPackagePlan,
     AssetPackageResult,
@@ -214,6 +217,299 @@ class AssetOrganizer:
                     errors
                 )
             ),
+        )
+
+    def plan_mega_bezel_layout(
+        self,
+        source_directory,
+        shader_directory,
+    ):
+        source_root = Path(
+            source_directory
+        ).expanduser().resolve(
+            strict=False
+        )
+        shader_root = Path(
+            shader_directory
+        ).expanduser().resolve(
+            strict=False
+        )
+
+        if not source_root.is_dir():
+            return AssetLayoutPlan(
+                source_root=source_root,
+                moves=(),
+                errors=(
+                    "Mega Bezel source is not "
+                    "a readable directory.",
+                ),
+            )
+
+        specifications = (
+            (
+                "Mega Bezel",
+                "Mega_Bezel_V*/Mega_Bezel",
+                (
+                    shader_root
+                    / "shaders_slang"
+                    / "bezel"
+                    / "Mega_Bezel"
+                ),
+            ),
+            (
+                "HSM Mega Bezel Examples",
+                (
+                    "HSM_Mega_Bezel_Examples_V*/"
+                    "HSM_Mega_Bezel_Examples"
+                ),
+                (
+                    shader_root
+                    / "Mega_Bezel_Packs"
+                    / "HSM_Mega_Bezel_Examples"
+                ),
+            ),
+            (
+                "OrionsAngel Console Pack",
+                "Orionsangel-Original-Console*",
+                (
+                    shader_root
+                    / "Mega_Bezel_Packs"
+                    / (
+                        "Orionsangel-"
+                        "Original-Console-main"
+                    )
+                ),
+            ),
+        )
+
+        moves = []
+        errors = []
+
+        for (
+            component,
+            pattern,
+            destination,
+        ) in specifications:
+            matches = sorted(
+                (
+                    candidate
+                    for candidate in source_root.glob(
+                        pattern
+                    )
+                    if candidate.is_dir()
+                ),
+                key=lambda candidate: (
+                    str(candidate).casefold()
+                ),
+            )
+
+            if len(matches) != 1:
+                errors.append(
+                    (
+                        f"{component} component "
+                        "was not found uniquely."
+                    )
+                )
+                continue
+
+            component_source = matches[0]
+
+            if destination.exists():
+                errors.append(
+                    (
+                        f"{component} destination "
+                        "already exists: "
+                        f"{destination}"
+                    )
+                )
+
+            if self._overlaps(
+                component_source,
+                destination,
+            ):
+                errors.append(
+                    (
+                        f"{component} destination "
+                        "overlaps its source."
+                    )
+                )
+
+            links = [
+                candidate
+                for candidate
+                in component_source.rglob("*")
+                if candidate.is_symlink()
+            ]
+
+            if links:
+                errors.append(
+                    (
+                        f"{component} contains "
+                        "symbolic links."
+                    )
+                )
+
+            files = [
+                candidate
+                for candidate
+                in component_source.rglob("*")
+                if (
+                    candidate.is_file()
+                    and not candidate.is_symlink()
+                )
+            ]
+
+            if not files:
+                errors.append(
+                    (
+                        f"{component} contains "
+                        "no files."
+                    )
+                )
+
+            total_bytes = 0
+
+            for file_path in files:
+                try:
+                    total_bytes += (
+                        file_path.stat().st_size
+                    )
+                except OSError:
+                    errors.append(
+                        (
+                            f"{component} contains "
+                            "an unreadable file: "
+                            f"{file_path}"
+                        )
+                    )
+
+            moves.append(
+                AssetLayoutMove(
+                    component=component,
+                    source=component_source,
+                    destination=destination,
+                    file_count=len(files),
+                    total_bytes=total_bytes,
+                )
+            )
+
+        return AssetLayoutPlan(
+            source_root=source_root,
+            moves=tuple(moves),
+            errors=tuple(
+                dict.fromkeys(
+                    errors
+                )
+            ),
+        )
+
+    def execute_layout(
+        self,
+        plan,
+    ):
+        if not isinstance(
+            plan,
+            AssetLayoutPlan,
+        ):
+            raise TypeError(
+                "Expected an AssetLayoutPlan."
+            )
+
+        if not plan.ready:
+            raise ValueError(
+                "Asset layout plan is not ready."
+            )
+
+        for move in plan.moves:
+            if not move.source.is_dir():
+                raise ValueError(
+                    "Layout component source "
+                    f"no longer exists: {move.source}"
+                )
+
+            if move.destination.exists():
+                raise ValueError(
+                    "Layout component destination "
+                    f"now exists: {move.destination}"
+                )
+
+            files = [
+                path
+                for path in move.source.rglob("*")
+                if (
+                    path.is_file()
+                    and not path.is_symlink()
+                )
+            ]
+
+            total_bytes = sum(
+                path.stat().st_size
+                for path in files
+            )
+
+            if (
+                len(files) != move.file_count
+                or total_bytes != move.total_bytes
+            ):
+                raise ValueError(
+                    "Layout component changed "
+                    f"after planning: {move.source}"
+                )
+
+        completed = []
+
+        try:
+            for move in plan.moves:
+                move.destination.parent.mkdir(
+                    parents=True,
+                    exist_ok=True,
+                )
+
+                shutil.move(
+                    str(move.source),
+                    str(move.destination),
+                )
+
+                completed.append(move)
+        except Exception as exc:
+            rollback_errors = []
+
+            for move in reversed(
+                completed
+            ):
+                try:
+                    move.source.parent.mkdir(
+                        parents=True,
+                        exist_ok=True,
+                    )
+
+                    if move.destination.exists():
+                        shutil.move(
+                            str(move.destination),
+                            str(move.source),
+                        )
+                except Exception as rollback_exc:
+                    rollback_errors.append(
+                        str(rollback_exc)
+                    )
+
+            if rollback_errors:
+                raise RuntimeError(
+                    "Canonical layout move and "
+                    "rollback failed: "
+                    + "; ".join(
+                        rollback_errors
+                    )
+                ) from exc
+
+            raise RuntimeError(
+                "Canonical layout move failed; "
+                "completed components were "
+                "rolled back."
+            ) from exc
+
+        return AssetLayoutResult(
+            moves=tuple(completed)
         )
 
     def plan_shader_package(
