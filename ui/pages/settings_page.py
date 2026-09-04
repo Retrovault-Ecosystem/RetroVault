@@ -203,6 +203,7 @@ class ReadyCheckButton(QPushButton):
 class SettingsPage(QWidget):
 
     artwork_directory_saved = pyqtSignal(str)
+    overlay_directory_saved = pyqtSignal(str)
 
     """Read-only view of RetroVault's effective runtime configuration."""
 
@@ -563,16 +564,63 @@ class SettingsPage(QWidget):
             assets_group
         )
 
-        self.overlays_value = QLabel()
-        self.overlays_status = QLabel()
-
-        assets_layout.addLayout(
-            self._setting_row(
-                "Overlays",
-                self.overlays_value,
-                self.overlays_status,
+        self.overlay_directory_status = (
+            ReadyCheckButton(
+                self.STATUS_CHECK_TEXT
             )
         )
+
+        self.overlay_directory_status.setToolTip(
+            "Validate the overlay directory"
+        )
+
+        self.overlay_directory_status.clicked.connect(
+            self._validate_overlay_directory
+        )
+
+        self.overlay_directory_edit = QLineEdit()
+
+        self.overlay_directory_edit.setPlaceholderText(
+            "Overlay directory"
+        )
+
+        self.overlay_directory_browse_button = (
+            QPushButton(
+                "Browse…"
+            )
+        )
+
+        (
+            self.overlay_directory_browse_button
+            .clicked.connect(
+                self._browse_overlay_directory
+            )
+        )
+
+        self._configure_path_editor(
+            self.overlay_directory_edit
+        )
+
+        self.overlay_directory_edit.textEdited.connect(
+            lambda _text:
+                self._mark_status_unchecked(
+                    self.overlay_directory_status,
+                    "Validate the overlay directory",
+                )
+        )
+
+        assets_layout.addLayout(
+            self._path_editor_row(
+                self.overlay_directory_edit,
+                self.overlay_directory_browse_button,
+                self.overlay_directory_status,
+            )
+        )
+
+        # Compatibility inspection values retained
+        # outside the visible layout.
+        self.overlays_value = QLabel()
+        self.overlays_status = QLabel()
 
         self.shaders_value = QLabel()
         self.shaders_status = QLabel()
@@ -1047,6 +1095,13 @@ class SettingsPage(QWidget):
             "Artwork directory",
         )
 
+    def _validate_overlay_directory(self):
+        return self._validate_directory_control(
+            self.overlay_directory_edit,
+            self.overlay_directory_status,
+            "Overlay directory",
+        )
+
     def _populate(self):
         retroarch = (
             self.config
@@ -1224,6 +1279,15 @@ class SettingsPage(QWidget):
             )
         )
 
+        self.overlay_directory_edit.setText(
+            str(
+                overlays
+                or ""
+            )
+        )
+
+        self._validate_overlay_directory()
+
         self.overlays_value.setText(
             overlays
             or "Not configured"
@@ -1368,9 +1432,28 @@ class SettingsPage(QWidget):
             )
         )
 
+        overlay_directory = (
+            default_paths
+            .get(
+                "overlays",
+                {},
+            )
+            .get(
+                "directory",
+                "",
+            )
+        )
+
         self.artwork_directory_edit.setText(
             str(
                 artwork_directory
+                or ""
+            )
+        )
+
+        self.overlay_directory_edit.setText(
+            str(
+                overlay_directory
                 or ""
             )
         )
@@ -1391,6 +1474,10 @@ class SettingsPage(QWidget):
             self.artwork_directory_edit
         )
 
+        self._resize_path_editor(
+            self.overlay_directory_edit
+        )
+
         self._validate_retroarch_path()
 
         self._validate_core_directory()
@@ -1398,6 +1485,8 @@ class SettingsPage(QWidget):
         self._validate_library_directory()
 
         self._validate_artwork_directory()
+
+        self._validate_overlay_directory()
 
         self.save_status.setText(
             "Default paths restored — save to apply"
@@ -1524,6 +1613,30 @@ class SettingsPage(QWidget):
 
             self._validate_artwork_directory()
 
+    def _browse_overlay_directory(self):
+        selected = (
+            QFileDialog.getExistingDirectory(
+                self,
+                "Choose overlay directory",
+                self._browse_start_path(
+                    self.overlay_directory_edit.text()
+                ),
+                options=(
+                    QFileDialog.Option.ShowDirsOnly
+                    |
+                    QFileDialog.Option
+                    .DontUseNativeDialog
+                ),
+            )
+        )
+
+        if selected:
+            self.overlay_directory_edit.setText(
+                selected
+            )
+
+            self._validate_overlay_directory()
+
     def save_runtime_settings(self):
         executable = (
             self.retroarch_edit
@@ -1549,6 +1662,12 @@ class SettingsPage(QWidget):
             .strip()
         )
 
+        overlay_directory = (
+            self.overlay_directory_edit
+            .text()
+            .strip()
+        )
+
         if not self._validate_retroarch_path():
             self.save_status.setText(
                 "RetroArch executable is invalid"
@@ -1568,6 +1687,12 @@ class SettingsPage(QWidget):
             return
 
         self._validate_artwork_directory()
+
+        if not self._validate_overlay_directory():
+            self.save_status.setText(
+                "Overlay path is not a readable directory"
+            )
+            return
 
         library_directory = (
             Path(
@@ -1628,6 +1753,9 @@ class SettingsPage(QWidget):
                 "artwork": {
                     "directory": artwork_directory,
                 },
+                "overlays": {
+                    "directory": overlay_directory,
+                },
             },
         }
 
@@ -1666,6 +1794,29 @@ class SettingsPage(QWidget):
         self.artwork_directory_saved.emit(
             str(
                 effective_artwork_directory
+                or ""
+            )
+        )
+
+        effective_overlay_directory = (
+            self.config
+            .get(
+                "paths",
+                {},
+            )
+            .get(
+                "overlays",
+                {},
+            )
+            .get(
+                "directory",
+                "",
+            )
+        )
+
+        self.overlay_directory_saved.emit(
+            str(
+                effective_overlay_directory
                 or ""
             )
         )
