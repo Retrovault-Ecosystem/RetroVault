@@ -86,6 +86,15 @@ class FakeController:
     ):
         del self.collections[name]
 
+    def remove_from_collection(
+        self,
+        name,
+        game,
+    ):
+        self.collections[name].remove(
+            game
+        )
+
 
 def make_game(
     name="Duck Tales 2",
@@ -293,3 +302,111 @@ def test_playlists_page_uses_controller_boundary():
 
     assert "CollectionStore" not in source
     assert "collections.json" not in source
+
+def test_remove_button_tracks_game_selection(
+    app,
+):
+    controller = FakeController()
+    controller.collections["NES"] = [
+        make_game()
+    ]
+
+    page = PlaylistsPage(controller)
+
+    assert not (
+        page.remove_game_button.isEnabled()
+    )
+
+    page.game_list.setCurrentRow(0)
+    app.processEvents()
+
+    assert page.remove_game_button.isEnabled()
+
+
+def test_remove_game_requires_confirmation(
+    app,
+    monkeypatch,
+):
+    controller = FakeController()
+    game = make_game()
+    controller.collections["NES"] = [
+        game
+    ]
+
+    page = PlaylistsPage(controller)
+    page.game_list.setCurrentRow(0)
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *args, **kwargs: (
+            QMessageBox.StandardButton.No
+        ),
+    )
+
+    page.remove_selected_game()
+
+    assert controller.collections[
+        "NES"
+    ] == [game]
+
+
+def test_remove_confirmed_game(
+    app,
+    monkeypatch,
+):
+    controller = FakeController()
+    controller.collections["NES"] = [
+        make_game()
+    ]
+
+    page = PlaylistsPage(controller)
+    page.game_list.setCurrentRow(0)
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *args, **kwargs: (
+            QMessageBox.StandardButton.Yes
+        ),
+    )
+
+    page.remove_selected_game()
+
+    assert controller.collections[
+        "NES"
+    ] == []
+    assert page.game_list.count() == 0
+    assert page.status_label.text() == (
+        "0 games"
+    )
+    assert not (
+        page.remove_game_button.isEnabled()
+    )
+
+
+def test_removing_game_preserves_collection(
+    app,
+    monkeypatch,
+):
+    controller = FakeController()
+    controller.collections["NES"] = [
+        make_game()
+    ]
+
+    page = PlaylistsPage(controller)
+    page.game_list.setCurrentRow(0)
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *args, **kwargs: (
+            QMessageBox.StandardButton.Yes
+        ),
+    )
+
+    page.remove_selected_game()
+
+    assert controller.collection_names() == [
+        "NES"
+    ]

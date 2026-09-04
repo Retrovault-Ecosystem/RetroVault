@@ -51,6 +51,15 @@ class PlaylistsPage(QWidget):
             "Delete"
         )
 
+        self.remove_game_button = QPushButton(
+            "Remove Selected Game"
+        )
+        self.remove_game_button.setEnabled(
+            False
+        )
+
+        self._displayed_games = []
+
         self.collection_title = QLabel(
             "Select a collection"
         )
@@ -129,6 +138,9 @@ class PlaylistsPage(QWidget):
         games_layout.addWidget(
             self.game_list
         )
+        games_layout.addWidget(
+            self.remove_game_button
+        )
 
         content.addWidget(
             collection_frame,
@@ -167,6 +179,12 @@ class PlaylistsPage(QWidget):
         )
         self.delete_button.clicked.connect(
             self.delete_collection
+        )
+        self.game_list.currentRowChanged.connect(
+            self._update_game_action
+        )
+        self.remove_game_button.clicked.connect(
+            self.remove_selected_game
         )
 
     def selected_collection(self):
@@ -255,6 +273,8 @@ class PlaylistsPage(QWidget):
         name,
     ):
         self.game_list.clear()
+        self._displayed_games = []
+        self._update_game_action()
 
         if not name:
             self.collection_title.setText(
@@ -269,6 +289,8 @@ class PlaylistsPage(QWidget):
                 name
             )
         )
+
+        self._displayed_games = games
 
         self.collection_title.setText(
             name
@@ -412,3 +434,76 @@ class PlaylistsPage(QWidget):
     ):
         self.refresh_collections()
         super().showEvent(event)
+
+    def _update_game_action(
+        self,
+        row=None,
+    ):
+        if row is None:
+            row = self.game_list.currentRow()
+
+        self.remove_game_button.setEnabled(
+            (
+                self.selected_collection()
+                is not None
+                and 0 <= row
+                < len(self._displayed_games)
+            )
+        )
+
+
+    def remove_selected_game(
+        self,
+    ):
+        collection = self.selected_collection()
+        row = self.game_list.currentRow()
+
+        if (
+            collection is None
+            or row < 0
+            or row >= len(
+                self._displayed_games
+            )
+        ):
+            return
+
+        game = self._displayed_games[row]
+
+        answer = QMessageBox.question(
+            self,
+            "Remove Game",
+            (
+                f'Remove "{game.name}" from '
+                f'"{collection}"? '
+                "The game will remain in "
+                "your Library."
+            ),
+            (
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+            ),
+            QMessageBox.StandardButton.No,
+        )
+
+        if (
+            answer
+            != QMessageBox.StandardButton.Yes
+        ):
+            return
+
+        try:
+            self.controller.remove_from_collection(
+                collection,
+                game,
+            )
+        except (
+            KeyError,
+            ValueError,
+            OSError,
+        ) as exc:
+            self._warning(exc)
+            return
+
+        self.show_collection(
+            collection
+        )
