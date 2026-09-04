@@ -125,9 +125,15 @@ class MainWindow(QMainWindow):
             overlays_page
         )
 
+        shaders_page = ShadersPage()
+
         self.pages.add_page(
             "Shaders",
-            ShadersPage()
+            shaders_page
+        )
+
+        overlays_page.assets_organized.connect(
+            shaders_page.refresh_shaders
         )
 
         self.pages.add_page(
