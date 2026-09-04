@@ -106,7 +106,9 @@ class MainWindow(QMainWindow):
 
         self.pages.add_page(
             "Playlists",
-            PlaylistsPage()
+            PlaylistsPage(
+                controller
+            )
         )
 
         self.pages.add_page(
