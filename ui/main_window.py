@@ -113,7 +113,8 @@ class MainWindow(QMainWindow):
         self.pages.add_page(
             "Playlists",
             PlaylistsPage(
-                controller
+                controller,
+                rvdb_service=rvdb_service,
             )
         )
 

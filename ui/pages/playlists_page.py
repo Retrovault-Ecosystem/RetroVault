@@ -1,4 +1,8 @@
 from PyQt6.QtCore import Qt
+from ui.library.details.game_details import (
+    GameDetails,
+)
+
 from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -18,6 +22,7 @@ class PlaylistsPage(QWidget):
     def __init__(
         self,
         controller,
+        rvdb_service=None,
     ):
         super().__init__()
 
@@ -59,6 +64,30 @@ class PlaylistsPage(QWidget):
         )
 
         self._displayed_games = []
+
+        self.details = GameDetails(
+            rvdb_service=rvdb_service,
+            favorite_handler=getattr(
+                controller,
+                "set_favorite",
+                None,
+            ),
+            played_handler=getattr(
+                controller,
+                "record_played",
+                None,
+            ),
+            collection_names_provider=getattr(
+                controller,
+                "collection_names",
+                None,
+            ),
+            collection_add_handler=getattr(
+                controller,
+                "add_to_collection",
+                None,
+            ),
+        )
 
         self.collection_title = QLabel(
             "Select a collection"
@@ -148,6 +177,10 @@ class PlaylistsPage(QWidget):
         )
         content.addWidget(
             games_frame,
+            1,
+        )
+        content.addWidget(
+            self.details,
             2,
         )
 
@@ -182,6 +215,9 @@ class PlaylistsPage(QWidget):
         )
         self.game_list.currentRowChanged.connect(
             self._update_game_action
+        )
+        self.game_list.currentRowChanged.connect(
+            self._show_selected_game
         )
         self.remove_game_button.clicked.connect(
             self.remove_selected_game
@@ -274,6 +310,7 @@ class PlaylistsPage(QWidget):
     ):
         self.game_list.clear()
         self._displayed_games = []
+        self.details.clear_game()
         self._update_game_action()
 
         if not name:
@@ -506,4 +543,21 @@ class PlaylistsPage(QWidget):
 
         self.show_collection(
             collection
+        )
+
+    def _show_selected_game(
+        self,
+        row,
+    ):
+        if (
+            row < 0
+            or row >= len(
+                self._displayed_games
+            )
+        ):
+            self.details.clear_game()
+            return
+
+        self.details.show_game(
+            self._displayed_games[row]
         )

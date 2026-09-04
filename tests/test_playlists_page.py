@@ -410,3 +410,128 @@ def test_removing_game_preserves_collection(
     assert controller.collection_names() == [
         "NES"
     ]
+
+def test_game_selection_updates_details(
+    app,
+):
+    controller = FakeController()
+    game = make_game()
+    controller.collections["NES"] = [
+        game
+    ]
+
+    page = PlaylistsPage(controller)
+
+    assert page.details.current_game is None
+    assert not page.details.launch_button.isEnabled()
+
+    page.game_list.setCurrentRow(0)
+    app.processEvents()
+
+    assert page.details.current_game is game
+    assert page.details.title.text() == (
+        "Duck Tales 2"
+    )
+    assert page.details.launch_button.isEnabled()
+
+
+def test_clearing_selection_clears_details(
+    app,
+):
+    controller = FakeController()
+    controller.collections["NES"] = [
+        make_game()
+    ]
+
+    page = PlaylistsPage(controller)
+    page.game_list.setCurrentRow(0)
+    app.processEvents()
+
+    page.game_list.setCurrentRow(-1)
+    app.processEvents()
+
+    assert page.details.current_game is None
+    assert page.details.title.text() == (
+        "Select a game"
+    )
+    assert not page.details.launch_button.isEnabled()
+
+
+def test_switching_to_empty_collection_clears_details(
+    app,
+):
+    controller = FakeController()
+    controller.collections["NES"] = [
+        make_game()
+    ]
+    controller.collections["Empty"] = []
+
+    page = PlaylistsPage(controller)
+    page.game_list.setCurrentRow(0)
+    app.processEvents()
+
+    page.collection_list.setCurrentRow(1)
+    app.processEvents()
+
+    assert page.selected_collection() == (
+        "Empty"
+    )
+    assert page.details.current_game is None
+    assert not page.details.launch_button.isEnabled()
+
+
+def test_removed_selected_game_clears_details(
+    app,
+    monkeypatch,
+):
+    controller = FakeController()
+    controller.collections["NES"] = [
+        make_game()
+    ]
+
+    page = PlaylistsPage(controller)
+    page.game_list.setCurrentRow(0)
+    app.processEvents()
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *args, **kwargs: (
+            QMessageBox.StandardButton.Yes
+        ),
+    )
+
+    page.remove_selected_game()
+
+    assert page.details.current_game is None
+    assert not page.details.launch_button.isEnabled()
+
+
+def test_playlists_details_uses_rvdb_service(
+    app,
+):
+    service = object()
+
+    page = PlaylistsPage(
+        FakeController(),
+        rvdb_service=service,
+    )
+
+    assert page.details.rvdb_service is service
+
+
+def test_playlists_reuses_game_details_launch_path(
+    app,
+):
+    from ui.library.details.game_details import (
+        GameDetails,
+    )
+
+    page = PlaylistsPage(
+        FakeController()
+    )
+
+    assert isinstance(
+        page.details,
+        GameDetails,
+    )
