@@ -327,6 +327,19 @@ class OverlaysPage(QWidget):
             directory
         ).expanduser()
 
+        layout_plan = (
+            self.asset_organizer
+            .plan_mega_bezel_layout(
+                source,
+                self.shader_directory,
+            )
+        )
+
+        if layout_plan.ready:
+            return self._confirm_layout(
+                layout_plan
+            )
+
         package_plan = (
             self.asset_organizer
             .plan_shader_package(
@@ -353,7 +366,8 @@ class OverlaysPage(QWidget):
 
         errors = tuple(
             dict.fromkeys(
-                package_plan.errors
+                layout_plan.errors
+                + package_plan.errors
                 + asset_plan.errors
             )
         )
@@ -374,6 +388,96 @@ class OverlaysPage(QWidget):
         )
 
         return None
+
+    def _confirm_layout(
+        self,
+        plan,
+    ):
+        size_mib = (
+            plan.total_bytes
+            / (1024 * 1024)
+        )
+
+        mappings = "\n\n".join(
+            (
+                f"{move.component}:\n"
+                f"{move.source}\n"
+                "→\n"
+                f"{move.destination}"
+            )
+            for move in plan.moves
+        )
+
+        message = (
+            "RetroVault identified a documented "
+            "Mega Bezel package layout.\n\n"
+            f"{mappings}\n\n"
+            f"Components: {len(plan.moves)}\n"
+            f"Files: {plan.file_count}\n"
+            f"Size: {size_mib:.1f} MiB\n\n"
+            "Move these components into their "
+            "canonical RetroArch locations?"
+        )
+
+        answer = QMessageBox.question(
+            self,
+            "Install Mega Bezel Layout",
+            message,
+            (
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+            ),
+            QMessageBox.StandardButton.No,
+        )
+
+        if (
+            answer
+            != QMessageBox.StandardButton.Yes
+        ):
+            self.status_label.setText(
+                "Asset organization cancelled."
+            )
+            return None
+
+        try:
+            result = (
+                self.asset_organizer
+                .execute_layout(plan)
+            )
+        except (
+            OSError,
+            TypeError,
+            ValueError,
+            RuntimeError,
+        ) as exc:
+            QMessageBox.warning(
+                self,
+                "Asset Organization Failed",
+                str(exc),
+            )
+            return None
+
+        self.refresh_overlays()
+        self.assets_organized.emit()
+
+        self.status_label.setText(
+            (
+                "Installed canonical Mega Bezel "
+                f"layout: {result.file_count} files."
+            )
+        )
+
+        QMessageBox.information(
+            self,
+            "Mega Bezel Organized",
+            (
+                "The Mega Bezel components were "
+                "installed in their documented "
+                "RetroArch locations."
+            ),
+        )
+
+        return result
 
     def _confirm_shader_package(
         self,
