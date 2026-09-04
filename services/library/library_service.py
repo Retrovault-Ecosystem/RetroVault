@@ -1,6 +1,12 @@
 from services.library.source_manager import SourceManager
 from services.library.library_builder import LibraryBuilder
-from services.library.state import LibraryState
+from services.library.state import (
+    LibraryState,
+    game_identity,
+)
+from services.library.collections import (
+    CollectionStore,
+)
 from services.artwork import ArtworkService
 
 
@@ -12,6 +18,7 @@ class LibraryService:
         rvdb_resolver=None,
         library_state=None,
         artwork_service=None,
+        collection_store=None,
     ):
 
         self.sources = SourceManager()
@@ -24,6 +31,12 @@ class LibraryService:
             library_state
             if library_state is not None
             else LibraryState()
+        )
+
+        self.collections = (
+            collection_store
+            if collection_store is not None
+            else CollectionStore()
         )
 
         artwork_directory = (
@@ -151,3 +164,96 @@ class LibraryService:
         game.favorite = favorite
 
         return game.favorite
+
+    def collection_names(self):
+
+        return self.collections.names()
+
+
+    def create_collection(
+        self,
+        name,
+    ):
+
+        return self.collections.create(
+            name
+        )
+
+
+    def rename_collection(
+        self,
+        current_name,
+        new_name,
+    ):
+
+        return self.collections.rename(
+            current_name,
+            new_name,
+        )
+
+
+    def delete_collection(
+        self,
+        name,
+    ):
+
+        return self.collections.delete(
+            name
+        )
+
+
+    def add_to_collection(
+        self,
+        name,
+        game,
+    ):
+
+        return self.collections.add_game(
+            name,
+            game,
+        )
+
+
+    def remove_from_collection(
+        self,
+        name,
+        game,
+    ):
+
+        return self.collections.remove_game(
+            name,
+            game,
+        )
+
+
+    def collection_games(
+        self,
+        name,
+    ):
+
+        identities = (
+            self.collections.identities(
+                name
+            )
+        )
+
+        games_by_identity = {}
+
+        for game in self.games:
+
+            try:
+                identity = game_identity(
+                    game
+                )
+            except ValueError:
+                continue
+
+            games_by_identity[
+                identity
+            ] = game
+
+        return [
+            games_by_identity[identity]
+            for identity in identities
+            if identity in games_by_identity
+        ]

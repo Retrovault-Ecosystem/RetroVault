@@ -23,6 +23,10 @@ from .library_service import (
     LibraryService,
 )
 
+from .collections import (
+    CollectionStore,
+)
+
 
 __all__ = [
 
@@ -39,5 +43,7 @@ __all__ = [
     "LibraryBuilder",
 
     "LibraryService",
+
+    "CollectionStore",
 
 ]

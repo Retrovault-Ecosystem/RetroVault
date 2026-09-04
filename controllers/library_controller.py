@@ -63,3 +63,73 @@ class LibraryController:
             game,
             favorite,
         )
+
+    def collection_names(self):
+
+        return self.library.collection_names()
+
+
+    def create_collection(
+        self,
+        name,
+    ):
+
+        return self.library.create_collection(
+            name
+        )
+
+
+    def rename_collection(
+        self,
+        current_name,
+        new_name,
+    ):
+
+        return self.library.rename_collection(
+            current_name,
+            new_name,
+        )
+
+
+    def delete_collection(
+        self,
+        name,
+    ):
+
+        return self.library.delete_collection(
+            name
+        )
+
+
+    def collection_games(
+        self,
+        name,
+    ):
+
+        return self.library.collection_games(
+            name
+        )
+
+
+    def add_to_collection(
+        self,
+        name,
+        game,
+    ):
+
+        return self.library.add_to_collection(
+            name,
+            game,
+        )
+
+
+    def remove_from_collection(
+        self,
+        name,
+        game,
+    ):
+
+        return self.library.remove_from_collection(
+            name,
+            game,
+        )
