@@ -118,9 +118,11 @@ class MainWindow(QMainWindow):
             )
         )
 
+        overlays_page = OverlaysPage()
+
         self.pages.add_page(
             "Overlays",
-            OverlaysPage()
+            overlays_page
         )
 
         self.pages.add_page(
@@ -145,6 +147,10 @@ class MainWindow(QMainWindow):
                     )
                 )
             )
+        )
+
+        settings_page.overlay_directory_saved.connect(
+            overlays_page.set_directory
         )
 
         self.pages.add_page(

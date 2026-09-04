@@ -256,6 +256,26 @@ class OverlaysPage(QWidget):
             self.show_overlay
         )
 
+    def set_directory(
+        self,
+        directory,
+    ):
+        self.overlay_directory = Path(
+            directory
+        ).expanduser()
+
+        self.overlay_service = OverlayService(
+            self.overlay_directory
+        )
+
+        self.path_label.setText(
+            str(
+                self.overlay_directory
+            )
+        )
+
+        self.refresh_overlays()
+
     def refresh_overlays(self):
         self.overlays = list(
             self.overlay_service.scan()
