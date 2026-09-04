@@ -1,6 +1,8 @@
+import shutil
 from pathlib import Path
 
 from .models import (
+    AssetExecutionResult,
     AssetMove,
     AssetPlan,
 )
@@ -211,6 +213,164 @@ class AssetOrganizer:
                 )
             ),
         )
+
+    def execute(
+        self,
+        plan,
+    ):
+        if not isinstance(
+            plan,
+            AssetPlan,
+        ):
+            raise TypeError(
+                "Expected an AssetPlan."
+            )
+
+        if not plan.ready:
+            raise ValueError(
+                "Asset plan is not ready."
+            )
+
+        self._validate_execution_plan(
+            plan
+        )
+
+        completed = []
+        created_directories = []
+
+        try:
+            for move in plan.moves:
+                self._create_parent_directories(
+                    move.destination.parent,
+                    created_directories,
+                )
+
+                shutil.move(
+                    str(move.source),
+                    str(move.destination),
+                )
+
+                completed.append(move)
+        except Exception as exc:
+            rollback_errors = (
+                self._rollback(
+                    completed,
+                    created_directories,
+                )
+            )
+
+            message = (
+                "Asset move failed; completed "
+                "moves were rolled back."
+            )
+
+            if rollback_errors:
+                message = (
+                    "Asset move and rollback failed: "
+                    + "; ".join(
+                        rollback_errors
+                    )
+                )
+
+            raise RuntimeError(
+                message
+            ) from exc
+
+        return AssetExecutionResult(
+            moved=tuple(completed)
+        )
+
+    @staticmethod
+    def _validate_execution_plan(
+        plan,
+    ):
+        destinations = set()
+
+        for move in plan.moves:
+            if not move.source.is_file():
+                raise ValueError(
+                    "Planned source no longer exists: "
+                    f"{move.source}"
+                )
+
+            if move.destination in destinations:
+                raise ValueError(
+                    "Duplicate destination in plan: "
+                    f"{move.destination}"
+                )
+
+            destinations.add(
+                move.destination
+            )
+
+            if move.destination.exists():
+                raise ValueError(
+                    "Planned destination now exists: "
+                    f"{move.destination}"
+                )
+
+    @staticmethod
+    def _create_parent_directories(
+        directory,
+        created_directories,
+    ):
+        missing = []
+        current = directory
+
+        while not current.exists():
+            missing.append(
+                current
+            )
+            current = current.parent
+
+        directory.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        for created in reversed(
+            missing
+        ):
+            if created not in created_directories:
+                created_directories.append(
+                    created
+                )
+
+    @staticmethod
+    def _rollback(
+        completed,
+        created_directories,
+    ):
+        errors = []
+
+        for move in reversed(
+            completed
+        ):
+            try:
+                move.source.parent.mkdir(
+                    parents=True,
+                    exist_ok=True,
+                )
+
+                if move.destination.exists():
+                    shutil.move(
+                        str(move.destination),
+                        str(move.source),
+                    )
+            except Exception as exc:
+                errors.append(
+                    f"{move.destination}: {exc}"
+                )
+
+        for directory in reversed(
+            created_directories
+        ):
+            try:
+                directory.rmdir()
+            except OSError:
+                pass
+
+        return tuple(errors)
 
     @staticmethod
     def _overlaps(

@@ -37,3 +37,29 @@ class AssetPlan:
             for move in self.moves
             if move.category == "shader"
         )
+
+@dataclass(frozen=True)
+class AssetExecutionResult:
+    moved: tuple[AssetMove, ...]
+
+    @property
+    def moved_count(self) -> int:
+        return len(
+            self.moved
+        )
+
+    @property
+    def overlay_count(self) -> int:
+        return sum(
+            1
+            for move in self.moved
+            if move.category == "overlay"
+        )
+
+    @property
+    def shader_count(self) -> int:
+        return sum(
+            1
+            for move in self.moved
+            if move.category == "shader"
+        )
