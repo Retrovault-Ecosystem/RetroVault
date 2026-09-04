@@ -90,6 +90,12 @@ class MainWindow(QMainWindow):
             recent_provider=(
                 controller.recent
             ),
+            collection_names_provider=(
+                controller.collection_names
+            ),
+            collection_add_handler=(
+                controller.add_to_collection
+            ),
         )
 
         self.pages.add_page(

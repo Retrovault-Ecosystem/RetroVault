@@ -405,3 +405,10 @@ class PlaylistsPage(QWidget):
             return
 
         self.refresh_collections()
+
+    def showEvent(
+        self,
+        event,
+    ):
+        self.refresh_collections()
+        super().showEvent(event)

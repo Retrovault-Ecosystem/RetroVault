@@ -2,6 +2,8 @@ from PyQt6.QtWidgets import (
     QWidget,
     QLabel,
     QPushButton,
+    QInputDialog,
+    QMessageBox,
     QVBoxLayout,
     QHBoxLayout,
     QTextEdit,
@@ -35,6 +37,8 @@ class GameDetails(QWidget):
         rvdb_service=None,
         favorite_handler=None,
         played_handler=None,
+        collection_names_provider=None,
+        collection_add_handler=None,
     ):
 
         super().__init__()
@@ -52,6 +56,14 @@ class GameDetails(QWidget):
 
         self.played_handler = (
             played_handler
+        )
+
+        self.collection_names_provider = (
+            collection_names_provider
+        )
+
+        self.collection_add_handler = (
+            collection_add_handler
         )
 
 
@@ -172,6 +184,23 @@ class GameDetails(QWidget):
         )
 
 
+        self.collection_button = QPushButton(
+            "＋ Add to Collection"
+        )
+
+        self.collection_button.setEnabled(
+            False
+        )
+
+        self.collection_button.clicked.connect(
+            self.add_to_collection
+        )
+
+        main.addWidget(
+            self.collection_button
+        )
+
+
         self.launch_button = QPushButton(
             "▶ Launch Game"
         )
@@ -202,6 +231,7 @@ class GameDetails(QWidget):
         self.current_game = game
 
         self._refresh_favorite_button()
+        self._refresh_collection_button()
 
         self._refresh_cover()
 
@@ -526,3 +556,91 @@ Future:
                     "Unable to record Recently Played: "
                     f"{exc}"
                 )
+
+    def _refresh_collection_button(
+        self,
+    ):
+        enabled = (
+            self.current_game is not None
+            and bool(
+                getattr(
+                    self.current_game,
+                    "rom",
+                    "",
+                )
+            )
+            and self.collection_names_provider
+            is not None
+            and self.collection_add_handler
+            is not None
+        )
+
+        self.collection_button.setEnabled(
+            enabled
+        )
+
+
+    def add_to_collection(
+        self,
+    ):
+        if (
+            self.current_game is None
+            or self.collection_names_provider
+            is None
+            or self.collection_add_handler
+            is None
+        ):
+            return
+
+        names = list(
+            self.collection_names_provider()
+        )
+
+        if not names:
+            QMessageBox.information(
+                self,
+                "Collections",
+                (
+                    "Create a collection on the "
+                    "Playlists page first."
+                ),
+            )
+            return
+
+        name, accepted = QInputDialog.getItem(
+            self,
+            "Add to Collection",
+            "Collection:",
+            names,
+            0,
+            False,
+        )
+
+        if not accepted:
+            return
+
+        try:
+            self.collection_add_handler(
+                name,
+                self.current_game,
+            )
+        except (
+            KeyError,
+            ValueError,
+            OSError,
+        ) as exc:
+            QMessageBox.warning(
+                self,
+                "Collections",
+                str(exc),
+            )
+            return
+
+        QMessageBox.information(
+            self,
+            "Collections",
+            (
+                f'Added "{self.current_game.name}" '
+                f'to "{name}".'
+            ),
+        )

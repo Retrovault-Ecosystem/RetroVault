@@ -9,6 +9,8 @@ class LibraryPage(GalleryView):
         favorite_handler=None,
         played_handler=None,
         recent_provider=None,
+        collection_names_provider=None,
+        collection_add_handler=None,
     ):
         super().__init__(
             games,
@@ -16,4 +18,10 @@ class LibraryPage(GalleryView):
             favorite_handler=favorite_handler,
             played_handler=played_handler,
             recent_provider=recent_provider,
+            collection_names_provider=(
+                collection_names_provider
+            ),
+            collection_add_handler=(
+                collection_add_handler
+            ),
         )

@@ -27,6 +27,8 @@ class GalleryView(QWidget):
         favorite_handler=None,
         played_handler=None,
         recent_provider=None,
+        collection_names_provider=None,
+        collection_add_handler=None,
     ):
 
         super().__init__()
@@ -106,6 +108,12 @@ class GalleryView(QWidget):
             rvdb_service=self.rvdb_service,
             favorite_handler=self.set_favorite,
             played_handler=self.record_played,
+            collection_names_provider=(
+                collection_names_provider
+            ),
+            collection_add_handler=(
+                collection_add_handler
+            ),
         )
 
 
