@@ -874,3 +874,320 @@ current production surface while preserving:
 5. safe ROM-identity resolution
 6. user configuration protection
 7. the 324-test regression baseline unless intentionally expanded
+
+---
+
+## RVA1-C.7 — Shader and Mega Bezel Integration
+
+Status:
+
+**COMPLETE**
+
+RVA1-C.7 establishes RetroVault's first production shader,
+Mega Bezel, and external shader-pack integration boundary.
+
+The completed work includes:
+
+- local overlay and shader discovery
+- recursive shader-package organization
+- transactional shader-package moves
+- complete-package dependency handling
+- recursive shader preset discovery
+- shader browser integration
+- guarded shader organization UI
+- canonical Mega Bezel layout planning
+- canonical Mega Bezel layout preview
+- dependency-aware shader preset validation
+- runtime-token and foreign-path handling
+- bounded compatibility resolution for known stale references
+- official Libretro dependency closure
+- HSM Mega Bezel Examples DREZ compatibility repair
+- live Mega Bezel runtime validation
+- live Orionsangel external-pack runtime validation
+
+### Published Checkpoint Before B.9 / B.10 Closure
+
+The protected RetroVault checkpoint before the final dependency
+resolution work is:
+
+`2f70889146a9f17613ceae7b9654c59916dabf03`
+
+Short form:
+
+`2f70889`
+
+Checkpoint message:
+
+`feat: preview canonical Mega Bezel layout`
+
+Local and origin remained at this checkpoint throughout the
+B.9 / B.10 implementation and verification until final closure.
+
+### RVA1-C.7-B.9 — Dependency-Aware Shader Validation
+
+`services.shaders.service.ShaderService` now validates shader
+preset references with dependency-aware path handling.
+
+The resolver supports:
+
+- normal preset-relative references
+- RetroArch shader-root-relative references
+- `:/shaders/...` references
+- `shaders_slang/...` references
+- `Mega_Bezel_Packs/...` references
+- root-level shader families such as `blurs/...` and `reshade/...`
+- foreign absolute RetroArch shader paths remapped to the local
+  canonical shader root
+- unique case-insensitive path recovery
+- runtime token references such as `$TOKEN$`, which are treated as
+  dynamic rather than static missing files
+- bounded structural compatibility fallbacks for known historical
+  Mega Bezel layout changes
+
+The implementation intentionally avoids broad basename guessing.
+
+Case-insensitive fallback succeeds only when the matching path is
+unique.
+
+Ambiguous case-insensitive matches remain unresolved rather than
+being guessed.
+
+### Structural Compatibility Resolution
+
+Two bounded compatibility cases were established.
+
+First, historical Mega Bezel Base CRT references using:
+
+`shaders_slang/bezel/Base_CRT_Presets/...`
+
+may resolve to the canonical modern location under:
+
+`shaders_slang/bezel/Mega_Bezel/Presets/Base_CRT_Presets/...`
+
+Second, historical `crt-super-xbr` references using a stale local
+`shaders/<name>` subdirectory may resolve to the corresponding
+known sibling package location.
+
+These fallbacks are deliberately narrow and apply only to their
+known structural contexts.
+
+### RVA1-C.7-B.10 — Installed Dependency Closure
+
+The remaining genuine shader dependency gaps were traced to
+runtime assets outside the RetroVault repository.
+
+Official Libretro shader dependencies were installed from the
+audited upstream `slang-shaders` revision:
+
+`4812a82f6c9a11cc8b5a7447040a98c9fc80c00e`
+
+The installed recursive dependency closure contains the required
+`blurs`, `reshade`, and shared `include` assets needed by the
+installed Mega Bezel presets.
+
+The original missing seed set included:
+
+- `blurs/shaders/royale/blur9x9.slang`
+- ReShade Bloom passes
+- ReShade Lens Flare passes
+- ReShade Lighting Combine
+
+Their recursive include dependencies were installed together so
+the shader runtime does not depend on partial package state.
+
+These files are runtime shader assets and are not part of the
+RetroVault Git repository.
+
+### HSM Mega Bezel Examples DREZ Compatibility Repair
+
+The installed HSM Mega Bezel Examples pack contained one
+historical DREZ reference using the pre-rename Mega Bezel filename:
+
+`MBZ__3__STD__DREZ-480p__GDV.slangp`
+
+Historical Mega Bezel provenance established that DREZ preset
+filenames were renamed so the DREZ suffix appears at the end.
+
+The installed HSM preset:
+
+`Presets/Variations/SegaDC-MVC2__STD__DEREZ-480p.slangp`
+
+was therefore repaired to reference the modern target:
+
+`MBZ__3__STD__GDV__DREZ-480p.slangp`
+
+The repair was constrained to that exact installed preset
+reference.
+
+No broad resolver alias was introduced.
+
+The repaired HSM asset is runtime installation state outside the
+RetroVault repository.
+
+### Canonical Runtime Layout
+
+The validated runtime shader layout includes:
+
+`shaders_slang/bezel/Mega_Bezel`
+
+`Mega_Bezel_Packs/HSM_Mega_Bezel_Examples`
+
+`Mega_Bezel_Packs/Orionsangel-Original-Console-main`
+
+The protected staging tree remains at:
+
+`orions_angel`
+
+and was not modified by the dependency closure, compatibility
+repair, browser experiment, or live runtime testing.
+
+Known protected staging fingerprint:
+
+`87ad50b2e2c4a7265c0e00b3db94f9caa660601d38bd0f044929caac5a74d494`
+
+### Static Dependency Validation
+
+Final installed shader audit:
+
+**1412 installed presets**
+
+**1412 ready presets**
+
+**0 presets with static misses**
+
+**0 unique static misses**
+
+The original structural false-miss cases and genuine dependency
+gaps were therefore fully resolved.
+
+### Automated Regression Baseline
+
+Dedicated shader service regression:
+
+**25 passing tests**
+
+Complete RetroVault regression baseline:
+
+**436 passing tests**
+
+Compile gate:
+
+**GREEN**
+
+The final repository verification also confirmed:
+
+- exact expected B.9 implementation/test file set
+- clean `git diff --check`
+- canonical Mega Bezel assets present
+- official Libretro dependency seed files present
+- HSM stale DREZ reference absent
+- repaired HSM DREZ reference present exactly once
+- temporary RetroArch browser symlink absent
+- protected staging fingerprint unchanged
+
+### Live Mega Bezel Runtime Validation
+
+The Mega Bezel engine was tested directly through RetroArch using
+the verified Duck Tales 2 NES runtime path.
+
+A standard Mega Bezel preset loaded successfully and rendered:
+
+- the game inside the Mega Bezel presentation
+- blurred glass treatment
+- CRT-style rendering
+- surrounding background treatment
+
+The game remained playable at normal speed.
+
+No shader loading or compilation error was observed.
+
+### Live Orionsangel Runtime Validation
+
+The Orionsangel external pack contains a complete Nintendo NES
+preset family.
+
+The validated NES Standard preset is:
+
+`Presets/Standard/Nintendo_NES/Nintendo_NES-[STD].slangp`
+
+RetroArch's normal shader browser did not expose the external
+`Mega_Bezel_Packs` directory through a temporary symlink placed
+under `shaders_slang`.
+
+The temporary symlink was removed after the browser experiment.
+
+The canonical Orionsangel preset was then loaded directly with
+RetroArch's `--set-shader` option while launching the verified
+Duck Tales 2 ROM through the FCEUmm core.
+
+The live result confirmed:
+
+- Orionsangel artwork rendered correctly
+- the game appeared inside the Nintendo console/bezel presentation
+- CRT and glass effects rendered correctly
+- the complete Mega Bezel dependency chain loaded successfully
+- no runtime shader errors were observed
+- game speed remained normal
+
+This validates the external Orionsangel pack without relocating,
+duplicating, or rewriting its canonical directory structure.
+
+### Runtime Asset Boundary
+
+Mega Bezel, HSM Mega Bezel Examples, Orionsangel, Libretro shader
+dependencies, and the repaired installed HSM preset are runtime
+assets under the RetroArch shader installation.
+
+They are not application source files and are not committed to
+the RetroVault repository by this milestone.
+
+RetroVault source control contains only the application-side
+resolver behavior, tests, documentation, and related production
+integration work.
+
+### Protected RVDB Boundary
+
+Protected RVDB remains unchanged at:
+
+`1e8bb5d19014fbd0db5b99bc4da382064a44a438`
+
+RVA1-C.7 introduces no RVDB schema, relationship, validator,
+build, or release changes.
+
+RetroVault continues to consume RVDB through the established
+protected service boundary.
+
+### Closure Decision
+
+RVA1-C.7 shader and Mega Bezel integration is complete.
+
+The final B.9 / B.10 work establishes both:
+
+1. static dependency correctness across the installed shader
+   preset population
+2. live RetroArch rendering proof through Mega Bezel and the
+   Orionsangel external pack
+
+No further shader dependency remediation is required for this
+milestone.
+
+Future work may build application-level preset assignment,
+per-system shader selection, automatic launch-time shader
+application, pack management, or richer presentation features on
+top of this validated runtime boundary.
+
+### Next Operation
+
+Begin from the published RVA1-C.7 closure checkpoint after the
+final atomic commit and push.
+
+Preserve:
+
+1. the protected RVDB consumer boundary
+2. the canonical shader runtime layout
+3. the protected `orions_angel` staging tree
+4. dependency-aware preset validation
+5. the verified RetroArch launch workflow
+6. the verified Mega Bezel runtime workflow
+7. the verified external-pack runtime workflow
+8. the 436-test regression baseline unless intentionally expanded

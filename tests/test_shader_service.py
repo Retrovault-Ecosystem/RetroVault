@@ -301,3 +301,583 @@ def test_preset_extension_is_case_insensitive(
     assert len(
         ShaderService(root).scan()
     ) == 1
+
+
+def test_runtime_wildcard_reference_is_not_missing(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+    root.mkdir()
+
+    preset = root / "wildcard.slangp"
+    preset.write_text(
+        (
+            '#reference "'
+            'referenced-presets/'
+            'Ref_$CORE$.slangp"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = ShaderService(
+        root
+    ).scan()[0]
+
+    assert result.missing_shaders == ()
+    assert result.ready
+
+
+def test_multiple_retroarch_runtime_tokens_are_dynamic(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+    root.mkdir()
+
+    preset = root / "wildcards.slangp"
+    preset.write_text(
+        (
+            '#reference "'
+            'Ref_$CONTENT-DIR$_'
+            '$VID-DRV-SHADER-EXT$.slangp"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = ShaderService(
+        root
+    ).scan()[0]
+
+    assert result.missing_shaders == ()
+    assert result.ready
+
+
+def test_shader_root_reference_resolves_from_root(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+
+    base = (
+        root
+        / "shaders_slang"
+        / "bezel"
+        / "Mega_Bezel"
+        / "Presets"
+        / "base.slangp"
+    )
+    base.parent.mkdir(
+        parents=True
+    )
+    base.write_text(
+        'shaders = "0"\n',
+        encoding="utf-8",
+    )
+
+    pack = (
+        root
+        / "Mega_Bezel_Packs"
+        / "Example"
+    )
+    pack.mkdir(
+        parents=True
+    )
+
+    preset = pack / "console.slangp"
+    preset.write_text(
+        (
+            '#reference "'
+            'shaders_slang/bezel/'
+            'Mega_Bezel/Presets/'
+            'base.slangp"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = {
+        item.preset_path: item
+        for item in ShaderService(
+            root
+        ).scan()
+    }[preset]
+
+    assert result.shader_paths == (
+        base.resolve(),
+    )
+    assert result.missing_shaders == ()
+    assert result.ready
+
+
+def test_colon_shader_root_reference_resolves(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+
+    shader = (
+        root
+        / "shaders_slang"
+        / "passes"
+        / "display.slang"
+    )
+    shader.parent.mkdir(
+        parents=True
+    )
+    shader.write_text(
+        "shader",
+        encoding="utf-8",
+    )
+
+    preset = root / "display.slangp"
+    preset.write_text(
+        (
+            'shader0 = "'
+            ':/shaders/'
+            'shaders_slang/passes/'
+            'display.slang"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = {
+        item.preset_path: item
+        for item in ShaderService(
+            root
+        ).scan()
+    }[preset]
+
+    assert result.shader_paths == (
+        shader.resolve(),
+    )
+    assert result.missing_shaders == ()
+
+
+def test_foreign_retroarch_shader_path_is_portable(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+
+    dependency = (
+        root
+        / "blurs"
+        / "shaders"
+        / "royale"
+        / "blur9x9.slang"
+    )
+    dependency.parent.mkdir(
+        parents=True
+    )
+    dependency.write_text(
+        "shader",
+        encoding="utf-8",
+    )
+
+    preset = root / "portable.slangp"
+    preset.write_text(
+        (
+            'shader0 = "'
+            '/opt/retropie/configs/all/'
+            'retroarch/shaders/'
+            'blurs/shaders/royale/'
+            'blur9x9.slang"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = {
+        item.preset_path: item
+        for item in ShaderService(
+            root
+        ).scan()
+    }[preset]
+
+    assert result.shader_paths == (
+        dependency.resolve(),
+    )
+    assert result.missing_shaders == ()
+
+
+def test_unique_casefold_match_resolves_on_linux(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+    package = (
+        root
+        / "shaders_slang"
+        / "hyllian"
+    )
+    package.mkdir(
+        parents=True
+    )
+
+    shader = (
+        package
+        / "custom-bicubic-x.slang"
+    )
+    shader.write_text(
+        "shader",
+        encoding="utf-8",
+    )
+
+    preset = root / "case.slangp"
+    preset.write_text(
+        (
+            'shader0 = "'
+            'shaders_slang/hyllian/'
+            'custom-bicubic-X.slang"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = {
+        item.preset_path: item
+        for item in ShaderService(
+            root
+        ).scan()
+    }[preset]
+
+    assert result.shader_paths == (
+        shader.resolve(),
+    )
+    assert result.missing_shaders == ()
+    assert result.ready
+
+
+def test_real_root_dependency_remains_missing(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+    root.mkdir()
+
+    preset = root / "dependency.slangp"
+    preset.write_text(
+        (
+            'shader0 = "'
+            'blurs/shaders/royale/'
+            'blur9x9.slang"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = ShaderService(
+        root
+    ).scan()[0]
+
+    assert not result.ready
+    assert result.missing_shaders == (
+        (
+            root
+            / "blurs"
+            / "shaders"
+            / "royale"
+            / "blur9x9.slang"
+        ).resolve(),
+    )
+
+
+def test_ambiguous_casefold_match_stays_missing(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+    package = root / "passes"
+    package.mkdir(
+        parents=True
+    )
+
+    (
+        package / "PASS.slang"
+    ).write_text(
+        "one",
+        encoding="utf-8",
+    )
+    (
+        package / "Pass.slang"
+    ).write_text(
+        "two",
+        encoding="utf-8",
+    )
+
+    preset = root / "ambiguous.slangp"
+    preset.write_text(
+        (
+            'shader0 = "'
+            'passes/pass.slang"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = {
+        item.preset_path: item
+        for item in ShaderService(
+            root
+        ).scan()
+    }[preset]
+
+    assert not result.ready
+    assert len(
+        result.missing_shaders
+    ) == 1
+
+
+def test_mega_bezel_variation_uses_bounded_base_crt_fallback(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+
+    base = (
+        root
+        / "shaders_slang"
+        / "bezel"
+        / "Mega_Bezel"
+        / "Presets"
+        / "Base_CRT_Presets"
+        / "MBZ__3__STD__GDV.slangp"
+    )
+    base.parent.mkdir(
+        parents=True
+    )
+    base.write_text(
+        'shaders = "0"\n',
+        encoding="utf-8",
+    )
+
+    variation = (
+        root
+        / "shaders_slang"
+        / "bezel"
+        / "Mega_Bezel"
+        / "Presets"
+        / "Variations"
+        / "FBNEO-Vertical__STD.slangp"
+    )
+    variation.parent.mkdir(
+        parents=True
+    )
+    variation.write_text(
+        (
+            '#reference "'
+            '../../../Base_CRT_Presets/'
+            'MBZ__3__STD__GDV.slangp"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = {
+        item.preset_path: item
+        for item in ShaderService(
+            root
+        ).scan()
+    }[variation]
+
+    assert result.shader_paths == (
+        base.resolve(),
+    )
+    assert result.missing_shaders == ()
+    assert result.ready
+
+
+def test_mega_bezel_base_crt_fallback_is_not_global(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+
+    base = (
+        root
+        / "shaders_slang"
+        / "bezel"
+        / "Mega_Bezel"
+        / "Presets"
+        / "Base_CRT_Presets"
+        / "MBZ__3__STD__GDV.slangp"
+    )
+    base.parent.mkdir(
+        parents=True
+    )
+    base.write_text(
+        'shaders = "0"\n',
+        encoding="utf-8",
+    )
+
+    unrelated = (
+        root
+        / "unrelated"
+        / "preset.slangp"
+    )
+    unrelated.parent.mkdir(
+        parents=True
+    )
+    unrelated.write_text(
+        (
+            '#reference "'
+            '../../../Base_CRT_Presets/'
+            'MBZ__3__STD__GDV.slangp"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = {
+        item.preset_path: item
+        for item in ShaderService(
+            root
+        ).scan()
+    }[unrelated]
+
+    assert not result.ready
+    assert len(
+        result.missing_shaders
+    ) == 1
+    assert result.shader_paths != (
+        base.resolve(),
+    )
+
+
+def test_crt_super_xbr_uses_bounded_sibling_fallback(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+
+    package = (
+        root
+        / "shaders_slang"
+        / "bezel"
+        / "Mega_Bezel"
+        / "shaders"
+        / "hyllian"
+        / "crt-super-xbr"
+    )
+    package.mkdir(
+        parents=True
+    )
+
+    shader = (
+        package
+        / "linearize.slang"
+    )
+    shader.write_text(
+        "shader",
+        encoding="utf-8",
+    )
+
+    preset = (
+        package
+        / "crt-super-xbr.slangp"
+    )
+    preset.write_text(
+        (
+            'shader0 = "'
+            'shaders/linearize.slang"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = {
+        item.preset_path: item
+        for item in ShaderService(
+            root
+        ).scan()
+    }[preset]
+
+    assert result.shader_paths == (
+        shader.resolve(),
+    )
+    assert result.missing_shaders == ()
+    assert result.ready
+
+
+def test_crt_super_xbr_fallback_is_not_package_wide(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+
+    package = (
+        root
+        / "shaders_slang"
+        / "bezel"
+        / "Mega_Bezel"
+        / "shaders"
+        / "hyllian"
+        / "crt-super-xbr"
+    )
+    package.mkdir(
+        parents=True
+    )
+
+    shader = (
+        package
+        / "linearize.slang"
+    )
+    shader.write_text(
+        "shader",
+        encoding="utf-8",
+    )
+
+    preset = (
+        package
+        / "other.slangp"
+    )
+    preset.write_text(
+        (
+            'shader0 = "'
+            'shaders/linearize.slang"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = {
+        item.preset_path: item
+        for item in ShaderService(
+            root
+        ).scan()
+    }[preset]
+
+    assert not result.ready
+    assert len(
+        result.missing_shaders
+    ) == 1
+    assert result.shader_paths != (
+        shader.resolve(),
+    )
+
+
+def test_structural_fallback_does_not_hide_absent_dependency(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+
+    package = (
+        root
+        / "shaders_slang"
+        / "bezel"
+        / "Mega_Bezel"
+        / "shaders"
+        / "hyllian"
+        / "crt-super-xbr"
+    )
+    package.mkdir(
+        parents=True
+    )
+
+    preset = (
+        package
+        / "crt-super-xbr.slangp"
+    )
+    preset.write_text(
+        (
+            'shader0 = "'
+            'shaders/not-installed.slang"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    result = {
+        item.preset_path: item
+        for item in ShaderService(
+            root
+        ).scan()
+    }[preset]
+
+    assert not result.ready
+    assert result.missing_shaders == (
+        (
+            package
+            / "shaders"
+            / "not-installed.slang"
+        ).resolve(),
+    )
