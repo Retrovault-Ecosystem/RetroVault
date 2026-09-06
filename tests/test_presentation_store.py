@@ -348,3 +348,212 @@ def test_default_path_honors_xdg_config_home(
         / "retrovault"
         / "presentation-state.json"
     )
+
+
+def test_assign_default_shader_preserves_other_fields(
+    tmp_path,
+):
+    path = (
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    store = PresentationStore(path)
+
+    store.save(
+        default=PresentationProfile(
+            shader="/old/default.slangp",
+            overlay="/default/overlay.cfg",
+            artwork="/default/art.png",
+        ),
+        systems={
+            "platform.nintendo.nes": (
+                PresentationProfile(
+                    shader="/old/nes.slangp",
+                    overlay="/nes/overlay.cfg",
+                )
+            )
+        },
+        games={
+            "/roms/game.nes": (
+                PresentationProfile(
+                    shader="/old/game.slangp",
+                    artwork="/game/art.png",
+                )
+            )
+        },
+    )
+
+    store.assign_default_shader(
+        "/new/default.slangp"
+    )
+
+    data = store.load()
+
+    assert data["default"] == PresentationProfile(
+        shader="/new/default.slangp",
+        overlay="/default/overlay.cfg",
+        artwork="/default/art.png",
+    )
+
+    assert data["systems"][
+        "platform.nintendo.nes"
+    ] == PresentationProfile(
+        shader="/old/nes.slangp",
+        overlay="/nes/overlay.cfg",
+    )
+
+    assert data["games"][
+        "/roms/game.nes"
+    ] == PresentationProfile(
+        shader="/old/game.slangp",
+        artwork="/game/art.png",
+    )
+
+
+def test_assign_system_shader_preserves_profile_and_other_scopes(
+    tmp_path,
+):
+    path = (
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    store = PresentationStore(path)
+
+    store.save(
+        default=PresentationProfile(
+            shader="/default.slangp",
+        ),
+        systems={
+            "platform.nintendo.nes": (
+                PresentationProfile(
+                    shader="/old/nes.slangp",
+                    overlay="/nes/overlay.cfg",
+                    artwork="/nes/art.png",
+                )
+            ),
+            "platform.nintendo.snes": (
+                PresentationProfile(
+                    shader="/snes.slangp",
+                )
+            ),
+        },
+        games={
+            "/roms/game.nes": (
+                PresentationProfile(
+                    shader="/game.slangp",
+                )
+            )
+        },
+    )
+
+    store.assign_system_shader(
+        "platform.nintendo.nes",
+        "/new/nes.slangp",
+    )
+
+    data = store.load()
+
+    assert data["systems"][
+        "platform.nintendo.nes"
+    ] == PresentationProfile(
+        shader="/new/nes.slangp",
+        overlay="/nes/overlay.cfg",
+        artwork="/nes/art.png",
+    )
+
+    assert data["systems"][
+        "platform.nintendo.snes"
+    ].shader == "/snes.slangp"
+
+    assert data["default"].shader == (
+        "/default.slangp"
+    )
+
+    assert data["games"][
+        "/roms/game.nes"
+    ].shader == "/game.slangp"
+
+
+def test_assign_game_shader_preserves_profile_and_other_scopes(
+    tmp_path,
+):
+    path = (
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    store = PresentationStore(path)
+
+    store.save(
+        default=PresentationProfile(
+            shader="/default.slangp",
+        ),
+        systems={
+            "platform.nintendo.nes": (
+                PresentationProfile(
+                    shader="/nes.slangp",
+                )
+            )
+        },
+        games={
+            "/roms/game.nes": (
+                PresentationProfile(
+                    shader="/old/game.slangp",
+                    overlay="/game/overlay.cfg",
+                    artwork="/game/art.png",
+                )
+            ),
+        },
+    )
+
+    store.assign_game_shader(
+        "/roms/game.nes",
+        "/new/game.slangp",
+    )
+
+    data = store.load()
+
+    assert data["games"][
+        "/roms/game.nes"
+    ] == PresentationProfile(
+        shader="/new/game.slangp",
+        overlay="/game/overlay.cfg",
+        artwork="/game/art.png",
+    )
+
+    assert data["default"].shader == (
+        "/default.slangp"
+    )
+
+    assert data["systems"][
+        "platform.nintendo.nes"
+    ].shader == "/nes.slangp"
+
+
+def test_assignment_methods_reject_invalid_identity(
+    tmp_path,
+):
+    path = (
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    store = PresentationStore(path)
+
+    import pytest
+
+    with pytest.raises(ValueError):
+        store.assign_system_shader(
+            "",
+            "/shader.slangp",
+        )
+
+    with pytest.raises(ValueError):
+        store.assign_game_shader(
+            "",
+            "/shader.slangp",
+        )
+
+    assert not path.exists()

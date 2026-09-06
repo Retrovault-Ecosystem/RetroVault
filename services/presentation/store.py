@@ -1,5 +1,6 @@
 import json
 import os
+from dataclasses import replace
 from pathlib import Path
 
 from .models import PresentationProfile
@@ -343,6 +344,116 @@ class PresentationStore:
         finally:
             if temporary.exists():
                 temporary.unlink()
+
+    @staticmethod
+    def _shader_value(
+        shader,
+    ):
+        if not isinstance(shader, str):
+            raise ValueError(
+                "Presentation shader must be a string."
+            )
+
+        return shader
+
+    def assign_default_shader(
+        self,
+        shader,
+    ):
+        shader = self._shader_value(
+            shader
+        )
+
+        data = self.load()
+
+        self.save(
+            default=replace(
+                data["default"],
+                shader=shader,
+            ),
+            systems=data["systems"],
+            games=data["games"],
+        )
+
+    def assign_system_shader(
+        self,
+        platform_id,
+        shader,
+    ):
+        if (
+            not isinstance(platform_id, str)
+            or not platform_id
+        ):
+            raise ValueError(
+                "Presentation system identity "
+                "must be a non-empty string."
+            )
+
+        shader = self._shader_value(
+            shader
+        )
+
+        data = self.load()
+
+        systems = dict(
+            data["systems"]
+        )
+
+        current = systems.get(
+            platform_id,
+            PresentationProfile(),
+        )
+
+        systems[platform_id] = replace(
+            current,
+            shader=shader,
+        )
+
+        self.save(
+            default=data["default"],
+            systems=systems,
+            games=data["games"],
+        )
+
+    def assign_game_shader(
+        self,
+        identity,
+        shader,
+    ):
+        if (
+            not isinstance(identity, str)
+            or not identity
+        ):
+            raise ValueError(
+                "Presentation game identity "
+                "must be a non-empty string."
+            )
+
+        shader = self._shader_value(
+            shader
+        )
+
+        data = self.load()
+
+        games = dict(
+            data["games"]
+        )
+
+        current = games.get(
+            identity,
+            PresentationProfile(),
+        )
+
+        games[identity] = replace(
+            current,
+            shader=shader,
+        )
+
+        self.save(
+            default=data["default"],
+            systems=data["systems"],
+            games=games,
+        )
 
     def resolver(self):
         from .resolver import (

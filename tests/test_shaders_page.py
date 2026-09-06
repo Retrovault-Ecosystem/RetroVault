@@ -6,6 +6,11 @@ from PyQt6.QtWidgets import (
 )
 
 from config import ConfigLoader
+from services.library.models import Game
+from services.library.state import game_identity
+from services.presentation import (
+    PresentationStore,
+)
 from ui.pages.shaders_page import (
     ShadersPage,
 )
@@ -30,6 +35,8 @@ def app():
 def make_page(
     tmp_path,
     shader_directory,
+    presentation_store=None,
+    current_game_provider=None,
 ):
     app()
 
@@ -56,7 +63,13 @@ def make_page(
         config_loader=ConfigLoader(
             default_file=defaults,
             runtime_file=runtime,
-        )
+        ),
+        presentation_store=(
+            presentation_store
+        ),
+        current_game_provider=(
+            current_game_provider
+        ),
     )
 
 
@@ -288,3 +301,260 @@ def test_page_uses_shader_service_boundary():
     assert "ShaderService" in source
     assert ".rglob(" not in source
     assert ".read_text(" not in source
+
+
+def assignment_game(tmp_path):
+    rom = tmp_path / "Duck Tales 2 (U).nes"
+
+    return Game(
+        name="Duck Tales 2",
+        platform="NES",
+        year=1993,
+        genre="Platformer",
+        core="fceumm",
+        rom=str(rom),
+        rvdb_platform_id="platform.nintendo.nes",
+    )
+
+
+def test_assignment_buttons_require_ready_selected_shader(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+    root.mkdir()
+
+    make_shader(
+        root,
+        "broken",
+        missing=True,
+    )
+
+    store = PresentationStore(
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    game = assignment_game(
+        tmp_path
+    )
+
+    page = make_page(
+        tmp_path,
+        root,
+        presentation_store=store,
+        current_game_provider=lambda: game,
+    )
+
+    page.shader_list.setCurrentRow(0)
+
+    assert not page.default_button.isEnabled()
+    assert not page.system_button.isEnabled()
+    assert not page.game_button.isEnabled()
+
+
+def test_default_shader_assignment_persists_selected_preset(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+    root.mkdir()
+
+    preset = make_shader(
+        root,
+        "default-crt",
+    )
+
+    store = PresentationStore(
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    page = make_page(
+        tmp_path,
+        root,
+        presentation_store=store,
+    )
+
+    page.shader_list.setCurrentRow(0)
+    page.default_button.click()
+
+    data = store.load()
+
+    assert data["default"].shader == str(
+        preset.resolve(
+            strict=False
+        )
+    )
+
+    assert page.status_label.text() == (
+        "Assigned selected shader as "
+        "RetroVault default."
+    )
+
+
+def test_system_shader_assignment_uses_rvdb_platform_id(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+    root.mkdir()
+
+    preset = make_shader(
+        root,
+        "nes-crt",
+    )
+
+    store = PresentationStore(
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    game = assignment_game(
+        tmp_path
+    )
+
+    page = make_page(
+        tmp_path,
+        root,
+        presentation_store=store,
+        current_game_provider=lambda: game,
+    )
+
+    page.shader_list.setCurrentRow(0)
+    page.system_button.click()
+
+    data = store.load()
+
+    assert data["systems"][
+        "platform.nintendo.nes"
+    ].shader == str(
+        preset.resolve(
+            strict=False
+        )
+    )
+
+
+def test_game_shader_assignment_uses_game_identity(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+    root.mkdir()
+
+    preset = make_shader(
+        root,
+        "duck-crt",
+    )
+
+    store = PresentationStore(
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    game = assignment_game(
+        tmp_path
+    )
+
+    page = make_page(
+        tmp_path,
+        root,
+        presentation_store=store,
+        current_game_provider=lambda: game,
+    )
+
+    page.shader_list.setCurrentRow(0)
+    page.game_button.click()
+
+    data = store.load()
+
+    identity = game_identity(
+        game
+    )
+
+    assert data["games"][
+        identity
+    ].shader == str(
+        preset.resolve(
+            strict=False
+        )
+    )
+
+
+def test_system_assignment_requires_canonical_rvdb_id(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+    root.mkdir()
+
+    make_shader(
+        root,
+        "system-crt",
+    )
+
+    store = PresentationStore(
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    game = assignment_game(
+        tmp_path
+    )
+    game.rvdb_platform_id = None
+
+    page = make_page(
+        tmp_path,
+        root,
+        presentation_store=store,
+        current_game_provider=lambda: game,
+    )
+
+    page.shader_list.setCurrentRow(0)
+    page.system_button.click()
+
+    assert not (
+        store.presentation_file.exists()
+    )
+
+    assert page.status_label.text() == (
+        "The selected game does not have "
+        "a canonical RVDB system identity."
+    )
+
+
+def test_assignment_is_immediately_visible_to_lazy_resolver(
+    tmp_path,
+):
+    root = tmp_path / "shaders"
+    root.mkdir()
+
+    preset = make_shader(
+        root,
+        "live-crt",
+    )
+
+    store = PresentationStore(
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    game = assignment_game(
+        tmp_path
+    )
+
+    page = make_page(
+        tmp_path,
+        root,
+        presentation_store=store,
+        current_game_provider=lambda: game,
+    )
+
+    page.shader_list.setCurrentRow(0)
+    page.game_button.click()
+
+    resolved = (
+        store.resolver()
+        .resolve(game)
+    )
+
+    assert resolved.shader == str(
+        preset.resolve(
+            strict=False
+        )
+    )
