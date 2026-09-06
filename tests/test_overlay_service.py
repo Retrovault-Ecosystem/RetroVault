@@ -16,9 +16,12 @@ def write_overlay(
     )
 
     lines = [
-        f'overlay{index}_overlay = "{reference}"'
-        for index, reference
-        in enumerate(references)
+        f"overlays = {len(references)}",
+        *[
+            f'overlay{index}_overlay = "{reference}"'
+            for index, reference
+            in enumerate(references)
+        ],
     ]
 
     path.write_text(
@@ -216,7 +219,8 @@ def test_non_image_overlay_value_is_ignored(
     ).scan()[0]
 
     assert overlay.image_paths == ()
-    assert overlay.ready is True
+    assert not overlay.descriptor_valid
+    assert overlay.ready is False
 
 
 def test_non_overlay_config_keys_are_ignored(
@@ -283,3 +287,127 @@ def test_display_name_normalizes_separators(
     assert overlay.name == (
         "mega bezel arcade"
     )
+
+
+def test_wrapper_settings_config_is_not_ready(
+    tmp_path,
+):
+    image = tmp_path / "game.png"
+    image.write_bytes(b"image")
+
+    wrapper = tmp_path / "game.cfg"
+    wrapper.write_text(
+        (
+            'input_overlay = '
+            '"/some/other/descriptor.cfg"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    overlays = OverlayService(tmp_path).scan()
+
+    assert len(overlays) == 1
+
+    overlay = overlays[0]
+
+    assert overlay.image_paths == ()
+    assert overlay.missing_images == ()
+    assert not overlay.descriptor_valid
+    assert not overlay.ready
+
+
+def test_zero_image_config_is_not_ready(
+    tmp_path,
+):
+    config = tmp_path / "empty.cfg"
+    config.write_text(
+        "some_other_setting = true\n",
+        encoding="utf-8",
+    )
+
+    overlay = OverlayService(
+        tmp_path
+    ).scan()[0]
+
+    assert overlay.image_paths == ()
+    assert not overlay.descriptor_valid
+    assert not overlay.ready
+
+
+def test_descriptor_requires_positive_overlay_count(
+    tmp_path,
+):
+    image = tmp_path / "game.png"
+    image.write_bytes(b"image")
+
+    config = tmp_path / "game.cfg"
+    config.write_text(
+        (
+            "overlays = 0\n"
+            'overlay0_overlay = "game.png"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    overlay = OverlayService(
+        tmp_path
+    ).scan()[0]
+
+    assert overlay.image_paths == (image,)
+    assert not overlay.descriptor_valid
+    assert not overlay.ready
+
+
+def test_real_descriptor_with_existing_image_is_ready(
+    tmp_path,
+):
+    image = tmp_path / "game.png"
+    image.write_bytes(b"image")
+
+    config = tmp_path / "game.cfg"
+    config.write_text(
+        (
+            "overlays = 1\n"
+            'overlay0_overlay = "game.png"\n'
+            "overlay0_full_screen = true\n"
+            "overlay0_descs = 0\n"
+        ),
+        encoding="utf-8",
+    )
+
+    overlay = OverlayService(
+        tmp_path
+    ).scan()[0]
+
+    assert overlay.image_paths == (image,)
+    assert overlay.missing_images == ()
+    assert overlay.descriptor_valid
+    assert overlay.ready
+
+
+def test_real_descriptor_with_missing_image_is_not_ready(
+    tmp_path,
+):
+    missing = tmp_path / "missing.png"
+
+    config = tmp_path / "game.cfg"
+    config.write_text(
+        (
+            "overlays = 1\n"
+            'overlay0_overlay = "missing.png"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    overlay = OverlayService(
+        tmp_path
+    ).scan()[0]
+
+    assert overlay.image_paths == (
+        missing,
+    )
+    assert overlay.missing_images == (
+        missing,
+    )
+    assert overlay.descriptor_valid
+    assert not overlay.ready

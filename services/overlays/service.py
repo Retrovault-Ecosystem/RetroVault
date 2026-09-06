@@ -57,6 +57,7 @@ class OverlayService:
         config_path,
     ):
         references = []
+        overlay_count_declared = False
 
         try:
             lines = config_path.read_text(
@@ -67,6 +68,9 @@ class OverlayService:
             lines = []
 
         for line in lines:
+            if self._declares_overlay_count(line):
+                overlay_count_declared = True
+
             reference = (
                 self._image_reference(
                     line
@@ -126,7 +130,43 @@ class OverlayService:
             relative_config=relative,
             image_paths=images,
             missing_images=missing,
+            descriptor_valid=(
+                overlay_count_declared
+                and bool(images)
+            ),
         )
+
+    @staticmethod
+    def _declares_overlay_count(
+        line,
+    ):
+        stripped = line.strip()
+
+        if (
+            not stripped
+            or stripped.startswith("#")
+            or "=" not in stripped
+        ):
+            return False
+
+        key, value = stripped.split(
+            "=",
+            1,
+        )
+
+        if key.strip().casefold() != "overlays":
+            return False
+
+        value = (
+            value.strip()
+            .strip('"')
+            .strip("'")
+        )
+
+        try:
+            return int(value) > 0
+        except ValueError:
+            return False
 
     @staticmethod
     def _image_reference(

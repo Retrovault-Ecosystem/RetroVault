@@ -557,3 +557,249 @@ def test_assignment_methods_reject_invalid_identity(
         )
 
     assert not path.exists()
+
+
+def test_assign_default_overlay_preserves_other_fields(
+    tmp_path,
+):
+    path = (
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    store = PresentationStore(path)
+
+    store.save(
+        default=PresentationProfile(
+            shader="/default.slangp",
+            overlay="/old/default.cfg",
+            artwork="/default.png",
+        ),
+        systems={
+            "platform.nintendo.nes": (
+                PresentationProfile(
+                    shader="/nes.slangp",
+                    overlay="/nes.cfg",
+                )
+            )
+        },
+        games={
+            "/roms/game.nes": (
+                PresentationProfile(
+                    overlay="/game.cfg",
+                    artwork="/game.png",
+                )
+            )
+        },
+    )
+
+    store.assign_default_overlay(
+        "/new/default.cfg"
+    )
+
+    data = store.load()
+
+    assert data["default"] == (
+        PresentationProfile(
+            shader="/default.slangp",
+            overlay="/new/default.cfg",
+            artwork="/default.png",
+        )
+    )
+
+    assert data["systems"][
+        "platform.nintendo.nes"
+    ] == PresentationProfile(
+        shader="/nes.slangp",
+        overlay="/nes.cfg",
+    )
+
+    assert data["games"][
+        "/roms/game.nes"
+    ] == PresentationProfile(
+        overlay="/game.cfg",
+        artwork="/game.png",
+    )
+
+
+def test_assign_system_overlay_preserves_profile_and_other_scopes(
+    tmp_path,
+):
+    path = (
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    store = PresentationStore(path)
+
+    store.save(
+        default=PresentationProfile(
+            overlay="/default.cfg",
+        ),
+        systems={
+            "platform.nintendo.nes": (
+                PresentationProfile(
+                    shader="/nes.slangp",
+                    overlay="/old/nes.cfg",
+                    artwork="/nes.png",
+                )
+            ),
+            "platform.nintendo.snes": (
+                PresentationProfile(
+                    overlay="/snes.cfg",
+                )
+            ),
+        },
+        games={
+            "/roms/game.nes": (
+                PresentationProfile(
+                    overlay="/game.cfg",
+                )
+            )
+        },
+    )
+
+    store.assign_system_overlay(
+        "platform.nintendo.nes",
+        "/new/nes.cfg",
+    )
+
+    data = store.load()
+
+    assert data["systems"][
+        "platform.nintendo.nes"
+    ] == PresentationProfile(
+        shader="/nes.slangp",
+        overlay="/new/nes.cfg",
+        artwork="/nes.png",
+    )
+
+    assert data["systems"][
+        "platform.nintendo.snes"
+    ].overlay == "/snes.cfg"
+
+    assert data["default"].overlay == (
+        "/default.cfg"
+    )
+
+    assert data["games"][
+        "/roms/game.nes"
+    ].overlay == "/game.cfg"
+
+
+def test_assign_game_overlay_preserves_profile_and_other_scopes(
+    tmp_path,
+):
+    path = (
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    store = PresentationStore(path)
+
+    store.save(
+        default=PresentationProfile(
+            overlay="/default.cfg",
+        ),
+        systems={
+            "platform.nintendo.nes": (
+                PresentationProfile(
+                    overlay="/nes.cfg",
+                )
+            )
+        },
+        games={
+            "/roms/game.nes": (
+                PresentationProfile(
+                    shader="/game.slangp",
+                    overlay="/old/game.cfg",
+                    artwork="/game.png",
+                )
+            ),
+            "/roms/other.nes": (
+                PresentationProfile(
+                    overlay="/other.cfg",
+                )
+            ),
+        },
+    )
+
+    store.assign_game_overlay(
+        "/roms/game.nes",
+        "/new/game.cfg",
+    )
+
+    data = store.load()
+
+    assert data["games"][
+        "/roms/game.nes"
+    ] == PresentationProfile(
+        shader="/game.slangp",
+        overlay="/new/game.cfg",
+        artwork="/game.png",
+    )
+
+    assert data["games"][
+        "/roms/other.nes"
+    ].overlay == "/other.cfg"
+
+    assert data["systems"][
+        "platform.nintendo.nes"
+    ].overlay == "/nes.cfg"
+
+    assert data["default"].overlay == (
+        "/default.cfg"
+    )
+
+
+def test_overlay_assignment_validates_values(
+    tmp_path,
+):
+    store = PresentationStore(
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Presentation overlay must be a string",
+    ):
+        store.assign_default_overlay(
+            None
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="Presentation system identity",
+    ):
+        store.assign_system_overlay(
+            "",
+            "/nes.cfg",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="Presentation overlay must be a string",
+    ):
+        store.assign_system_overlay(
+            "platform.nintendo.nes",
+            None,
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="Presentation game identity",
+    ):
+        store.assign_game_overlay(
+            "",
+            "/game.cfg",
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="Presentation overlay must be a string",
+    ):
+        store.assign_game_overlay(
+            "/roms/game.nes",
+            None,
+        )

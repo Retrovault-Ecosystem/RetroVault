@@ -125,7 +125,18 @@ class MainWindow(QMainWindow):
             )
         )
 
-        overlays_page = OverlaysPage()
+        overlays_page = OverlaysPage(
+            presentation_store=(
+                presentation_store
+            ),
+            current_game_provider=(
+                lambda: (
+                    library_page
+                    .details
+                    .current_game
+                )
+            ),
+        )
 
         self.pages.add_page(
             "Overlays",

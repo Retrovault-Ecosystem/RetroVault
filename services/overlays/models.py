@@ -9,10 +9,15 @@ class Overlay:
     relative_config: Path
     image_paths: tuple[Path, ...]
     missing_images: tuple[Path, ...]
+    descriptor_valid: bool = True
 
     @property
     def ready(self) -> bool:
-        return not self.missing_images
+        return (
+            self.descriptor_valid
+            and bool(self.image_paths)
+            and not self.missing_images
+        )
 
     @property
     def image_count(self) -> int:

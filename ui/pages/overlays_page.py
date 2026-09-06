@@ -21,6 +21,7 @@ from config import ConfigLoader
 from services.assets import (
     AssetOrganizer,
 )
+from services.library.state import game_identity
 from services.overlays import (
     OverlayService,
 )
@@ -36,6 +37,8 @@ class OverlaysPage(QWidget):
         config_loader=None,
         overlay_service=None,
         asset_organizer=None,
+        presentation_store=None,
+        current_game_provider=None,
     ):
         super().__init__()
 
@@ -84,6 +87,14 @@ class OverlaysPage(QWidget):
 
         self.overlays = []
 
+        self.presentation_store = (
+            presentation_store
+        )
+
+        self.current_game_provider = (
+            current_game_provider
+        )
+
         self.title_label = QLabel(
             "Overlays"
         )
@@ -120,6 +131,26 @@ class OverlaysPage(QWidget):
 
         self.refresh_button = QPushButton(
             "Refresh"
+        )
+
+        self.default_button = QPushButton(
+            "Set as Default"
+        )
+        self.system_button = QPushButton(
+            "Set for System"
+        )
+        self.game_button = QPushButton(
+            "Set for Game"
+        )
+
+        self.default_button.setEnabled(
+            False
+        )
+        self.system_button.setEnabled(
+            False
+        )
+        self.game_button.setEnabled(
+            False
         )
 
         self.overlay_list = QListWidget()
@@ -258,6 +289,30 @@ class OverlaysPage(QWidget):
             self.readiness_value
         )
 
+        details.addSpacing(8)
+
+        assignment_label = QLabel(
+            "RetroVault Presentation Assignment"
+        )
+        assignment_label.setObjectName(
+            "SectionTitle"
+        )
+
+        details.addWidget(
+            assignment_label
+        )
+        details.addWidget(
+            self.default_button
+        )
+        details.addWidget(
+            self.system_button
+        )
+        details.addWidget(
+            self.game_button
+        )
+
+        details.addStretch(1)
+
         content.addWidget(
             details_frame,
             2,
@@ -291,6 +346,15 @@ class OverlaysPage(QWidget):
         )
         self.overlay_list.currentRowChanged.connect(
             self.show_overlay
+        )
+        self.default_button.clicked.connect(
+            self.assign_default_overlay
+        )
+        self.system_button.clicked.connect(
+            self.assign_system_overlay
+        )
+        self.game_button.clicked.connect(
+            self.assign_game_overlay
         )
 
     def choose_organizer_source(
@@ -717,6 +781,17 @@ class OverlaysPage(QWidget):
         self.images_value.setText("—")
         self.missing_value.setText("—")
         self.readiness_value.setText("—")
+
+        self.default_button.setEnabled(
+            False
+        )
+        self.system_button.setEnabled(
+            False
+        )
+        self.game_button.setEnabled(
+            False
+        )
+
         self.preview.clear()
         self.preview.setText(
             "No preview"
@@ -736,6 +811,26 @@ class OverlaysPage(QWidget):
             return
 
         overlay = self.overlays[row]
+
+        assignable = (
+            overlay.ready
+            and self.presentation_store
+            is not None
+        )
+
+        self.default_button.setEnabled(
+            assignable
+        )
+        self.system_button.setEnabled(
+            assignable
+            and self.current_game_provider
+            is not None
+        )
+        self.game_button.setEnabled(
+            assignable
+            and self.current_game_provider
+            is not None
+        )
 
         self.name_value.setText(
             overlay.name
@@ -789,3 +884,175 @@ class OverlaysPage(QWidget):
                 )
             )
             break
+
+    def _selected_assignable_overlay(
+        self,
+    ):
+        row = self.overlay_list.currentRow()
+
+        if (
+            row < 0
+            or row >= len(self.overlays)
+        ):
+            return None
+
+        overlay = self.overlays[row]
+
+        if not overlay.ready:
+            return None
+
+        return overlay
+
+    def _selected_overlay_path(
+        self,
+    ):
+        overlay = (
+            self._selected_assignable_overlay()
+        )
+
+        if overlay is None:
+            return ""
+
+        return str(
+            overlay.config_path.expanduser().resolve(
+                strict=False
+            )
+        )
+
+    def _current_game(
+        self,
+    ):
+        if self.current_game_provider is None:
+            return None
+
+        return self.current_game_provider()
+
+    def assign_default_overlay(
+        self,
+    ):
+        if self.presentation_store is None:
+            return
+
+        overlay = self._selected_overlay_path()
+
+        if not overlay:
+            return
+
+        try:
+            self.presentation_store.assign_default_overlay(
+                overlay
+            )
+        except (
+            OSError,
+            ValueError,
+        ) as exc:
+            self.status_label.setText(
+                "Unable to assign overlay: "
+                f"{exc}"
+            )
+            return
+
+        self.status_label.setText(
+            "Assigned selected overlay as "
+            "RetroVault default."
+        )
+
+    def assign_system_overlay(
+        self,
+    ):
+        if self.presentation_store is None:
+            return
+
+        overlay = self._selected_overlay_path()
+
+        if not overlay:
+            return
+
+        game = self._current_game()
+
+        if game is None:
+            self.status_label.setText(
+                "Select a game in the Library "
+                "before assigning a system overlay."
+            )
+            return
+
+        platform_id = str(
+            getattr(
+                game,
+                "rvdb_platform_id",
+                "",
+            )
+            or ""
+        )
+
+        if not platform_id:
+            self.status_label.setText(
+                "The selected game does not have "
+                "a canonical RVDB system identity."
+            )
+            return
+
+        try:
+            self.presentation_store.assign_system_overlay(
+                platform_id,
+                overlay,
+            )
+        except (
+            OSError,
+            ValueError,
+        ) as exc:
+            self.status_label.setText(
+                "Unable to assign overlay: "
+                f"{exc}"
+            )
+            return
+
+        self.status_label.setText(
+            "Assigned selected overlay to "
+            f"system {platform_id}."
+        )
+
+    def assign_game_overlay(
+        self,
+    ):
+        if self.presentation_store is None:
+            return
+
+        overlay = self._selected_overlay_path()
+
+        if not overlay:
+            return
+
+        game = self._current_game()
+
+        if game is None:
+            self.status_label.setText(
+                "Select a game in the Library "
+                "before assigning a game overlay."
+            )
+            return
+
+        try:
+            identity = game_identity(
+                game
+            )
+
+            self.presentation_store.assign_game_overlay(
+                identity,
+                overlay,
+            )
+        except (
+            OSError,
+            ValueError,
+        ) as exc:
+            self.status_label.setText(
+                "Unable to assign overlay: "
+                f"{exc}"
+            )
+            return
+
+        self.status_label.setText(
+            "Assigned selected overlay to "
+            f"{game.name}."
+        )

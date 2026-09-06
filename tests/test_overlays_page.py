@@ -338,3 +338,353 @@ def test_page_uses_overlay_service_boundary():
 
     assert "rglob" not in source
     assert "read_text" not in source
+
+
+def assignment_game(
+    tmp_path,
+    *,
+    rvdb_platform_id="platform.nintendo.nes",
+):
+    from services.library.models import Game
+
+    rom = tmp_path / "Duck Tales 2 (U).nes"
+
+    return Game(
+        name="Duck Tales 2",
+        platform="NES",
+        year=1993,
+        genre="Platformer",
+        core="nestopia",
+        rom=str(rom),
+        rvdb_platform_id=rvdb_platform_id,
+    )
+
+
+def test_assignment_buttons_require_ready_selected_overlay(
+    app,
+    tmp_path,
+):
+    from services.presentation import PresentationStore
+
+    broken = make_overlay(
+        tmp_path,
+        name="Broken",
+        ready=False,
+    )
+
+    store = PresentationStore(
+        tmp_path / "presentation-state.json"
+    )
+
+    game = assignment_game(
+        tmp_path
+    )
+
+    page = OverlaysPage(
+        config_loader=FakeLoader(
+            tmp_path
+        ),
+        overlay_service=FakeService(
+            [broken]
+        ),
+        presentation_store=store,
+        current_game_provider=lambda: game,
+    )
+
+    page.overlay_list.setCurrentRow(0)
+    app.processEvents()
+
+    assert not page.default_button.isEnabled()
+    assert not page.system_button.isEnabled()
+    assert not page.game_button.isEnabled()
+
+
+def test_default_overlay_assignment_persists_selected_descriptor(
+    app,
+    tmp_path,
+):
+    from services.presentation import PresentationStore
+
+    overlay = make_overlay(
+        tmp_path,
+        name="Default",
+        ready=True,
+    )
+
+    store = PresentationStore(
+        tmp_path / "presentation-state.json"
+    )
+
+    page = OverlaysPage(
+        config_loader=FakeLoader(
+            tmp_path
+        ),
+        overlay_service=FakeService(
+            [overlay]
+        ),
+        presentation_store=store,
+    )
+
+    page.overlay_list.setCurrentRow(0)
+    app.processEvents()
+
+    assert page.default_button.isEnabled()
+
+    page.default_button.click()
+    app.processEvents()
+
+    data = store.load()
+
+    expected = str(
+        overlay.config_path.expanduser().resolve(
+            strict=False
+        )
+    )
+
+    assert data["default"].overlay == expected
+
+    assert page.status_label.text() == (
+        "Assigned selected overlay as "
+        "RetroVault default."
+    )
+
+
+def test_system_overlay_assignment_uses_rvdb_platform_id(
+    app,
+    tmp_path,
+):
+    from services.presentation import PresentationStore
+
+    overlay = make_overlay(
+        tmp_path,
+        name="NES",
+        ready=True,
+    )
+
+    store = PresentationStore(
+        tmp_path / "presentation-state.json"
+    )
+
+    game = assignment_game(
+        tmp_path
+    )
+
+    page = OverlaysPage(
+        config_loader=FakeLoader(
+            tmp_path
+        ),
+        overlay_service=FakeService(
+            [overlay]
+        ),
+        presentation_store=store,
+        current_game_provider=lambda: game,
+    )
+
+    page.overlay_list.setCurrentRow(0)
+    app.processEvents()
+
+    assert page.system_button.isEnabled()
+
+    page.system_button.click()
+    app.processEvents()
+
+    data = store.load()
+
+    expected = str(
+        overlay.config_path.expanduser().resolve(
+            strict=False
+        )
+    )
+
+    assert (
+        data["systems"][
+            "platform.nintendo.nes"
+        ].overlay
+        == expected
+    )
+
+
+def test_game_overlay_assignment_uses_game_identity(
+    app,
+    tmp_path,
+):
+    from services.library.state import game_identity
+    from services.presentation import PresentationStore
+
+    overlay = make_overlay(
+        tmp_path,
+        name="Duck Tales",
+        ready=True,
+    )
+
+    store = PresentationStore(
+        tmp_path / "presentation-state.json"
+    )
+
+    game = assignment_game(
+        tmp_path
+    )
+
+    page = OverlaysPage(
+        config_loader=FakeLoader(
+            tmp_path
+        ),
+        overlay_service=FakeService(
+            [overlay]
+        ),
+        presentation_store=store,
+        current_game_provider=lambda: game,
+    )
+
+    page.overlay_list.setCurrentRow(0)
+    app.processEvents()
+
+    assert page.game_button.isEnabled()
+
+    page.game_button.click()
+    app.processEvents()
+
+    data = store.load()
+
+    identity = game_identity(
+        game
+    )
+
+    expected = str(
+        overlay.config_path.expanduser().resolve(
+            strict=False
+        )
+    )
+
+    assert data["games"][identity].overlay == expected
+
+
+def test_system_overlay_assignment_requires_canonical_rvdb_id(
+    app,
+    tmp_path,
+):
+    from services.presentation import PresentationStore
+
+    overlay = make_overlay(
+        tmp_path,
+        name="No ID",
+        ready=True,
+    )
+
+    store = PresentationStore(
+        tmp_path / "presentation-state.json"
+    )
+
+    game = assignment_game(
+        tmp_path,
+        rvdb_platform_id="",
+    )
+
+    page = OverlaysPage(
+        config_loader=FakeLoader(
+            tmp_path
+        ),
+        overlay_service=FakeService(
+            [overlay]
+        ),
+        presentation_store=store,
+        current_game_provider=lambda: game,
+    )
+
+    page.overlay_list.setCurrentRow(0)
+    app.processEvents()
+
+    page.system_button.click()
+    app.processEvents()
+
+    assert store.load()["systems"] == {}
+
+    assert page.status_label.text() == (
+        "The selected game does not have "
+        "a canonical RVDB system identity."
+    )
+
+
+def test_overlay_assignment_is_immediately_visible_to_lazy_resolver(
+    app,
+    tmp_path,
+):
+    from services.presentation import PresentationStore
+
+    overlay = make_overlay(
+        tmp_path,
+        name="Immediate",
+        ready=True,
+    )
+
+    store = PresentationStore(
+        tmp_path / "presentation-state.json"
+    )
+
+    game = assignment_game(
+        tmp_path
+    )
+
+    resolver_provider = store.resolver
+
+    before = resolver_provider().resolve(
+        game
+    )
+
+    assert before.overlay == ""
+
+    page = OverlaysPage(
+        config_loader=FakeLoader(
+            tmp_path
+        ),
+        overlay_service=FakeService(
+            [overlay]
+        ),
+        presentation_store=store,
+        current_game_provider=lambda: game,
+    )
+
+    page.overlay_list.setCurrentRow(0)
+    app.processEvents()
+
+    page.game_button.click()
+    app.processEvents()
+
+    after = resolver_provider().resolve(
+        game
+    )
+
+    expected = str(
+        overlay.config_path.expanduser().resolve(
+            strict=False
+        )
+    )
+
+    assert after.overlay == expected
+
+
+def test_ready_overlay_without_presentation_store_is_not_assignable(
+    app,
+    tmp_path,
+):
+    overlay = make_overlay(
+        tmp_path,
+        name="Ready",
+        ready=True,
+    )
+
+    page = OverlaysPage(
+        config_loader=FakeLoader(
+            tmp_path
+        ),
+        overlay_service=FakeService(
+            [overlay]
+        ),
+    )
+
+    page.overlay_list.setCurrentRow(0)
+    app.processEvents()
+
+    assert not page.default_button.isEnabled()
+    assert not page.system_button.isEnabled()
+    assert not page.game_button.isEnabled()
