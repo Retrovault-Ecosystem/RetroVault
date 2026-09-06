@@ -491,6 +491,7 @@ Future:
 
 
         shader = ""
+        overlay = ""
 
         if (
             self.presentation_resolver_provider
@@ -504,6 +505,7 @@ Future:
                     self.current_game
                 )
                 shader = presentation.shader
+                overlay = presentation.overlay
             except (
                 OSError,
                 ValueError,
@@ -520,6 +522,8 @@ Future:
             rom=self.current_game.rom,
 
             core=core_path,
+
+            overlay=overlay,
 
             shader=shader
 

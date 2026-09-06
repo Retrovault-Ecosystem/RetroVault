@@ -184,3 +184,152 @@ def test_launcher_composes_config_and_shader():
         "success": True,
         "command": expected,
     }
+
+
+class FakeOverlayRuntime:
+    def __init__(
+        self,
+        runtime_file="/runtime/overlay.cfg",
+    ):
+        self.runtime_file = runtime_file
+        self.calls = []
+
+    def create(
+        self,
+        overlay,
+    ):
+        self.calls.append(
+            overlay
+        )
+
+        return self.runtime_file
+
+
+def test_launcher_appends_overlay_runtime_config():
+    runtime = FakeOverlayRuntime()
+
+    launcher = RetroArchLauncher(
+        overlay_runtime=runtime
+    )
+
+    profile = LaunchProfile(
+        game="Overlay Game",
+        rom="/roms/game.nes",
+        core="/cores/fceumm_libretro.so",
+        overlay="/overlays/NES.cfg",
+    )
+
+    with patch(
+        "services.retroarch.launcher.subprocess.Popen"
+    ) as popen:
+        result = launcher.launch(
+            profile
+        )
+
+    expected = [
+        "retroarch",
+        "-L",
+        "/cores/fceumm_libretro.so",
+        "/roms/game.nes",
+        "--appendconfig",
+        "/runtime/overlay.cfg",
+    ]
+
+    assert runtime.calls == [
+        "/overlays/NES.cfg"
+    ]
+
+    popen.assert_called_once_with(
+        expected
+    )
+
+    assert result == {
+        "success": True,
+        "command": expected,
+    }
+
+
+def test_launcher_composes_config_overlay_and_shader():
+    runtime = FakeOverlayRuntime(
+        "/runtime/overlay.cfg"
+    )
+
+    launcher = RetroArchLauncher(
+        overlay_runtime=runtime
+    )
+
+    profile = LaunchProfile(
+        game="Presented Game",
+        rom="/roms/game.sfc",
+        core="/cores/snes9x_libretro.so",
+        config="/configs/retrovault.cfg",
+        overlay="/overlays/SNES.cfg",
+        shader="/shaders/crt.slangp",
+    )
+
+    with patch(
+        "services.retroarch.launcher.subprocess.Popen"
+    ) as popen:
+        result = launcher.launch(
+            profile
+        )
+
+    expected = [
+        "retroarch",
+        "-L",
+        "/cores/snes9x_libretro.so",
+        "/roms/game.sfc",
+        "--config",
+        "/configs/retrovault.cfg",
+        "--appendconfig",
+        "/runtime/overlay.cfg",
+        "--set-shader",
+        "/shaders/crt.slangp",
+    ]
+
+    popen.assert_called_once_with(
+        expected
+    )
+
+    assert result == {
+        "success": True,
+        "command": expected,
+    }
+
+
+def test_launcher_reports_overlay_runtime_failure():
+    class BrokenOverlayRuntime:
+        def create(
+            self,
+            _overlay,
+        ):
+            raise ValueError(
+                "broken overlay"
+            )
+
+    launcher = RetroArchLauncher(
+        overlay_runtime=(
+            BrokenOverlayRuntime()
+        )
+    )
+
+    profile = LaunchProfile(
+        game="Broken Overlay",
+        rom="/roms/game.nes",
+        core="/cores/fceumm_libretro.so",
+        overlay="/overlays/broken.cfg",
+    )
+
+    with patch(
+        "services.retroarch.launcher.subprocess.Popen"
+    ) as popen:
+        result = launcher.launch(
+            profile
+        )
+
+    popen.assert_not_called()
+
+    assert result == {
+        "success": False,
+        "error": "broken overlay",
+    }

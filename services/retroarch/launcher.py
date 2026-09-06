@@ -2,15 +2,25 @@ import subprocess
 
 from models.launch_profile import LaunchProfile
 
+from .overlay_runtime import OverlayRuntimeConfig
+
 
 
 class RetroArchLauncher:
 
 
 
-    def __init__(self):
+    def __init__(
+        self,
+        overlay_runtime=None,
+    ):
 
         self.command = "retroarch"
+
+        self.overlay_runtime = (
+            overlay_runtime
+            or OverlayRuntimeConfig()
+        )
 
 
 
@@ -47,6 +57,31 @@ class RetroArchLauncher:
 
                 ]
 
+            )
+
+
+        if profile.overlay:
+
+            try:
+                append_config = (
+                    self.overlay_runtime.create(
+                        profile.overlay
+                    )
+                )
+            except (
+                OSError,
+                ValueError,
+            ) as error:
+                return {
+                    "success": False,
+                    "error": str(error),
+                }
+
+            command.extend(
+                [
+                    "--appendconfig",
+                    append_config,
+                ]
             )
 
 

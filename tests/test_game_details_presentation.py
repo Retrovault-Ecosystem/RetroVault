@@ -308,3 +308,124 @@ def test_presentation_load_failure_falls_back_cleanly(
 
     assert len(calls) == 1
     assert calls[0].shader == ""
+
+
+def test_resolved_overlay_reaches_launch_profile(
+    app,
+    monkeypatch,
+):
+    class Resolver:
+        def resolve(
+            self,
+            _game,
+        ):
+            from services.presentation import (
+                PresentationProfile,
+            )
+
+            return PresentationProfile(
+                overlay="/overlays/duck.cfg"
+            )
+
+    calls = []
+
+    details = GameDetails(
+        presentation_resolver_provider=(
+            lambda: Resolver()
+        )
+    )
+
+    details.show_game(
+        make_game()
+    )
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        make_ready(details),
+    )
+
+    details.core_resolver.find = (
+        lambda _core:
+        "/cores/fceumm_libretro.so"
+    )
+
+    details.launcher.launch = (
+        lambda profile: (
+            calls.append(profile)
+            or {
+                "success": True,
+                "command": [],
+            }
+        )
+    )
+
+    details.launch_game()
+
+    assert len(calls) == 1
+
+    assert calls[0].overlay == (
+        "/overlays/duck.cfg"
+    )
+
+
+def test_presentation_resolves_shader_and_overlay_together(
+    app,
+    monkeypatch,
+):
+    class Resolver:
+        def resolve(
+            self,
+            _game,
+        ):
+            from services.presentation import (
+                PresentationProfile,
+            )
+
+            return PresentationProfile(
+                shader="/shaders/crt.slangp",
+                overlay="/overlays/duck.cfg",
+            )
+
+    calls = []
+
+    details = GameDetails(
+        presentation_resolver_provider=(
+            lambda: Resolver()
+        )
+    )
+
+    details.show_game(
+        make_game()
+    )
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        make_ready(details),
+    )
+
+    details.core_resolver.find = (
+        lambda _core:
+        "/cores/fceumm_libretro.so"
+    )
+
+    details.launcher.launch = (
+        lambda profile: (
+            calls.append(profile)
+            or {
+                "success": True,
+                "command": [],
+            }
+        )
+    )
+
+    details.launch_game()
+
+    assert len(calls) == 1
+
+    assert calls[0].shader == (
+        "/shaders/crt.slangp"
+    )
+
+    assert calls[0].overlay == (
+        "/overlays/duck.cfg"
+    )
