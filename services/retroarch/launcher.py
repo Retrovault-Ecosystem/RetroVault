@@ -50,6 +50,22 @@ class RetroArchLauncher:
             )
 
 
+        if profile.shader:
+
+
+            command.extend(
+
+                [
+
+                    "--set-shader",
+
+                    profile.shader
+
+                ]
+
+            )
+
+
 
         try:
 
