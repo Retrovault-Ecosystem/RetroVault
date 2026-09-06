@@ -29,6 +29,7 @@ class GalleryView(QWidget):
         recent_provider=None,
         collection_names_provider=None,
         collection_add_handler=None,
+        presentation_resolver_provider=None,
     ):
 
         super().__init__()
@@ -113,6 +114,9 @@ class GalleryView(QWidget):
             ),
             collection_add_handler=(
                 collection_add_handler
+            ),
+            presentation_resolver_provider=(
+                presentation_resolver_provider
             ),
         )
 

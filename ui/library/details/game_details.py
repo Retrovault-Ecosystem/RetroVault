@@ -39,6 +39,7 @@ class GameDetails(QWidget):
         played_handler=None,
         collection_names_provider=None,
         collection_add_handler=None,
+        presentation_resolver_provider=None,
     ):
 
         super().__init__()
@@ -64,6 +65,10 @@ class GameDetails(QWidget):
 
         self.collection_add_handler = (
             collection_add_handler
+        )
+
+        self.presentation_resolver_provider = (
+            presentation_resolver_provider
         )
 
 
@@ -485,13 +490,38 @@ Future:
 
 
 
+        shader = ""
+
+        if (
+            self.presentation_resolver_provider
+            is not None
+        ):
+            try:
+                resolver = (
+                    self.presentation_resolver_provider()
+                )
+                presentation = resolver.resolve(
+                    self.current_game
+                )
+                shader = presentation.shader
+            except (
+                OSError,
+                ValueError,
+            ) as exc:
+                print(
+                    "Unable to resolve presentation: "
+                    f"{exc}"
+                )
+
         profile = LaunchProfile(
 
             game=self.current_game.name,
 
             rom=self.current_game.rom,
 
-            core=core_path
+            core=core_path,
+
+            shader=shader
 
         )
 

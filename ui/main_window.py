@@ -32,6 +32,8 @@ from services.library.rvdb_resolver import (
     RVDBLibraryResolver,
 )
 
+from services.presentation import PresentationStore
+
 
 class MainWindow(QMainWindow):
 
@@ -74,6 +76,8 @@ class MainWindow(QMainWindow):
             rvdb_resolver=rvdb_resolver
         )
 
+        presentation_store = PresentationStore()
+
 
         self.pages = PageManager()
 
@@ -95,6 +99,9 @@ class MainWindow(QMainWindow):
             ),
             collection_add_handler=(
                 controller.add_to_collection
+            ),
+            presentation_resolver_provider=(
+                presentation_store.resolver
             ),
         )
 
