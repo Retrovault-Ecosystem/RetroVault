@@ -1191,3 +1191,91 @@ Preserve:
 6. the verified Mega Bezel runtime workflow
 7. the verified external-pack runtime workflow
 8. the 436-test regression baseline unless intentionally expanded
+
+## RVA1-C.8-B.8 — Production RVV Live Proof
+
+Status:
+
+**COMPLETE**
+
+RVA1-C.8-B.8 established the first complete production
+end-to-end proof of the RetroVault Visuals/Presentation
+Engine (RVV) overlay path.
+
+The verified production game was:
+
+`Duck Tales 2 (U)`
+
+ROM:
+
+`/home/oilcan/roms/Starter Suite Roms/Nintendo Entertainment System/Duck Tales 2 (U).nes`
+
+A real game-specific presentation assignment was created
+through the production RetroVault Overlays page and persisted
+in:
+
+`~/.config/retrovault/presentation-state.json`
+
+The assignment resolved to:
+
+`/opt/retropie/configs/all/retroarch/overlays/RetroVault_DuckTales_2_USA.cfg`
+
+The descriptor referenced the verified Duck Tales 2 overlay
+artwork.
+
+The normal RetroVault Game Details `Launch Game` action was
+then used for the final controlled production proof.
+
+The verified runtime chain was:
+
+`PresentationStore`
+→ `PresentationResolver`
+→ `LaunchProfile.overlay`
+→ `RetroArchLauncher`
+→ `OverlayRuntimeConfig`
+→ RetroArch append configuration
+→ production overlay descriptor
+→ Duck Tales 2 artwork
+
+The captured RetroArch runtime configuration contained:
+
+`input_overlay = "/opt/retropie/configs/all/retroarch/overlays/RetroVault_DuckTales_2_USA.cfg"`
+
+and:
+
+`input_overlay_enable = "true"`
+
+The production descriptor referenced:
+
+`/home/oilcan/.var/app/org.libretro.RetroArch/config/retroarch/overlays/Nintendo/NES/NES_DuckTales 2 (USA).png`
+
+Final live confirmation from the single normal production
+launch:
+
+- RetroArch opened: YES
+- Duck Tales 2 started automatically: YES
+- RVV overlay visible: YES
+- gameplay responsive: YES
+- audio normal: YES
+
+The final production path therefore proved:
+
+`RetroVault UI assignment`
+→ persistent RVV state
+→ presentation resolution
+→ launch-profile injection
+→ transient RetroArch configuration
+→ overlay descriptor
+→ artwork
+→ RetroArch
+→ automatically launched game with visible overlay
+
+No source workaround was required.
+
+The earlier preliminary launch ambiguity was not reproduced
+during the final controlled production launch.
+
+The final B.8 focused regression passed with 79 tests.
+
+B.8 therefore closes with the first verified production RVV
+overlay assignment and launch pipeline operating end to end.
