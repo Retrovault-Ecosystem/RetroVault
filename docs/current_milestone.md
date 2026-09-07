@@ -1458,3 +1458,131 @@ RetroVault has now demonstrated simultaneous production RVV
 shader + overlay composition through the real launch pipeline,
 including successful automatic end-to-end invocation using the
 existing production game object and launch method.
+
+## RVA1-C.8 — RetroVault Visuals / Presentation Engine Foundation Closure
+
+Status:
+
+**COMPLETE**
+
+RVA1-C.8 establishes the application foundation for the
+RetroVault Visuals / Presentation Engine (RVV).
+
+The milestone now provides a production-capable presentation
+architecture spanning discovery, validation, persistence,
+resolution, assignment, and launch-time application of
+RetroArch presentation assets.
+
+### Foundation Capabilities Established
+
+The completed RVV foundation includes:
+
+- local shader discovery and validation
+- local overlay discovery and validation
+- canonical Mega Bezel package integration
+- shader dependency validation
+- persistent presentation state
+- independent shader and overlay assignment
+- Default, System, and Game presentation scopes
+- presentation precedence resolution
+- launch-time shader injection
+- launch-time overlay configuration
+- RetroVault Shaders page assignment controls
+- RetroVault Overlays page assignment controls
+- production RetroArch launch integration
+
+### Presentation Architecture
+
+The production presentation boundary is composed of:
+
+`PresentationStore`
+→ `PresentationResolver`
+→ `LaunchProfile`
+→ `RetroArchLauncher`
+
+Presentation state supports independent shader and overlay
+fields so each property can resolve through its own
+Game > System > Default precedence chain.
+
+### Production Proof
+
+Duck Tales 2 (U) provided the controlled production target.
+
+The final production proof demonstrated simultaneous use of:
+
+- FCEUmm
+- Duck Tales 2 (U)
+- Nintendo NES `[STD]` Orionsangel shader
+- RetroVault Duck Tales 2 overlay
+
+The normal RetroVault launch path successfully resolved both
+presentation fields and supplied them to RetroArch together.
+
+Runtime proof confirmed:
+
+- `--set-shader` received the exact assigned shader
+- `--appendconfig` received the transient overlay configuration
+- the overlay runtime descriptor was enabled
+- the expected game overlay was visible
+- the expected shader was visible
+- gameplay remained responsive
+- audio remained normal
+
+### Automatic Production Invocation Proof
+
+A temporary external verification harness also initialized the
+real RetroVault application, located the actual Duck Tales 2
+library object, selected it through the production Game Details
+surface, and invoked the existing production launch method
+without a manual Launch Game click.
+
+This proved that automatic launch intent can drive the existing
+RVV pipeline without bypassing presentation resolution or the
+normal RetroArch launch architecture.
+
+No permanent auto-launch feature was added during RVA1-C.8.
+
+### Closure Audit
+
+The final closure audit verified:
+
+- production presentation models exist
+- production PresentationStore exists
+- production PresentationResolver exists
+- shader assignment APIs exist at Default/System/Game scope
+- overlay assignment APIs exist at Default/System/Game scope
+- resolved shader and overlay fields reach LaunchProfile
+- RetroArchLauncher applies both presentation mechanisms
+- no genuine RVV production TODO/FIXME/NotImplemented/pass debt remains
+
+The two bare `pass` statements identified during audit were
+confirmed to be test scaffolding only:
+
+- ReadyValidator test-double constructor
+- FakeResolver test-double class
+
+They do not represent production implementation debt.
+
+### Protection Results
+
+Throughout RVA1-C.8:
+
+- the protected RVDB consumer boundary remained intact
+- RVDB remained unchanged
+- the protected C.7 shader staging state remained intact
+- production proofs required no source workaround
+- runtime presentation state remained separate from Git source
+- milestone work remained regression-gated and checkpointed
+
+### RVA1-C.8 Closure
+
+RVA1-C.8 is complete.
+
+RetroVault now has a verified production foundation for the
+RetroVault Visuals / Presentation Engine.
+
+Future RVV work can build on this boundary with richer asset
+management, broader system/game coverage, automated presentation
+selection, curated RetroVault visual packs, and higher-level
+presentation workflows without reopening the foundational
+launch architecture established here.
