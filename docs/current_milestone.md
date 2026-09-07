@@ -1279,3 +1279,182 @@ The final B.8 focused regression passed with 79 tests.
 
 B.8 therefore closes with the first verified production RVV
 overlay assignment and launch pipeline operating end to end.
+
+## RVA1-C.8-B.9 — Production RVV Shader + Overlay Composition
+
+Status:
+
+**COMPLETE**
+
+RVA1-C.8-B.9 establishes the first production RetroVault
+Visuals / Presentation Engine launch in which a persisted
+game-specific shader assignment and a persisted game-specific
+overlay assignment are resolved and applied together through
+the normal RetroVault launch path.
+
+### Production Proof Target
+
+Game:
+
+- `Duck Tales 2 (U)`
+
+ROM:
+
+- `/home/oilcan/roms/Starter Suite Roms/Nintendo Entertainment System/Duck Tales 2 (U).nes`
+
+Core:
+
+- FCEUmm
+- `/opt/retropie/libretrocores/lr-fceumm/fceumm_libretro.so`
+
+### Production Shader Assignment
+
+The RetroVault Shaders page assigned the following ready
+preset at game scope:
+
+- `/opt/retropie/configs/all/retroarch/shaders/Mega_Bezel_Packs/Orionsangel-Original-Console-main/Presets/Standard/Nintendo_NES/Nintendo_NES-[STD].slangp`
+
+Production ShaderService validation established:
+
+- preset type: `Slang`
+- missing dependencies: `0`
+- readiness: `True`
+
+The assignment was persisted through PresentationStore using
+the canonical Duck Tales 2 game identity.
+
+### Existing Production Overlay Assignment
+
+The B.8 production overlay assignment remained intact:
+
+- `/opt/retropie/configs/all/retroarch/overlays/RetroVault_DuckTales_2_USA.cfg`
+
+The shader assignment did not replace or alter the existing
+overlay assignment.
+
+### Presentation Resolution
+
+PresentationResolver returned both presentation fields
+simultaneously for Duck Tales 2:
+
+- shader: Nintendo NES `[STD]`
+- overlay: `RetroVault_DuckTales_2_USA.cfg`
+
+This confirms that presentation-field precedence and merging
+operate independently and preserve shader + overlay
+composition.
+
+### Normal Production Launch Proof
+
+Duck Tales 2 was launched through the normal RetroVault UI:
+
+`Library`
+→ `Game Details`
+→ `Launch Game`
+→ `PresentationStore`
+→ `PresentationResolver`
+→ `LaunchProfile`
+→ `RetroArchLauncher`
+→ `RetroArch`
+
+The live RetroArch command contained:
+
+- FCEUmm core
+- Duck Tales 2 ROM
+- `--appendconfig`
+- transient OverlayRuntimeConfig path
+- `--set-shader`
+- exact Nintendo NES `[STD]` preset
+
+### Atomic Runtime Evidence
+
+The controlled live proof captured the active RetroArch command
+while RetroArch was running and copied the transient overlay
+runtime configuration before cleanup.
+
+Validation confirmed:
+
+- exact Duck Tales 2 ROM
+- exact FCEUmm core
+- exact Nintendo NES `[STD]` shader through `--set-shader`
+- overlay injection through `--appendconfig`
+- exact RetroVault Duck Tales 2 overlay descriptor
+- overlay runtime enabled
+
+### Live Production Validation
+
+The combined shader + overlay production launch passed all
+manual runtime checks:
+
+- RetroArch opened
+- Duck Tales 2 started automatically
+- Duck Tales overlay was visible
+- Nintendo NES / Orionsangel shader was visible
+- gameplay was responsive
+- audio was normal
+
+### Automatic End-to-End Production Launch
+
+A final external test harness initialized the real RetroVault
+application without modifying production source.
+
+The harness used the actual `LibraryPage.all_games` collection,
+located exactly one real Duck Tales 2 game object, passed that
+object to the production `GameDetails.show_game()` method, and
+then invoked the existing production
+`GameDetails.launch_game()` method automatically.
+
+Terminal proof established:
+
+- exactly one Duck Tales 2 production library object matched
+- the real game object was selected automatically
+- launch validation returned `Game is ready to launch.`
+- the production launch method was invoked
+- no manual Launch Game click was required
+
+Live user validation established:
+
+- RetroVault opened normally
+- zero manual launch clicks were made
+- RetroArch opened automatically
+- Duck Tales 2 started automatically
+- the Duck Tales overlay was active
+- the Nintendo NES shader was active
+- gameplay and audio were normal
+
+This test demonstrates that the existing RetroVault production
+architecture can support automatic game launching while still
+using the normal presentation-resolution and launch pipeline.
+
+It does not add an automatic-launch feature to RetroVault;
+the harness existed only as an external production proof.
+
+### Regression Proof
+
+B.9 regression checkpoints passed:
+
+- baseline focused regression: 84 passed
+- assignment recovery regression: 59 passed
+- final focused production regression: 81 passed
+
+### Protection Results
+
+B.9 required no RetroVault production source workaround.
+
+Throughout the production proof:
+
+- RetroVault source remained unchanged
+- local and GitHub protected checkpoints remained unchanged
+- protected RVDB remained unchanged
+- protected C.7 Orionsangel staging remained unchanged
+- the B.8 overlay assignment remained preserved
+- the B.9 shader assignment remained persisted
+
+### B.9 Closure
+
+RVA1-C.8-B.9 is complete.
+
+RetroVault has now demonstrated simultaneous production RVV
+shader + overlay composition through the real launch pipeline,
+including successful automatic end-to-end invocation using the
+existing production game object and launch method.
