@@ -72,7 +72,17 @@ class EffectivePresentationResolver:
         if not platform_id:
             return manual
 
+        game_id = str(
+            getattr(
+                game,
+                "rvdb_game_id",
+                "",
+            )
+            or ""
+        )
+
         return self.recommendation_composer.compose(
             platform_id=platform_id,
+            game_id=game_id,
             manual=manual,
         )

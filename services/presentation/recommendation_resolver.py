@@ -1,23 +1,23 @@
 from .assets import PresentationAssetReferenceResolver
 from .models import PresentationProfile
-from .recommendations import PresentationRecommendationCatalog
+from .recommendations import (
+    PresentationRecommendationCatalog,
+)
 
 
 class PresentationRecommendationResolver:
     """
-    Resolve a curated RetroVault presentation recommendation
-    into locally usable presentation assets.
+    Resolve portable RetroVault automatic recommendations
+    into local PresentationProfile values.
 
-    Responsibilities remain deliberately separated:
+    System recommendations form the automatic baseline.
 
-        PresentationRecommendationCatalog
-            -> portable PresentationProfile
+    When a canonical RVDB game identity is supplied, non-empty
+    game recommendation properties override the corresponding
+    system recommendation properties.
 
-        PresentationAssetReferenceResolver
-            -> local PresentationProfile
-
-    This boundary performs no fuzzy platform matching, persistence,
-    manual/automatic composition, or launch-time mutation.
+    This resolver performs no manual presentation composition,
+    persistence, or launch-time mutation.
     """
 
     def __init__(
@@ -47,14 +47,71 @@ class PresentationRecommendationResolver:
         self.catalog = catalog
         self.asset_resolver = asset_resolver
 
+    @staticmethod
+    def _compose_automatic(
+        system: PresentationProfile,
+        game: PresentationProfile,
+    ) -> PresentationProfile:
+        """
+        Compose the automatic recommendation hierarchy.
+
+        Game values override system values only when the
+        game property is non-empty.
+        """
+        if not isinstance(
+            system,
+            PresentationProfile,
+        ):
+            raise TypeError(
+                "System recommendation must be a "
+                "PresentationProfile."
+            )
+
+        if not isinstance(
+            game,
+            PresentationProfile,
+        ):
+            raise TypeError(
+                "Game recommendation must be a "
+                "PresentationProfile."
+            )
+
+        return PresentationProfile(
+            shader=(
+                game.shader
+                or system.shader
+            ),
+            overlay=(
+                game.overlay
+                or system.overlay
+            ),
+            artwork=(
+                game.artwork
+                or system.artwork
+            ),
+        )
+
     def resolve(
         self,
         platform_id: str,
+        game_id: str = "",
     ) -> PresentationProfile:
-        recommendation = self.catalog.recommend(
+        system = self.catalog.recommend(
             platform_id
         )
 
+        game = PresentationProfile()
+
+        if game_id:
+            game = self.catalog.recommend_game(
+                game_id
+            )
+
+        automatic = self._compose_automatic(
+            system,
+            game,
+        )
+
         return self.asset_resolver.resolve_profile(
-            recommendation
+            automatic
         )

@@ -47,6 +47,7 @@ class PresentationRecommendationComposer:
         *,
         platform_id: str,
         manual: PresentationProfile,
+        game_id: str = "",
     ) -> PresentationProfile:
         if not isinstance(
             manual,
@@ -59,7 +60,8 @@ class PresentationRecommendationComposer:
 
         automatic = (
             self.recommendation_resolver.resolve(
-                platform_id
+                platform_id,
+                game_id,
             )
         )
 
