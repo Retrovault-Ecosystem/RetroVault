@@ -120,6 +120,7 @@ class PresentationRecommendationManifest:
         allowed = {
             "version",
             "systems",
+            "games",
         }
 
         unknown = set(data) - allowed
@@ -154,6 +155,7 @@ class PresentationRecommendationManifest:
             )
 
         recommendations = {}
+        game_recommendations = {}
 
         for platform_id, profile_data in (
             systems.items()
@@ -185,6 +187,51 @@ class PresentationRecommendationManifest:
                 )
             )
 
+        games = data.get(
+            "games",
+            {},
+        )
+
+        if not isinstance(games, dict):
+            raise ValueError(
+                "Presentation recommendation "
+                "games must contain "
+                "a JSON object."
+            )
+
+        for game_id, profile_data in (
+            games.items()
+        ):
+            if not isinstance(
+                game_id,
+                str,
+            ):
+                raise ValueError(
+                    "Presentation recommendation "
+                    "game identities must "
+                    "be strings."
+                )
+
+            if not game_id.strip():
+                raise ValueError(
+                    "Presentation recommendation "
+                    "game identities cannot "
+                    "be empty."
+                )
+
+            game_recommendations[game_id] = (
+                self._profile_from_data(
+                    profile_data,
+                    (
+                        "Presentation recommendation "
+                        f"{game_id!r}"
+                    ),
+                )
+            )
+
         return PresentationRecommendationCatalog(
-            recommendations
+            recommendations,
+            game_recommendations=(
+                game_recommendations
+            ),
         )
