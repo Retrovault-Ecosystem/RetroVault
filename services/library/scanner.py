@@ -117,13 +117,33 @@ class RomScanner:
                     legacy_platform,
                 )
 
+                game_name = os.path.splitext(
+                    filename
+                )[0]
+
+                rvdb_game_id = ""
+
+                if (
+                    self.rvdb_resolver is not None
+                    and rvdb_platform_id
+                ):
+                    rvdb_game = (
+                        self.rvdb_resolver.game_for_name(
+                            game_name,
+                            rvdb_platform_id,
+                        )
+                    )
+
+                    if rvdb_game is not None:
+                        rvdb_game_id = (
+                            rvdb_game.id
+                        )
+
                 games.append(
 
                     Game(
 
-                        name=os.path.splitext(
-                            filename
-                        )[0],
+                        name=game_name,
 
                         platform=platform,
 
@@ -144,6 +164,10 @@ class RomScanner:
 
                         rvdb_platform_id=(
                             rvdb_platform_id
+                        ),
+
+                        rvdb_game_id=(
+                            rvdb_game_id
                         ),
 
                     )

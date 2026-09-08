@@ -6,6 +6,7 @@ from pathlib import Path
 from services.rvdb import RVDBService
 from services.rvdb.models import (
     RVDBEntityRef,
+    RVDBGameSummary,
     RVDBPlatformSummary,
 )
 
@@ -35,6 +36,14 @@ class RVDBLibraryResolver:
             ),
         )
 
+        self._games = sorted(
+            service.games(),
+            key=lambda game: (
+                game.name.casefold(),
+                game.id,
+            ),
+        )
+
         self._extension_map: dict[
             str,
             list[RVDBPlatformSummary],
@@ -43,6 +52,11 @@ class RVDBLibraryResolver:
         self._name_map: dict[
             str,
             list[RVDBPlatformSummary],
+        ] = defaultdict(list)
+
+        self._game_name_map: dict[
+            str,
+            list[RVDBGameSummary],
         ] = defaultdict(list)
 
         self._build_indexes()
@@ -111,6 +125,27 @@ class RVDBLibraryResolver:
                         platform
                     )
 
+        for game in self._games:
+            names = [
+                game.name,
+                *game.aliases,
+            ]
+
+            for name in names:
+                if not name:
+                    continue
+
+                key = self._normalize_name(
+                    name
+                )
+
+                if key:
+                    self._game_name_map[
+                        key
+                    ].append(
+                        game
+                    )
+
     def platforms_for_extension(
         self,
         extension: str,
@@ -169,6 +204,59 @@ class RVDBLibraryResolver:
     ) -> RVDBPlatformSummary | None:
         matches = self.platforms_for_name(
             name
+        )
+
+        if len(matches) != 1:
+            return None
+
+        return matches[0]
+
+    def games_for_name(
+        self,
+        name: str,
+        platform_id: str,
+    ) -> list[RVDBGameSummary]:
+        """
+        Return canonical RVDB Games matching an exact normalized
+        title or alias on one canonical Platform.
+
+        Platform identity is mandatory so cross-platform title
+        collisions never become implicit application policy.
+        """
+
+        if not platform_id:
+            return []
+
+        key = self._normalize_name(
+            name
+        )
+
+        matches = self._game_name_map.get(
+            key,
+            [],
+        )
+
+        return [
+            game
+            for game in matches
+            if platform_id in game.platforms
+        ]
+
+    def game_for_name(
+        self,
+        name: str,
+        platform_id: str,
+    ) -> RVDBGameSummary | None:
+        """
+        Resolve a canonical RVDB Game only when normalized
+        title/alias plus Platform identifies exactly one result.
+
+        Missing and ambiguous matches intentionally return None.
+        """
+
+        matches = self.games_for_name(
+            name,
+            platform_id,
         )
 
         if len(matches) != 1:

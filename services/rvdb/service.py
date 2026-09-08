@@ -7,6 +7,7 @@ from services.rvdb.consumer import RVDBConsumer
 from services.rvdb.models import (
     RVDBCoreView,
     RVDBEntityRef,
+    RVDBGameSummary,
     RVDBPlatformMetadata,
     RVDBPlatformSummary,
     RVDBPlatformView,
@@ -149,6 +150,67 @@ class RVDBService:
 
         return tuple(
             refs
+        )
+
+    def games(
+        self,
+    ) -> tuple[RVDBGameSummary, ...]:
+        """
+        Return canonical RVDB Game title summaries.
+
+        Raw bundle dictionaries remain behind RVDBService.
+        Platform relationships are read through the canonical
+        RVDB graph rather than inferred from filenames or ROM paths.
+        """
+
+        games = []
+
+        for entity in self._consumer.nodes.values():
+            if entity.get("type") != "game":
+                continue
+
+            game_id = str(
+                entity["id"]
+            )
+
+            platforms = tuple(
+                sorted(
+                    set(
+                        self._consumer.relationship_targets(
+                            game_id,
+                            "platform",
+                        )
+                    )
+                )
+            )
+
+            games.append(
+                RVDBGameSummary(
+                    id=game_id,
+                    name=str(
+                        entity.get(
+                            "name",
+                            game_id,
+                        )
+                    ),
+                    aliases=self._values(
+                        entity.get(
+                            "aliases"
+                        )
+                    ),
+                    platforms=platforms,
+                )
+            )
+
+        games.sort(
+            key=lambda game: (
+                game.name.casefold(),
+                game.id,
+            )
+        )
+
+        return tuple(
+            games
         )
 
     def platforms(

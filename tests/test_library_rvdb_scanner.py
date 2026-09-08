@@ -52,6 +52,17 @@ class FakeResolver:
         )
 
 
+    def game_for_name(
+        self,
+        name,
+        platform_id,
+    ):
+        # Existing scanner tests exercise only platform
+        # enrichment. No canonical game fixture is supplied,
+        # so the expanded resolver contract reports no match.
+        return None
+
+
 def write_rom(
     root,
     name,

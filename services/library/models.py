@@ -24,3 +24,5 @@ class Game:
     favorite: bool = False
 
     rvdb_platform_id: str = ""
+
+    rvdb_game_id: str = ""

@@ -39,6 +39,22 @@ class RVDBEntityRef:
 
 
 @dataclass(frozen=True, slots=True)
+class RVDBGameSummary:
+    """
+    Stable RetroVault-facing summary for one RVDB Game.
+
+    This represents canonical RVDB title identity. It does not
+    represent a local ROM path, dump revision, or user-library
+    persistence identity.
+    """
+
+    id: str
+    name: str
+    aliases: tuple[str, ...]
+    platforms: tuple[str, ...]
+
+
+@dataclass(frozen=True, slots=True)
 class RVDBPlatformSummary:
     """
     Stable RetroVault-facing summary for one Platform.
