@@ -1,3 +1,4 @@
+from .assets import PresentationAssetReferenceResolver
 from .automation import PresentationAutomationPolicy
 from .manifest import PresentationRecommendationManifest
 from .models import PresentationProfile
@@ -7,6 +8,7 @@ from .store import PresentationStore
 
 
 __all__ = [
+    "PresentationAssetReferenceResolver",
     "PresentationAutomationPolicy",
     "PresentationRecommendationManifest",
     "PresentationProfile",
