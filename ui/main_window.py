@@ -32,7 +32,13 @@ from services.library.rvdb_resolver import (
     RVDBLibraryResolver,
 )
 
-from services.presentation import PresentationStore
+from config import ConfigLoader
+
+from services.presentation import (
+    PresentationCompositionFactory,
+    PresentationRecommendationManifest,
+    PresentationStore,
+)
 
 
 class MainWindow(QMainWindow):
@@ -78,6 +84,18 @@ class MainWindow(QMainWindow):
 
         presentation_store = PresentationStore()
 
+        presentation_composition_factory = (
+            PresentationCompositionFactory(
+                presentation_store=(
+                    presentation_store
+                ),
+                config_loader=ConfigLoader(),
+                recommendation_manifest=(
+                    PresentationRecommendationManifest()
+                ),
+            )
+        )
+
 
         self.pages = PageManager()
 
@@ -101,7 +119,7 @@ class MainWindow(QMainWindow):
                 controller.add_to_collection
             ),
             presentation_resolver_provider=(
-                presentation_store.resolver
+                presentation_composition_factory.build
             ),
         )
 
