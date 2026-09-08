@@ -316,7 +316,7 @@ def test_real_rvdb_ambiguous_iso_preserves_unknown(
     assert game.rvdb_platform_id == ""
 
 
-def test_real_rvdb_unresolved_sfc_preserves_super_nintendo(
+def test_real_rvdb_sfc_resolves_platform_but_not_unmatched_game(
     tmp_path,
 ):
     write_rom(
@@ -338,4 +338,8 @@ def test_real_rvdb_unresolved_sfc_preserves_super_nintendo(
         "Super Nintendo"
     )
 
-    assert game.rvdb_platform_id == ""
+    assert game.rvdb_platform_id == (
+        "platform.nintendo.snes"
+    )
+
+    assert game.rvdb_game_id == ""
