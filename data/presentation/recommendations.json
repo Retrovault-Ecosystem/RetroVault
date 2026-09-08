@@ -1,4 +1,10 @@
 {
   "version": 1,
-  "systems": {}
+  "systems": {
+    "platform.nintendo.nes": {
+      "shader": "retro-vault://shaders/Mega_Bezel_Packs/Orionsangel-Original-Console-main/Presets/Standard/Nintendo_NES/Nintendo_NES-[STD].slangp",
+      "overlay": "retro-vault://overlays/RetroVault_DuckTales_2_USA.cfg",
+      "artwork": ""
+    }
+  }
 }
