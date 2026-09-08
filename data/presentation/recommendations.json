@@ -5,6 +5,18 @@
       "shader": "retro-vault://shaders/Mega_Bezel_Packs/Orionsangel-Original-Console-main/Presets/Standard/Nintendo_NES/Nintendo_NES-[STD].slangp",
       "overlay": "retro-vault://overlays/RetroVault_DuckTales_2_USA.cfg",
       "artwork": ""
+    },
+    "platform.nintendo.snes": {
+      "shader": "retro-vault://shaders/Mega_Bezel_Packs/Orionsangel-Original-Console-main/Presets/Standard/Nintendo_SNES/Nintendo_SNES-[STD].slangp",
+      "overlay": "",
+      "artwork": ""
+    }
+  },
+  "games": {
+    "game.super_metroid": {
+      "shader": "retro-vault://shaders/Mega_Bezel_Packs/HSM_Mega_Bezel_Examples/Presets/Orionsangel_Console/SuperMetroid__STD.slangp",
+      "overlay": "",
+      "artwork": ""
     }
   }
 }

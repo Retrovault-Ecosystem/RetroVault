@@ -257,6 +257,16 @@ def test_current_production_manifest_remains_compatible():
         NES
     ) != PresentationProfile()
 
-    assert catalog.recommend_game(
+    super_metroid = catalog.recommend_game(
         SUPER_METROID
+    )
+
+    assert super_metroid != PresentationProfile()
+
+    assert super_metroid.shader.endswith(
+        "SuperMetroid__STD.slangp"
+    )
+
+    assert catalog.recommend_game(
+        "game.unknown"
     ) == PresentationProfile()
