@@ -1,0 +1,47 @@
+{
+  "version": 1,
+  "id": "rvv.overlay.nes.classic",
+  "family": "RetroVault Classic",
+  "display_name": "Nintendo NES — RetroVault Classic",
+  "platform_id": "platform.nintendo.nes",
+  "asset_type": "overlay",
+  "source": "rvv_native",
+  "author": "RetroVault",
+  "copyright": "RetroVault",
+  "production_status": "specified",
+  "design": {
+    "intent": "Create an original RetroVault-owned NES presentation that evokes the visual character of home console play while remaining clean, game-focused, and suitable for long play sessions.",
+    "originality": "The visual must be an original RetroVault composition and must not reproduce third-party bezel artwork, copyrighted Nintendo artwork, console photography, logos, trademarks, or external pack artwork.",
+    "composition": {
+      "game_view": "Centered 4:3 gameplay viewport with presentation framing that does not obscure gameplay.",
+      "frame": "Purpose-built RetroVault frame with restrained late-1980s home-console industrial character.",
+      "surround": "Dark neutral presentation field designed to keep visual attention on gameplay.",
+      "depth": "Subtle layered depth may be used around the game viewport without creating excessive visual bulk.",
+      "branding": "RetroVault branding only; understated and subordinate to gameplay."
+    },
+    "visual_language": {
+      "style": "clean retro-industrial",
+      "era_reference": "late-1980s home console",
+      "surface_character": "subtle molded-material and display-surround cues",
+      "decoration": "minimal",
+      "game_priority": "high"
+    },
+    "runtime": {
+      "target_aspect": "16:9",
+      "game_aspect": "4:3",
+      "target_resolution": "1920x1080",
+      "overlay_format": "PNG",
+      "descriptor_format": "RetroArch overlay CFG",
+      "shader_independent": true,
+      "shader_compatible": true
+    }
+  },
+  "production_assets": {
+    "artwork": "retrovault/nes/classic/RetroVault_NES_Classic_1080p.png",
+    "descriptor": "retrovault/nes/classic/RetroVault_NES_Classic.cfg"
+  },
+  "catalog": {
+    "reference": "retro-vault://overlays/retrovault/nes/classic/RetroVault_NES_Classic.cfg",
+    "attribution": "Original RetroVault visual."
+  }
+}
