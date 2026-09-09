@@ -6,7 +6,9 @@ from PyQt6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
+    QLineEdit,
     QListWidget,
+    QComboBox,
     QMessageBox,
     QPushButton,
     QScrollArea,
@@ -19,6 +21,13 @@ from services.library.state import game_identity
 from services.presentation.service import (
     NativeVisualInstallStatus,
     NativeVisualService,
+)
+
+from services.presentation.visual_catalog import (
+    VisualAssetType,
+)
+from services.presentation.visual_discovery import (
+    VisualAssetDiscovery,
 )
 
 
@@ -56,6 +65,7 @@ class NativeVisualsPage(QWidget):
 
         self.assets = []
         self.statuses = []
+        self._all_statuses = []
 
         self.title_label = QLabel(
             "RetroVault Visuals"
@@ -84,6 +94,33 @@ class NativeVisualsPage(QWidget):
 
         self.count_label = QLabel()
         self.status_label = QLabel()
+
+        self.search_edit = QLineEdit()
+        self.search_edit.setPlaceholderText(
+            "Search RetroVault visuals…"
+        )
+        self.search_edit.setClearButtonEnabled(
+            True
+        )
+
+        self.type_filter = QComboBox()
+        self.type_filter.addItem(
+            "All Visual Types",
+            "",
+        )
+
+        for asset_type in VisualAssetType:
+            self.type_filter.addItem(
+                asset_type.value.title(),
+                asset_type.value,
+            )
+
+        self.clear_filters_button = QPushButton(
+            "Clear Filters"
+        )
+        self.clear_filters_button.setEnabled(
+            False
+        )
 
         self.visual_list = QListWidget()
         self.visual_list.setMinimumWidth(
@@ -186,6 +223,28 @@ class NativeVisualsPage(QWidget):
 
         layout.addWidget(
             self.subtitle_label
+        )
+
+        discovery_controls = QHBoxLayout()
+        discovery_controls.setSpacing(
+            10
+        )
+
+        discovery_controls.addWidget(
+            self.search_edit,
+            1,
+        )
+
+        discovery_controls.addWidget(
+            self.type_filter
+        )
+
+        discovery_controls.addWidget(
+            self.clear_filters_button
+        )
+
+        layout.addLayout(
+            discovery_controls
         )
 
         header = QHBoxLayout()
@@ -363,6 +422,18 @@ class NativeVisualsPage(QWidget):
         )
 
     def _connect_signals(self):
+        self.search_edit.textChanged.connect(
+            self._apply_filters
+        )
+
+        self.type_filter.currentIndexChanged.connect(
+            self._apply_filters
+        )
+
+        self.clear_filters_button.clicked.connect(
+            self.clear_filters
+        )
+
         self.visual_list.currentRowChanged.connect(
             self.show_visual
         )
@@ -423,7 +494,268 @@ class NativeVisualsPage(QWidget):
 
         return "Install"
 
+    def _selected_asset_id(
+        self,
+    ):
+        row = self.visual_list.currentRow()
+
+        if (
+            row < 0
+            or row >= len(
+                self.statuses
+            )
+        ):
+            return ""
+
+        return str(
+            self.statuses[
+                row
+            ].asset.id
+            or ""
+        )
+
+    def _selected_type_filter(
+        self,
+    ):
+        value = str(
+            self.type_filter.currentData()
+            or ""
+        ).strip()
+
+        if not value:
+            return None
+
+        return VisualAssetType(
+            value
+        )
+
+    def _filters_active(
+        self,
+    ):
+        return bool(
+            self.search_edit.text().strip()
+            or self.type_filter.currentData()
+        )
+
+    def clear_filters(
+        self,
+    ):
+        if not self._filters_active():
+            return
+
+        preserve_asset_id = (
+            self._selected_asset_id()
+        )
+
+        self.search_edit.blockSignals(
+            True
+        )
+        self.type_filter.blockSignals(
+            True
+        )
+
+        try:
+            self.search_edit.clear()
+            self.type_filter.setCurrentIndex(
+                0
+            )
+        finally:
+            self.search_edit.blockSignals(
+                False
+            )
+            self.type_filter.blockSignals(
+                False
+            )
+
+        self._apply_filters(
+            preserve_asset_id=(
+                preserve_asset_id
+            ),
+        )
+
+    def _count_text(
+        self,
+        visible,
+        total,
+    ):
+        if self._filters_active():
+            return (
+                f"{visible} of {total} "
+                "RetroVault visuals"
+            )
+
+        return (
+            "1 RetroVault visual"
+            if visible == 1
+            else (
+                f"{visible} "
+                "RetroVault visuals"
+            )
+        )
+
+    def _populate_visual_list(
+        self,
+        *,
+        preserve_asset_id="",
+    ):
+        self.visual_list.blockSignals(
+            True
+        )
+
+        selected_row = -1
+
+        try:
+            self.visual_list.clear()
+
+            for row, (
+                asset,
+                status,
+            ) in enumerate(
+                zip(
+                    self.assets,
+                    self.statuses,
+                )
+            ):
+                label = (
+                    f"{asset.display_name}  —  "
+                    f"{self._status_display(status.status)}"
+                )
+
+                self.visual_list.addItem(
+                    label
+                )
+
+                if (
+                    preserve_asset_id
+                    and asset.id
+                    == preserve_asset_id
+                ):
+                    selected_row = row
+
+        finally:
+            self.visual_list.blockSignals(
+                False
+            )
+
+        visible = len(
+            self.assets
+        )
+
+        total = len(
+            self._all_statuses
+        )
+
+        self.clear_filters_button.setEnabled(
+            self._filters_active()
+        )
+
+        self.count_label.setText(
+            self._count_text(
+                visible,
+                total,
+            )
+        )
+
+        self.clear_details()
+
+        if selected_row >= 0:
+            self.visual_list.setCurrentRow(
+                selected_row
+            )
+
+            self.show_visual(
+                selected_row
+            )
+
+        if visible:
+            if self._filters_active():
+                self.status_label.setText(
+                    f"Showing {visible} of {total} "
+                    "RetroVault visuals. "
+                    "Select one to preview and manage it."
+                )
+            else:
+                self.status_label.setText(
+                    "Select a RetroVault visual "
+                    "to preview and manage it."
+                )
+
+        elif total:
+            self.status_label.setText(
+                f"No RetroVault visuals match "
+                f"the current filters "
+                f"(0 of {total})."
+            )
+
+        else:
+            self.status_label.setText(
+                "No RetroVault-native visuals "
+                "are currently cataloged."
+            )
+
+    def _apply_filters(
+        self,
+        *_signal_args,
+        preserve_asset_id=None,
+    ):
+        selected_id = (
+            preserve_asset_id
+            if preserve_asset_id is not None
+            else self._selected_asset_id()
+        )
+
+        if not self._all_statuses:
+            self.assets = []
+            self.statuses = []
+
+            self._populate_visual_list(
+                preserve_asset_id="",
+            )
+            return
+
+        discovery = VisualAssetDiscovery(
+            tuple(
+                status.asset
+                for status
+                in self._all_statuses
+            )
+        )
+
+        discovered = discovery.query(
+            text=self.search_edit.text(),
+            asset_type=(
+                self._selected_type_filter()
+            ),
+        )
+
+        status_by_id = {
+            status.asset.id: status
+            for status
+            in self._all_statuses
+        }
+
+        self.assets = list(
+            discovered
+        )
+
+        self.statuses = [
+            status_by_id[
+                asset.id
+            ]
+            for asset in discovered
+        ]
+
+        self._populate_visual_list(
+            preserve_asset_id=(
+                selected_id
+            ),
+        )
+
     def refresh_visuals(self):
+        preserve_asset_id = (
+            self._selected_asset_id()
+        )
+
         try:
             assets = tuple(
                 self.native_visual_service.native_assets()
@@ -445,6 +777,7 @@ class NativeVisualsPage(QWidget):
         ) as exc:
             self.assets = []
             self.statuses = []
+            self._all_statuses = []
 
             self.visual_list.clear()
             self.clear_details()
@@ -460,63 +793,15 @@ class NativeVisualsPage(QWidget):
 
             return
 
-        self.assets = list(
-            assets
-        )
-
-        self.statuses = list(
+        self._all_statuses = list(
             statuses
         )
 
-        self.visual_list.blockSignals(
-            True
+        self._apply_filters(
+            preserve_asset_id=(
+                preserve_asset_id
+            ),
         )
-
-        try:
-            self.visual_list.clear()
-
-            for asset, status in zip(
-                self.assets,
-                self.statuses,
-            ):
-                label = (
-                    f"{asset.display_name}  —  "
-                    f"{self._status_display(status.status)}"
-                )
-
-                self.visual_list.addItem(
-                    label
-                )
-
-        finally:
-            self.visual_list.blockSignals(
-                False
-            )
-
-        count = len(
-            self.assets
-        )
-
-        self.count_label.setText(
-            (
-                "1 RetroVault visual"
-                if count == 1
-                else f"{count} RetroVault visuals"
-            )
-        )
-
-        self.clear_details()
-
-        if count:
-            self.status_label.setText(
-                "Select a RetroVault visual "
-                "to preview and manage it."
-            )
-        else:
-            self.status_label.setText(
-                "No RetroVault-native visuals "
-                "are currently cataloged."
-            )
 
     def clear_details(self):
         self.name_value.setText(

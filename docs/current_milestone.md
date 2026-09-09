@@ -2176,3 +2176,128 @@ is not authorized unless a future production-path regression
 demonstrably differs from this accepted baseline.
 
 RVA1-C.4-D controlled native RVV assignment is ready for closure.
+
+## RVA1-C.4-F — RVV Visual Discovery
+
+Status:
+
+COMPLETE
+
+RVA1-C.4-F extends the established RetroVault Visuals
+surface with catalog-driven visual discovery while preserving
+the existing RVV ownership, deployment, assignment, and launch
+boundaries.
+
+### F.1 — Generic Visual Discovery
+
+Added:
+
+- `services/presentation/visual_discovery.py`
+- `tests/test_presentation_visual_discovery.py`
+
+`VisualAssetDiscovery` operates over an existing collection of
+typed `VisualAsset` objects.
+
+The discovery layer:
+
+- does not load or own the authoritative visual catalog
+- does not scan the filesystem
+- does not persist catalog or assignment state
+- does not install or deploy visual assets
+- does not alter launch behavior
+- remains independent of platform-specific visual policy
+
+Supported discovery behavior includes:
+
+- deterministic display-name ordering
+- case-insensitive free-text search
+- token-prefix matching for incremental search
+- protection against inside-token collisions
+- multi-term matching
+- normalized whitespace
+- typed source filtering
+- typed visual-type filtering
+- composable text/source/type queries
+- metadata search over visual identity, display name, author,
+  attribution, source, and visual type
+- exclusion of portable asset references from free-text search
+
+### F.2 — User-Facing Visual Discovery
+
+The existing `RetroVault Visuals` page now provides:
+
+- a visual search field
+- visual-type filtering
+- composable search and type filters
+- filtered result counts
+- safe selection handling when filtering changes the visible
+  collection
+
+The UI continues to consume the native visual service and the
+authoritative typed catalog model.
+
+No independent UI catalog, filesystem discovery, or source
+ownership was introduced.
+
+### F.3 — Discovery UX and Collection Polish
+
+The discovery workflow was completed with:
+
+- Clear Filters control
+- automatic Clear Filters enabled/disabled state
+- restoration of the complete collection after clearing filters
+- simultaneous search/type reset
+- filter persistence across visual refresh
+- preservation of a selected asset across refresh when that asset
+  remains visible
+- safe clearing of stale selections
+- explicit filtered result status text
+- explicit zero-result status text
+
+### Architecture Preserved
+
+RVA1-C.4-F does not modify:
+
+- the authoritative visual catalog schema or manifest
+- presentation recommendations
+- `NativeVisualService`
+- native deployment
+- presentation persistence or assignment precedence
+- effective presentation resolution
+- RetroArch launch/runtime composition
+- the separate RetroArch overlay and shader browsing surfaces
+- MainWindow composition
+- the accepted native NES production package or geometry
+
+Source separation remains structural. Native RVV discovery does
+not collapse RetroVault-native, RetroArch-default, third-party,
+or user-owned visual sources into a single ownership model.
+
+### Validation
+
+Checkpoint validation completed successfully:
+
+- F.1/F.2/F.3 focused regression: 55 passed
+- corrected RVV presentation regression: 168 passed
+- complete RetroVault regression suite: 847 passed
+- changed Python compile gate: PASS
+- `git diff --check`: PASS
+- production policy scan: PASS
+- filesystem discovery guard: PASS
+- source-boundary guard: PASS
+- protected architecture checks: PASS
+- accepted NES production package check: PASS
+- exact implementation scope before documentation: four files
+
+### Closure
+
+RVA1-C.4-F is complete.
+
+RetroVault now has a generic discovery layer and a user-facing
+search/filter workflow capable of scaling with future native RVV
+visual collections without reopening the catalog, deployment,
+assignment, or launch architecture.
+
+Future visual collection expansion can build on this discovery
+boundary while preserving the accepted native NES production
+baseline.

@@ -15,6 +15,12 @@ from PyQt6.QtWidgets import (
 from services.presentation.service import (
     NativeVisualInstallStatus,
 )
+
+from services.presentation.visual_catalog import (
+    VisualAsset,
+    VisualAssetSource,
+    VisualAssetType,
+)
 from ui.pages.visuals_page import (
     NativeVisualsPage,
 )
@@ -36,6 +42,7 @@ def make_status(
     state=NativeVisualInstallStatus.NOT_INSTALLED,
     display_name="Nintendo NES — RetroVault Classic",
     asset_id="rvv.overlay.nes.classic",
+    asset_type=VisualAssetType.OVERLAY,
     preview=True,
 ):
     package = (
@@ -86,15 +93,11 @@ def make_status(
             image_path
         )
 
-    asset = SimpleNamespace(
+    asset = VisualAsset(
         id=asset_id,
         display_name=display_name,
-        asset_type=SimpleNamespace(
-            value="overlay"
-        ),
-        source=SimpleNamespace(
-            value="rvv_native"
-        ),
+        asset_type=asset_type,
+        source=VisualAssetSource.RVV_NATIVE,
         reference=(
             "retro-vault://overlays/"
             "retrovault/nes/classic/"
@@ -958,4 +961,592 @@ def test_main_window_injects_shared_assignment_context_into_visuals_page():
         "                        .details\n"
         "                        .current_game"
         in source
+    )
+
+
+def test_native_visual_search_filters_collection(
+    app,
+    tmp_path,
+):
+    nes = make_status(
+        tmp_path,
+        display_name=(
+            "Nintendo NES — RetroVault Classic"
+        ),
+        asset_id="rvv.overlay.nes.classic",
+    )
+
+    snes = make_status(
+        tmp_path,
+        display_name=(
+            "Nintendo SNES — RetroVault Classic"
+        ),
+        asset_id="rvv.overlay.snes.classic",
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                [snes, nes]
+            )
+        )
+    )
+
+    assert page.visual_list.count() == 2
+
+    page.search_edit.setText(
+        "NES"
+    )
+
+    app.processEvents()
+
+    assert page.visual_list.count() == 1
+
+    assert (
+        "Nintendo NES — RetroVault Classic"
+        in page.visual_list.item(0).text()
+    )
+
+    assert (
+        "Nintendo SNES"
+        not in page.visual_list.item(0).text()
+    )
+
+    assert page.count_label.text() == (
+        "1 of 2 RetroVault visuals"
+    )
+
+
+def test_native_visual_search_supports_prefixes(
+    app,
+    tmp_path,
+):
+    first = make_status(
+        tmp_path,
+        display_name="RetroVault Classic",
+        asset_id="rvv.overlay.classic",
+    )
+
+    second = make_status(
+        tmp_path,
+        display_name="Arcade Cabinet",
+        asset_id="rvv.overlay.arcade",
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                [first, second]
+            )
+        )
+    )
+
+    # Use a display-name token that is not shared
+    # by the common native RetroVault metadata.
+    page.search_edit.setText(
+        "Clas"
+    )
+
+    app.processEvents()
+
+    assert page.visual_list.count() == 1
+
+    assert (
+        "RetroVault Classic"
+        in page.visual_list.item(0).text()
+    )
+
+
+def test_native_visual_type_filter_uses_catalog_type(
+    app,
+    tmp_path,
+):
+    other_type = next(
+        item
+        for item in VisualAssetType
+        if item is not VisualAssetType.OVERLAY
+    )
+
+    overlay = make_status(
+        tmp_path,
+        display_name="Overlay Visual",
+        asset_id="rvv.overlay.test",
+        asset_type=VisualAssetType.OVERLAY,
+    )
+
+    other = make_status(
+        tmp_path,
+        display_name="Other Visual",
+        asset_id="rvv.other.test",
+        asset_type=other_type,
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                [overlay, other]
+            )
+        )
+    )
+
+    index = page.type_filter.findData(
+        other_type.value
+    )
+
+    assert index >= 0
+
+    page.type_filter.setCurrentIndex(
+        index
+    )
+
+    app.processEvents()
+
+    assert page.visual_list.count() == 1
+
+    assert (
+        "Other Visual"
+        in page.visual_list.item(0).text()
+    )
+
+    assert page.count_label.text() == (
+        "1 of 2 RetroVault visuals"
+    )
+
+
+def test_filtering_clears_stale_selection_safely(
+    app,
+    tmp_path,
+):
+    first = make_status(
+        tmp_path,
+        state=NativeVisualInstallStatus.CURRENT,
+        display_name="Alpha Visual",
+        asset_id="rvv.overlay.alpha",
+    )
+
+    second = make_status(
+        tmp_path,
+        state=NativeVisualInstallStatus.CURRENT,
+        display_name="Beta Visual",
+        asset_id="rvv.overlay.beta",
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                [first, second]
+            )
+        )
+    )
+
+    page.visual_list.setCurrentRow(0)
+    app.processEvents()
+
+    page.search_edit.setText(
+        "Beta"
+    )
+
+    app.processEvents()
+
+    assert page.visual_list.count() == 1
+    assert page.visual_list.currentRow() == -1
+
+    assert page.name_value.text() == (
+        "Select a RetroVault visual"
+    )
+
+    assert not page.install_button.isEnabled()
+    assert not page.default_button.isEnabled()
+    assert not page.system_button.isEnabled()
+    assert not page.game_button.isEnabled()
+
+
+def test_search_and_type_filters_compose(
+    app,
+    tmp_path,
+):
+    other_type = next(
+        item
+        for item in VisualAssetType
+        if item is not VisualAssetType.OVERLAY
+    )
+
+    overlay_match = make_status(
+        tmp_path,
+        display_name="Classic Overlay",
+        asset_id="rvv.overlay.classic",
+        asset_type=VisualAssetType.OVERLAY,
+    )
+
+    type_match = make_status(
+        tmp_path,
+        display_name="Classic Alternate",
+        asset_id="rvv.other.classic",
+        asset_type=other_type,
+    )
+
+    unrelated = make_status(
+        tmp_path,
+        display_name="Modern Alternate",
+        asset_id="rvv.other.modern",
+        asset_type=other_type,
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                [
+                    overlay_match,
+                    type_match,
+                    unrelated,
+                ]
+            )
+        )
+    )
+
+    page.search_edit.setText(
+        "Classic"
+    )
+
+    index = page.type_filter.findData(
+        other_type.value
+    )
+
+    assert index >= 0
+
+    page.type_filter.setCurrentIndex(
+        index
+    )
+
+    app.processEvents()
+
+    assert page.visual_list.count() == 1
+
+    assert (
+        "Classic Alternate"
+        in page.visual_list.item(0).text()
+    )
+
+
+def test_clear_filters_button_tracks_filter_state(
+    app,
+    tmp_path,
+):
+    status = make_status(
+        tmp_path,
+        display_name="Classic Visual",
+        asset_id="rvv.overlay.classic",
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                [status]
+            )
+        )
+    )
+
+    assert not (
+        page.clear_filters_button.isEnabled()
+    )
+
+    page.search_edit.setText(
+        "Classic"
+    )
+    app.processEvents()
+
+    assert (
+        page.clear_filters_button.isEnabled()
+    )
+
+    page.search_edit.clear()
+    app.processEvents()
+
+    assert not (
+        page.clear_filters_button.isEnabled()
+    )
+
+
+def test_clear_filters_restores_complete_collection(
+    app,
+    tmp_path,
+):
+    first = make_status(
+        tmp_path,
+        display_name="Classic Visual",
+        asset_id="rvv.overlay.classic",
+    )
+
+    second = make_status(
+        tmp_path,
+        display_name="Modern Visual",
+        asset_id="rvv.overlay.modern",
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                [first, second]
+            )
+        )
+    )
+
+    page.search_edit.setText(
+        "Classic"
+    )
+    app.processEvents()
+
+    assert page.visual_list.count() == 1
+
+    page.clear_filters_button.click()
+    app.processEvents()
+
+    assert page.search_edit.text() == ""
+    assert page.type_filter.currentIndex() == 0
+    assert page.visual_list.count() == 2
+
+    assert page.count_label.text() == (
+        "2 RetroVault visuals"
+    )
+
+    assert not (
+        page.clear_filters_button.isEnabled()
+    )
+
+
+def test_clear_filters_resets_search_and_type_together(
+    app,
+    tmp_path,
+):
+    other_type = next(
+        item
+        for item in VisualAssetType
+        if item is not VisualAssetType.OVERLAY
+    )
+
+    overlay = make_status(
+        tmp_path,
+        display_name="Classic Overlay",
+        asset_id="rvv.overlay.classic",
+        asset_type=VisualAssetType.OVERLAY,
+    )
+
+    alternate = make_status(
+        tmp_path,
+        display_name="Classic Alternate",
+        asset_id="rvv.other.classic",
+        asset_type=other_type,
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                [overlay, alternate]
+            )
+        )
+    )
+
+    page.search_edit.setText(
+        "Classic"
+    )
+
+    index = page.type_filter.findData(
+        other_type.value
+    )
+    assert index >= 0
+
+    page.type_filter.setCurrentIndex(
+        index
+    )
+    app.processEvents()
+
+    assert page.visual_list.count() == 1
+
+    page.clear_filters_button.click()
+    app.processEvents()
+
+    assert page.search_edit.text() == ""
+    assert page.type_filter.currentData() == ""
+    assert page.visual_list.count() == 2
+
+
+def test_refresh_preserves_active_filters(
+    app,
+    tmp_path,
+):
+    first = make_status(
+        tmp_path,
+        display_name="Classic Visual",
+        asset_id="rvv.overlay.classic",
+    )
+
+    second = make_status(
+        tmp_path,
+        display_name="Modern Visual",
+        asset_id="rvv.overlay.modern",
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                [first, second]
+            )
+        )
+    )
+
+    page.search_edit.setText(
+        "Classic"
+    )
+    app.processEvents()
+
+    assert page.visual_list.count() == 1
+
+    page.refresh_visuals()
+    app.processEvents()
+
+    assert page.search_edit.text() == (
+        "Classic"
+    )
+
+    assert page.visual_list.count() == 1
+
+    assert (
+        "Classic Visual"
+        in page.visual_list.item(0).text()
+    )
+
+
+def test_refresh_preserves_visible_selected_asset(
+    app,
+    tmp_path,
+):
+    first = make_status(
+        tmp_path,
+        state=NativeVisualInstallStatus.CURRENT,
+        display_name="Classic Alpha",
+        asset_id="rvv.overlay.alpha",
+    )
+
+    second = make_status(
+        tmp_path,
+        state=NativeVisualInstallStatus.CURRENT,
+        display_name="Classic Beta",
+        asset_id="rvv.overlay.beta",
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                [first, second]
+            )
+        )
+    )
+
+    page.search_edit.setText(
+        "Classic"
+    )
+    app.processEvents()
+
+    page.visual_list.setCurrentRow(
+        1
+    )
+    app.processEvents()
+
+    assert (
+        page.statuses[
+            page.visual_list.currentRow()
+        ].asset.id
+        == "rvv.overlay.beta"
+    )
+
+    page.refresh_visuals()
+    app.processEvents()
+
+    row = page.visual_list.currentRow()
+
+    assert row >= 0
+
+    assert (
+        page.statuses[row].asset.id
+        == "rvv.overlay.beta"
+    )
+
+
+def test_zero_results_reports_filtered_count(
+    app,
+    tmp_path,
+):
+    first = make_status(
+        tmp_path,
+        display_name="Classic Visual",
+        asset_id="rvv.overlay.classic",
+    )
+
+    second = make_status(
+        tmp_path,
+        display_name="Modern Visual",
+        asset_id="rvv.overlay.modern",
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                [first, second]
+            )
+        )
+    )
+
+    page.search_edit.setText(
+        "ImpossibleMatch"
+    )
+    app.processEvents()
+
+    assert page.visual_list.count() == 0
+
+    assert page.count_label.text() == (
+        "0 of 2 RetroVault visuals"
+    )
+
+    assert page.status_label.text() == (
+        "No RetroVault visuals match "
+        "the current filters (0 of 2)."
+    )
+
+    assert (
+        page.clear_filters_button.isEnabled()
+    )
+
+
+def test_filtered_status_message_reports_result_count(
+    app,
+    tmp_path,
+):
+    first = make_status(
+        tmp_path,
+        display_name="Classic Visual",
+        asset_id="rvv.overlay.classic",
+    )
+
+    second = make_status(
+        tmp_path,
+        display_name="Modern Visual",
+        asset_id="rvv.overlay.modern",
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                [first, second]
+            )
+        )
+    )
+
+    page.search_edit.setText(
+        "Classic"
+    )
+    app.processEvents()
+
+    assert page.status_label.text() == (
+        "Showing 1 of 2 RetroVault visuals. "
+        "Select one to preview and manage it."
     )
