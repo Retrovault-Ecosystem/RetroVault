@@ -289,6 +289,74 @@ def test_factory_preserves_manual_assignments_over_recommendations(
     )
 
 
+def test_factory_localizes_manual_portable_system_overlay(
+    tmp_path,
+):
+    shaders = tmp_path / "shaders"
+    overlays = tmp_path / "overlays"
+    artwork = tmp_path / "artwork"
+
+    shaders.mkdir()
+    overlays.mkdir()
+    artwork.mkdir()
+
+    relative = (
+        "retrovault/nes/classic/"
+        "RetroVault_NES_Classic.cfg"
+    )
+
+    overlay = create_asset(
+        overlays,
+        relative,
+    )
+
+    manifest = write_manifest(
+        tmp_path
+    )
+
+    defaults = write_defaults(
+        tmp_path,
+        shaders=shaders,
+        overlays=overlays,
+        artwork=artwork,
+    )
+
+    store = PresentationStore(
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    portable = (
+        "retro-vault://overlays/"
+        f"{relative}"
+    )
+
+    store.assign_system_overlay(
+        NES,
+        portable,
+    )
+
+    factory = make_factory(
+        tmp_path,
+        manifest_file=manifest,
+        defaults_file=defaults,
+        store=store,
+    )
+
+    profile = factory.build().resolve(
+        make_game(tmp_path)
+    )
+
+    assert profile.overlay == str(overlay)
+
+    persisted = store.load()[
+        "systems"
+    ][NES]
+
+    assert persisted.overlay == portable
+
+
+
 def test_factory_reloads_runtime_configuration_on_each_build(
     tmp_path,
 ):

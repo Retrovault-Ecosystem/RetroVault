@@ -333,3 +333,233 @@ def test_launcher_reports_overlay_runtime_failure():
         "success": False,
         "error": "broken overlay",
     }
+
+
+class FakeShaderRuntime:
+    def __init__(
+        self,
+        parameters=None,
+        runtime_shader="/runtime/shader.slangp",
+    ):
+        self.parameters = (
+            {}
+            if parameters is None
+            else dict(parameters)
+        )
+        self.runtime_shader = runtime_shader
+        self.parameter_calls = []
+        self.resolve_calls = []
+
+    def parameters_for_overlay(
+        self,
+        overlay,
+    ):
+        self.parameter_calls.append(
+            overlay
+        )
+
+        return dict(
+            self.parameters
+        )
+
+    def resolve(
+        self,
+        shader,
+        parameters=None,
+    ):
+        self.resolve_calls.append(
+            (
+                shader,
+                parameters,
+            )
+        )
+
+        return self.runtime_shader
+
+
+def test_launcher_shader_without_runtime_parameters_passes_through():
+    shader_runtime = FakeShaderRuntime()
+
+    launcher = RetroArchLauncher(
+        shader_runtime=shader_runtime
+    )
+
+    profile = LaunchProfile(
+        game="Shader Game",
+        rom="/roms/game.nes",
+        core="/cores/fceumm_libretro.so",
+        shader="/shaders/base.slangp",
+    )
+
+    with patch(
+        "services.retroarch.launcher.subprocess.Popen"
+    ) as popen:
+        result = launcher.launch(
+            profile
+        )
+
+    expected = [
+        "retroarch",
+        "-L",
+        "/cores/fceumm_libretro.so",
+        "/roms/game.nes",
+        "--set-shader",
+        "/shaders/base.slangp",
+    ]
+
+    assert shader_runtime.parameter_calls == [""]
+    assert shader_runtime.resolve_calls == []
+
+    popen.assert_called_once_with(
+        expected
+    )
+
+    assert result == {
+        "success": True,
+        "command": expected,
+    }
+
+
+def test_launcher_wraps_selected_shader_when_overlay_has_parameters():
+    overlay_runtime = FakeOverlayRuntime(
+        "/runtime/overlay.cfg"
+    )
+
+    shader_runtime = FakeShaderRuntime(
+        parameters={
+            "PARAM": "1",
+        },
+        runtime_shader=(
+            "/runtime/shader.slangp"
+        ),
+    )
+
+    launcher = RetroArchLauncher(
+        overlay_runtime=overlay_runtime,
+        shader_runtime=shader_runtime,
+    )
+
+    profile = LaunchProfile(
+        game="Presented Game",
+        rom="/roms/game.nes",
+        core="/cores/fceumm_libretro.so",
+        overlay="/overlays/NES.cfg",
+        shader="/shaders/base.slangp",
+    )
+
+    with patch(
+        "services.retroarch.launcher.subprocess.Popen"
+    ) as popen:
+        result = launcher.launch(
+            profile
+        )
+
+    expected = [
+        "retroarch",
+        "-L",
+        "/cores/fceumm_libretro.so",
+        "/roms/game.nes",
+        "--appendconfig",
+        "/runtime/overlay.cfg",
+        "--set-shader",
+        "/runtime/shader.slangp",
+    ]
+
+    assert shader_runtime.parameter_calls == [
+        "/overlays/NES.cfg"
+    ]
+
+    assert shader_runtime.resolve_calls == [
+        (
+            "/shaders/base.slangp",
+            {
+                "PARAM": "1",
+            },
+        )
+    ]
+
+    popen.assert_called_once_with(
+        expected
+    )
+
+    assert result == {
+        "success": True,
+        "command": expected,
+    }
+
+
+def test_launcher_does_not_synthesize_shader_for_overlay_only():
+    shader_runtime = FakeShaderRuntime(
+        parameters={
+            "PARAM": "1",
+        }
+    )
+
+    launcher = RetroArchLauncher(
+        shader_runtime=shader_runtime
+    )
+
+    profile = LaunchProfile(
+        game="Overlay Only",
+        rom="/roms/game.nes",
+        core="/cores/fceumm_libretro.so",
+        overlay="",
+        shader="",
+    )
+
+    with patch(
+        "services.retroarch.launcher.subprocess.Popen"
+    ) as popen:
+        result = launcher.launch(
+            profile
+        )
+
+    assert result["success"] is True
+
+    assert shader_runtime.parameter_calls == []
+    assert shader_runtime.resolve_calls == []
+
+    popen.assert_called_once()
+
+
+def test_launcher_reports_shader_runtime_failure():
+    class BrokenShaderRuntime:
+        def parameters_for_overlay(
+            self,
+            _overlay,
+        ):
+            raise ValueError(
+                "broken shader runtime"
+            )
+
+        def resolve(
+            self,
+            shader,
+            parameters=None,
+        ):
+            return shader
+
+    launcher = RetroArchLauncher(
+        shader_runtime=BrokenShaderRuntime()
+    )
+
+    profile = LaunchProfile(
+        game="Broken Shader Runtime",
+        rom="/roms/game.nes",
+        core="/cores/fceumm_libretro.so",
+        shader="/shaders/base.slangp",
+    )
+
+    with patch(
+        "services.retroarch.launcher.subprocess.Popen"
+    ) as popen:
+        result = launcher.launch(
+            profile
+        )
+
+    popen.assert_not_called()
+
+    assert result == {
+        "success": False,
+        "error": "broken shader runtime",
+    }

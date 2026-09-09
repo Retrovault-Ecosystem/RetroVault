@@ -68,6 +68,9 @@ def build_effective(
             manual
         ),
         recommendation_composer=composer,
+        asset_resolver=(
+            PresentationAssetReferenceResolver()
+        ),
     )
 
 

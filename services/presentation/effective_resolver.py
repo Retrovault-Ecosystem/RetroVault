@@ -1,3 +1,4 @@
+from .assets import PresentationAssetReferenceResolver
 from .composer import PresentationRecommendationComposer
 from .models import PresentationProfile
 from .resolver import PresentationResolver
@@ -28,6 +29,7 @@ class EffectivePresentationResolver:
         *,
         manual_resolver,
         recommendation_composer,
+        asset_resolver,
     ):
         if not isinstance(
             manual_resolver,
@@ -47,10 +49,20 @@ class EffectivePresentationResolver:
                 "PresentationRecommendationComposer."
             )
 
+        if not isinstance(
+            asset_resolver,
+            PresentationAssetReferenceResolver,
+        ):
+            raise TypeError(
+                "Asset resolver must be a "
+                "PresentationAssetReferenceResolver."
+            )
+
         self.manual_resolver = manual_resolver
         self.recommendation_composer = (
             recommendation_composer
         )
+        self.asset_resolver = asset_resolver
 
     def resolve(
         self,
@@ -70,7 +82,9 @@ class EffectivePresentationResolver:
         )
 
         if not platform_id:
-            return manual
+            return self.asset_resolver.resolve_profile(
+                manual
+            )
 
         game_id = str(
             getattr(
@@ -81,8 +95,12 @@ class EffectivePresentationResolver:
             or ""
         )
 
-        return self.recommendation_composer.compose(
+        effective = self.recommendation_composer.compose(
             platform_id=platform_id,
             game_id=game_id,
             manual=manual,
+        )
+
+        return self.asset_resolver.resolve_profile(
+            effective
         )

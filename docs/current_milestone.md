@@ -2016,3 +2016,163 @@ No launch architecture changes were made.
 
 No parallel catalog, configuration, or assignment
 architecture was introduced.
+
+## RVA1-C.4-D.3bf — Corrected Native NES Aperture
+
+Status:
+
+IMPLEMENTED — VALIDATION PENDING
+
+Human live acceptance during D.3bb and D.3bc proved that
+the original native RVV NES aperture exposed an opaque
+right/bottom inner rim from the production artwork.
+
+The accepted native aperture is now:
+
+- canvas: `1920 x 1080`
+- x: `355`
+- y: `100`
+- width: `1206`
+- height: `762`
+- rightmost transparent pixel: `1560`
+- bottommost transparent pixel: `861`
+
+The promoted production PNG SHA-256 is:
+
+`8da659b2cbb5ad25e3d03a4cbb9e73d27cfbeb6ff8b83c26fb41a45842fa3ce7`
+
+The production artwork remains otherwise unchanged.
+
+The aperture correction is independent from final emulated
+game geometry. The separately human-accepted NES game target
+remains exact `4:3`, with no crop, stretch, or squash.
+
+D.3bf does not yet productionize the Mega Bezel geometry
+parameters or RetroArch full-output viewport. Those remain
+frozen from D.3bc for the next runtime-boundary step.
+
+## RVA1-C.4-D.3bi — Native Overlay Runtime Descriptor
+
+Status:
+
+IMPLEMENTED — VALIDATION PENDING
+
+RVV native overlays may contain an optional sibling
+`<overlay-stem>.runtime.cfg`.
+
+When present, native deployment includes that descriptor in
+the same transactional, byte-verified package as the overlay
+CFG and artwork.
+
+`OverlayRuntimeConfig` reads the sibling descriptor from the
+already-localized overlay path and merges only allowlisted
+RetroArch settings into RetroVault's existing single transient
+`--appendconfig`.
+
+RetroArchLauncher is unchanged.
+
+Presentation persistence is unchanged.
+
+Overlays without the sibling descriptor retain existing
+overlay-only behavior.
+
+The human-accepted NES runtime viewport is:
+
+- `aspect_ratio_index = "22"`
+- `video_force_aspect = "true"`
+- `custom_viewport_x = "0"`
+- `custom_viewport_y = "0"`
+- `custom_viewport_width = "1920"`
+- `custom_viewport_height = "1080"`
+
+The Mega Bezel shader geometry remains independently frozen
+for the subsequent productionization step.
+
+### RVA1-C.4-D.3bn.1 — Accepted Shader Geometry Production Wiring
+
+Status: IMPLEMENTED / TESTED — LIVE ACCEPTANCE PENDING
+
+The human-accepted D.3bc Mega Bezel geometry is now represented
+by an RVV-owned native-overlay shader runtime sidecar:
+
+- `RetroVault_NES_Classic.shader.cfg`
+
+The sidecar does not select, copy, or modify a shader.
+
+The effective independently selected shader remains authoritative.
+
+When an installed overlay has no `.shader.cfg`, the selected shader
+continues directly to RetroArch unchanged.
+
+When the overlay has a `.shader.cfg`, `ShaderRuntimeConfig` creates
+a transient `.slangp` wrapper which `#reference`s the effective
+localized shader and adds the sidecar parameter overrides.
+
+The launcher contains no NES, HSM, Mega Bezel, Orionsangel, or
+RVV-specific policy.
+
+The existing single overlay `--appendconfig` remains unchanged.
+
+Frozen D.3bc shader values:
+
+- `HSM_ASPECT_RATIO_MODE = 1.000000`
+- `HSM_ASPECT_RATIO_EXPLICIT = 1.333333333`
+- `HSM_INT_SCALE_MODE = 0.000000`
+- `HSM_NON_INTEGER_SCALE = 70.555555556`
+- `HSM_CROP_PERCENT_TOP = 0.000000`
+- `HSM_CROP_PERCENT_BOTTOM = 0.000000`
+- `HSM_VIEWPORT_ZOOM = 100.000000`
+- `HSM_SCREEN_POSITION_X = -2.314814815`
+- `HSM_SCREEN_POSITION_Y = 55.092592593`
+
+No installation, live launch, commit, or push occurs in this
+checkpoint.
+
+### RVA1-C.4-D.3bo — Production Deployment + Human Acceptance
+
+Status: ACCEPTED / COMPLETE
+
+The complete native RVV NES production path was validated through
+the normal RetroVault application launch path.
+
+Automated production acceptance:
+
+- corrected native NES production PNG remained frozen at the
+  accepted aperture geometry
+- RetroArch viewport runtime contract remained frozen
+- shader runtime geometry contract remained frozen
+- full RetroVault regression passed: 814 tests
+- production native package contained exactly four files
+- live deployed package was byte-identical to repository production
+  sources
+- portable native RVV overlay reference resolved to the live
+  deployed CFG
+- viewport and shader runtime sidecars were present in the live
+  package
+- transactional deployment left no staging or backup debris
+- NES system assignment remained the portable native RVV reference
+- installed native visual remained CURRENT after the live launch
+
+Human production acceptance:
+
+- title screen: PASS
+- gameplay: PASS
+- map/dialog: PASS
+- right bright strip: NONE
+- bottom bright strip: NONE
+- horizontal stretch: NONE
+- vertical squash: NONE
+- clipping: NONE
+- shader / CRT presentation: VISIBLE
+- native RetroVault NES bezel: VISIBLE
+- gameplay speed: NORMAL
+- audio: NORMAL
+
+The production launch reproduced the previously accepted D.3bc
+visual contract.
+
+The accepted NES geometry is therefore frozen. Further calibration
+is not authorized unless a future production-path regression
+demonstrably differs from this accepted baseline.
+
+RVA1-C.4-D controlled native RVV assignment is ready for closure.

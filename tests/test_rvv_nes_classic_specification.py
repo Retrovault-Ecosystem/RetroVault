@@ -111,8 +111,8 @@ def test_native_nes_game_viewport_geometry():
 
     assert viewport["x"] == 355
     assert viewport["y"] == 100
-    assert viewport["width"] == 1188
-    assert viewport["height"] == 751
+    assert viewport["width"] == 1206
+    assert viewport["height"] == 762
 
 def test_native_nes_game_viewport_is_inside_canvas():
     runtime = load_spec()["design"]["runtime"]
@@ -146,8 +146,8 @@ def test_native_nes_game_viewport_normalization():
 
     assert normalized["x"] == 355 / 1920
     assert normalized["y"] == 100 / 1080
-    assert normalized["width"] == 1188 / 1920
-    assert normalized["height"] == 751 / 1080
+    assert normalized["width"] == 1206 / 1920
+    assert normalized["height"] == 762 / 1080
 
 def test_native_nes_branding_layout_is_approved():
     layout = load_spec()["design"][
@@ -186,7 +186,7 @@ def test_native_nes_aperture_is_not_game_aspect_contract():
 
     assert (
         runtime["game_viewport"]["aperture_aspect"]
-        == "1188:751"
+        == "1206:762"
     )
 
     assert (
@@ -215,8 +215,8 @@ def test_native_nes_aperture_ratio_matches_geometry():
     width = viewport["width"]
     height = viewport["height"]
 
-    assert width == 1188
-    assert height == 751
+    assert width == 1206
+    assert height == 762
 
     assert (
         viewport["aperture_aspect"]
@@ -225,7 +225,7 @@ def test_native_nes_aperture_ratio_matches_geometry():
 
     assert (
         width / height
-        == 1188 / 751
+        == 1206 / 762
     )
 
 def test_native_nes_final_branding_layout():

@@ -186,3 +186,134 @@ def test_default_runtime_falls_back_to_home_cache(
         / "retrovault"
         / "overlay-runtime"
     )
+
+
+def test_runtime_config_merges_optional_runtime_descriptor(
+    tmp_path,
+):
+    overlay = tmp_path / "NES.cfg"
+
+    overlay.write_text(
+        'overlays = "1"\n',
+        encoding="utf-8",
+    )
+
+    overlay.with_suffix(
+        ".runtime.cfg"
+    ).write_text(
+        (
+            'aspect_ratio_index = "22"\n'
+            'video_force_aspect = "true"\n'
+            'custom_viewport_x = "0"\n'
+            'custom_viewport_y = "0"\n'
+            'custom_viewport_width = "1920"\n'
+            'custom_viewport_height = "1080"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    runtime = OverlayRuntimeConfig(
+        tmp_path / "runtime"
+    )
+
+    generated = Path(
+        runtime.create(str(overlay))
+    )
+
+    assert generated.read_text(
+        encoding="utf-8"
+    ) == (
+        f'input_overlay = "{overlay.resolve()}"\n'
+        'input_overlay_enable = "true"\n'
+        'aspect_ratio_index = "22"\n'
+        'video_force_aspect = "true"\n'
+        'custom_viewport_x = "0"\n'
+        'custom_viewport_y = "0"\n'
+        'custom_viewport_width = "1920"\n'
+        'custom_viewport_height = "1080"\n'
+    )
+
+
+def test_runtime_config_without_descriptor_is_unchanged(
+    tmp_path,
+):
+    overlay = tmp_path / "plain.cfg"
+
+    overlay.write_text(
+        'overlays = "1"\n',
+        encoding="utf-8",
+    )
+
+    runtime = OverlayRuntimeConfig(
+        tmp_path / "runtime"
+    )
+
+    generated = Path(
+        runtime.create(str(overlay))
+    )
+
+    assert generated.read_text(
+        encoding="utf-8"
+    ) == (
+        f'input_overlay = "{overlay.resolve()}"\n'
+        'input_overlay_enable = "true"\n'
+    )
+
+
+def test_runtime_config_rejects_unsupported_runtime_key(
+    tmp_path,
+):
+    overlay = tmp_path / "NES.cfg"
+
+    overlay.write_text(
+        'overlays = "1"\n',
+        encoding="utf-8",
+    )
+
+    overlay.with_suffix(
+        ".runtime.cfg"
+    ).write_text(
+        'unexpected_setting = "1"\n',
+        encoding="utf-8",
+    )
+
+    runtime = OverlayRuntimeConfig(
+        tmp_path / "runtime"
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Unsupported overlay runtime setting",
+    ):
+        runtime.create(str(overlay))
+
+
+def test_runtime_config_rejects_duplicate_runtime_key(
+    tmp_path,
+):
+    overlay = tmp_path / "NES.cfg"
+
+    overlay.write_text(
+        'overlays = "1"\n',
+        encoding="utf-8",
+    )
+
+    overlay.with_suffix(
+        ".runtime.cfg"
+    ).write_text(
+        (
+            'custom_viewport_width = "1920"\n'
+            'custom_viewport_width = "1280"\n'
+        ),
+        encoding="utf-8",
+    )
+
+    runtime = OverlayRuntimeConfig(
+        tmp_path / "runtime"
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="Duplicate overlay runtime setting",
+    ):
+        runtime.create(str(overlay))

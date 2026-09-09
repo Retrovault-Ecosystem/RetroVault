@@ -144,4 +144,5 @@ class PresentationCompositionFactory:
                 self.presentation_store.resolver()
             ),
             recommendation_composer=composer,
+            asset_resolver=asset_resolver,
         )

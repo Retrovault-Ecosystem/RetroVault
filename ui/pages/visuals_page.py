@@ -9,9 +9,12 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QMessageBox,
     QPushButton,
+    QScrollArea,
     QVBoxLayout,
     QWidget,
 )
+
+from services.library.state import game_identity
 
 from services.presentation.service import (
     NativeVisualInstallStatus,
@@ -33,12 +36,22 @@ class NativeVisualsPage(QWidget):
     def __init__(
         self,
         native_visual_service=None,
+        presentation_store=None,
+        current_game_provider=None,
     ):
         super().__init__()
 
         self.native_visual_service = (
             native_visual_service
             or NativeVisualService()
+        )
+
+        self.presentation_store = (
+            presentation_store
+        )
+
+        self.current_game_provider = (
+            current_game_provider
         )
 
         self.assets = []
@@ -125,6 +138,30 @@ class NativeVisualsPage(QWidget):
 
         self.refresh_button = QPushButton(
             "Refresh"
+        )
+
+        self.default_button = QPushButton(
+            "Set as Default"
+        )
+
+        self.system_button = QPushButton(
+            "Set for System"
+        )
+
+        self.game_button = QPushButton(
+            "Set for Game"
+        )
+
+        self.default_button.setEnabled(
+            False
+        )
+
+        self.system_button.setEnabled(
+            False
+        )
+
+        self.game_button.setEnabled(
+            False
         )
 
         self._build_ui()
@@ -261,10 +298,46 @@ class NativeVisualsPage(QWidget):
             self.install_button
         )
 
+        details.addSpacing(8)
+
+        assignment_label = QLabel(
+            "RetroVault Presentation Assignment"
+        )
+        assignment_label.setObjectName(
+            "SectionTitle"
+        )
+
+        details.addWidget(
+            assignment_label
+        )
+
+        details.addWidget(
+            self.default_button
+        )
+
+        details.addWidget(
+            self.system_button
+        )
+
+        details.addWidget(
+            self.game_button
+        )
+
         details.addStretch(1)
 
+        self.details_scroll = QScrollArea()
+        self.details_scroll.setWidgetResizable(
+            True
+        )
+        self.details_scroll.setFrameShape(
+            QFrame.Shape.NoFrame
+        )
+        self.details_scroll.setWidget(
+            details_frame
+        )
+
         content.addWidget(
-            details_frame,
+            self.details_scroll,
             2,
         )
 
@@ -300,6 +373,18 @@ class NativeVisualsPage(QWidget):
 
         self.refresh_button.clicked.connect(
             self.refresh_visuals
+        )
+
+        self.default_button.clicked.connect(
+            self.assign_default_visual
+        )
+
+        self.system_button.clicked.connect(
+            self.assign_system_visual
+        )
+
+        self.game_button.clicked.connect(
+            self.assign_game_visual
         )
 
     @staticmethod
@@ -458,6 +543,18 @@ class NativeVisualsPage(QWidget):
             False
         )
 
+        self.default_button.setEnabled(
+            False
+        )
+
+        self.system_button.setEnabled(
+            False
+        )
+
+        self.game_button.setEnabled(
+            False
+        )
+
     def _selected_status(self):
         row = self.visual_list.currentRow()
 
@@ -528,6 +625,29 @@ class NativeVisualsPage(QWidget):
             is not NativeVisualInstallStatus.CURRENT
         )
 
+        assignable = (
+            status.status
+            is NativeVisualInstallStatus.CURRENT
+            and self.presentation_store
+            is not None
+        )
+
+        self.default_button.setEnabled(
+            assignable
+        )
+
+        self.system_button.setEnabled(
+            assignable
+            and self.current_game_provider
+            is not None
+        )
+
+        self.game_button.setEnabled(
+            assignable
+            and self.current_game_provider
+            is not None
+        )
+
         self._show_preview(
             status
         )
@@ -580,6 +700,179 @@ class NativeVisualsPage(QWidget):
             )
 
             return
+
+    def _current_game(
+        self,
+    ):
+        if self.current_game_provider is None:
+            return None
+
+        return self.current_game_provider()
+
+    def _selected_assignable_status(
+        self,
+    ):
+        selected = self._selected_status()
+
+        if selected is None:
+            return None
+
+        if (
+            selected.status
+            is not NativeVisualInstallStatus.CURRENT
+        ):
+            return None
+
+        if self.presentation_store is None:
+            return None
+
+        return selected
+
+    def assign_default_visual(
+        self,
+    ):
+        selected = (
+            self._selected_assignable_status()
+        )
+
+        if selected is None:
+            return
+
+        try:
+            self.presentation_store.assign_default_overlay(
+                selected.asset.reference
+            )
+        except (
+            OSError,
+            TypeError,
+            ValueError,
+            RuntimeError,
+        ) as exc:
+            QMessageBox.warning(
+                self,
+                "RetroVault Visual Assignment Failed",
+                str(exc),
+            )
+            return
+
+        self.status_label.setText(
+            "Assigned "
+            f"{selected.asset.display_name} "
+            "as RetroVault default."
+        )
+
+    def assign_system_visual(
+        self,
+    ):
+        selected = (
+            self._selected_assignable_status()
+        )
+
+        if selected is None:
+            return
+
+        game = self._current_game()
+
+        if game is None:
+            self.status_label.setText(
+                "Select a game in the Library "
+                "before assigning a system visual."
+            )
+            return
+
+        platform_id = str(
+            getattr(
+                game,
+                "rvdb_platform_id",
+                "",
+            )
+            or ""
+        )
+
+        if not platform_id:
+            self.status_label.setText(
+                "The selected game does not have "
+                "a canonical RVDB system identity."
+            )
+            return
+
+        try:
+            self.presentation_store.assign_system_overlay(
+                platform_id,
+                selected.asset.reference,
+            )
+        except (
+            OSError,
+            TypeError,
+            ValueError,
+            RuntimeError,
+        ) as exc:
+            QMessageBox.warning(
+                self,
+                "RetroVault Visual Assignment Failed",
+                str(exc),
+            )
+            return
+
+        self.status_label.setText(
+            "Assigned "
+            f"{selected.asset.display_name} "
+            f"to system {platform_id}."
+        )
+
+    def assign_game_visual(
+        self,
+    ):
+        selected = (
+            self._selected_assignable_status()
+        )
+
+        if selected is None:
+            return
+
+        game = self._current_game()
+
+        if game is None:
+            self.status_label.setText(
+                "Select a game in the Library "
+                "before assigning a game visual."
+            )
+            return
+
+        try:
+            identity = game_identity(
+                game
+            )
+        except ValueError:
+            self.status_label.setText(
+                "The selected game does not have "
+                "a stable RetroVault game identity."
+            )
+            return
+
+        try:
+            self.presentation_store.assign_game_overlay(
+                identity,
+                selected.asset.reference,
+            )
+        except (
+            OSError,
+            TypeError,
+            ValueError,
+            RuntimeError,
+        ) as exc:
+            QMessageBox.warning(
+                self,
+                "RetroVault Visual Assignment Failed",
+                str(exc),
+            )
+            return
+
+        self.status_label.setText(
+            "Assigned "
+            f"{selected.asset.display_name} "
+            f'to game "{getattr(game, "name", identity)}".'
+        )
 
     def install_selected_visual(
         self,

@@ -294,6 +294,61 @@ class NativeVisualDeploymentService:
                 f"does not exist: {source_image}"
             )
 
+        runtime_descriptor = (
+            source_descriptor
+            .with_suffix(".runtime.cfg")
+        )
+
+        shader_descriptor = (
+            source_descriptor
+            .with_suffix(".shader.cfg")
+        )
+
+        source_files = [
+            source_descriptor,
+            source_image,
+        ]
+
+        if runtime_descriptor.exists():
+            if not runtime_descriptor.is_file():
+                raise ValueError(
+                    "Native RVV runtime descriptor "
+                    "must be a regular file."
+                )
+
+            self._assert_within(
+                runtime_descriptor.resolve(),
+                source_package,
+                message=(
+                    "Native RVV runtime descriptor "
+                    "escaped its production package."
+                ),
+            )
+
+            source_files.append(
+                runtime_descriptor
+            )
+
+        if shader_descriptor.exists():
+            if not shader_descriptor.is_file():
+                raise ValueError(
+                    "Native RVV shader descriptor "
+                    "must be a regular file."
+                )
+
+            self._assert_within(
+                shader_descriptor.resolve(),
+                source_package,
+                message=(
+                    "Native RVV shader descriptor "
+                    "escaped its production package."
+                ),
+            )
+
+            source_files.append(
+                shader_descriptor
+            )
+
         destination_descriptor = (
             self.overlay_root
             / relative_descriptor
@@ -316,9 +371,8 @@ class NativeVisualDeploymentService:
             source_descriptor=(
                 source_descriptor
             ),
-            source_files=(
-                source_descriptor,
-                source_image,
+            source_files=tuple(
+                source_files
             ),
             overlay_root=(
                 self.overlay_root

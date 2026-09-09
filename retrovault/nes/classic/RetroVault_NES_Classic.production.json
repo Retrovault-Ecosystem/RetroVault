@@ -6,14 +6,14 @@
   "aperture": {
     "x": 355,
     "y": 100,
-    "width": 1188,
-    "height": 751
+    "width": 1206,
+    "height": 762
   },
   "aperture_normalized": {
     "x": 0.18489583333333334,
     "y": 0.09259259259259259,
-    "width": 0.61875,
-    "height": 0.6953703703703704
+    "width": 0.628125,
+    "height": 0.7055555555555556
   },
   "source_reference": "approved RetroVault NES master concept",
   "notes": [
@@ -21,6 +21,7 @@
     "Checkerboard gameplay field converted deterministically to alpha=0.",
     "Black inner bezel retained.",
     "RetroVault branding retained with red accent lines.",
-    "Nintendo system identity retained beneath RetroVault without flanking red lines."
+    "Nintendo system identity retained beneath RetroVault without flanking red lines.",
+    "Human-accepted RVV NES aperture expanded to 1206x762 after D.3bb/D.3bc live proof; the obsolete right/bottom opaque inner rim is no longer part of the gameplay opening."
   ]
 }

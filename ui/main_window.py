@@ -164,7 +164,18 @@ class MainWindow(QMainWindow):
 
         self.pages.add_page(
             "RetroVault Visuals",
-            NativeVisualsPage()
+            NativeVisualsPage(
+                presentation_store=(
+                    presentation_store
+                ),
+                current_game_provider=(
+                    lambda: (
+                        library_page
+                        .details
+                        .current_game
+                    )
+                ),
+            )
         )
 
         shaders_page = ShadersPage(

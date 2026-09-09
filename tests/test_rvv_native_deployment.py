@@ -670,7 +670,17 @@ def test_production_catalog_asset_has_deployable_plan():
 
     assert len(
         plan.source_files
-    ) == 2
+    ) == 4
+
+    assert {
+        source.name
+        for source in plan.source_files
+    } == {
+        "RetroVault_NES_Classic.cfg",
+        "RetroVault_NES_Classic_1080p.png",
+        "RetroVault_NES_Classic.runtime.cfg",
+        "RetroVault_NES_Classic.shader.cfg",
+    }
 
     assert all(
         path.is_file()
@@ -712,4 +722,90 @@ def test_deployment_has_no_assignment_methods():
     assert not hasattr(
         NativeVisualDeploymentService,
         "assign_default_overlay",
+    )
+
+
+def test_native_deployment_includes_optional_runtime_descriptor(
+    tmp_path,
+):
+    repository = tmp_path / "repository"
+    overlay_root = tmp_path / "overlays"
+
+    package = (
+        repository
+        / "retrovault"
+        / "nes"
+        / "classic"
+    )
+    package.mkdir(parents=True)
+
+    descriptor = (
+        package
+        / "RetroVault_NES_Classic.cfg"
+    )
+
+    image = (
+        package
+        / "RetroVault_NES_Classic.png"
+    )
+
+    runtime_descriptor = (
+        package
+        / "RetroVault_NES_Classic.runtime.cfg"
+    )
+
+    descriptor.write_text(
+        'overlay0_overlay = '
+        '"RetroVault_NES_Classic.png"\n',
+        encoding="utf-8",
+    )
+
+    image.write_bytes(b"png")
+
+    runtime_descriptor.write_text(
+        'custom_viewport_width = "1920"\n',
+        encoding="utf-8",
+    )
+
+    asset = VisualAsset(
+        id="rvv.overlay.nes.classic",
+        display_name="NES",
+        asset_type=VisualAssetType.OVERLAY,
+        source=VisualAssetSource.RVV_NATIVE,
+        reference=(
+            "retro-vault://overlays/"
+            "retrovault/nes/classic/"
+            "RetroVault_NES_Classic.cfg"
+        ),
+    )
+
+    service = NativeVisualDeploymentService(
+        repository_root=repository,
+        overlay_root=overlay_root,
+    )
+
+    plan = service.plan(asset)
+
+    assert {
+        source.name
+        for source in plan.source_files
+    } == {
+        "RetroVault_NES_Classic.cfg",
+        "RetroVault_NES_Classic.png",
+        "RetroVault_NES_Classic.runtime.cfg",
+    }
+
+    service.deploy(asset)
+
+    deployed = (
+        overlay_root
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "RetroVault_NES_Classic.runtime.cfg"
+    )
+
+    assert (
+        deployed.read_bytes()
+        == runtime_descriptor.read_bytes()
     )

@@ -270,8 +270,8 @@ def test_production_geometry_matches_spec():
     assert aperture == {
         "x": 355,
         "y": 100,
-        "width": 1188,
-        "height": 751,
+        "width": 1206,
+        "height": 762,
     }
 
 
@@ -360,4 +360,57 @@ def test_asset_is_production_after_live_proof():
     assert (
         spec["production_status"]
         == "production"
+    )
+
+
+def test_native_nes_runtime_descriptor_is_production_owned():
+    from pathlib import Path
+
+    runtime_descriptor = (
+        Path(__file__).resolve().parents[1]
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "RetroVault_NES_Classic.runtime.cfg"
+    )
+
+    assert runtime_descriptor.is_file()
+
+    assert runtime_descriptor.read_text(
+        encoding="utf-8"
+    ) == (
+        'aspect_ratio_index = "22"\n'
+        'video_force_aspect = "true"\n'
+        'custom_viewport_x = "0"\n'
+        'custom_viewport_y = "0"\n'
+        'custom_viewport_width = "1920"\n'
+        'custom_viewport_height = "1080"\n'
+    )
+
+
+def test_native_nes_shader_runtime_descriptor_is_production_owned():
+    from pathlib import Path
+
+    shader_descriptor = (
+        Path(__file__).resolve().parents[1]
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "RetroVault_NES_Classic.shader.cfg"
+    )
+
+    assert shader_descriptor.is_file()
+
+    assert shader_descriptor.read_text(
+        encoding="utf-8"
+    ) == (
+        'HSM_ASPECT_RATIO_MODE = "1.000000"\n'
+        'HSM_ASPECT_RATIO_EXPLICIT = "1.333333333"\n'
+        'HSM_INT_SCALE_MODE = "0.000000"\n'
+        'HSM_NON_INTEGER_SCALE = "70.555555556"\n'
+        'HSM_CROP_PERCENT_TOP = "0.000000"\n'
+        'HSM_CROP_PERCENT_BOTTOM = "0.000000"\n'
+        'HSM_VIEWPORT_ZOOM = "100.000000"\n'
+        'HSM_SCREEN_POSITION_X = "-2.314814815"\n'
+        'HSM_SCREEN_POSITION_Y = "55.092592593"\n'
     )

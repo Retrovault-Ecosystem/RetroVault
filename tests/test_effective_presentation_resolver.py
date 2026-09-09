@@ -80,6 +80,7 @@ def make_effective_resolver(
             or PresentationResolver()
         ),
         recommendation_composer=composer,
+        asset_resolver=asset_resolver,
     )
 
     return (
@@ -269,6 +270,87 @@ def test_manual_game_precedence_survives_automatic_composition(
     )
 
 
+def test_manual_portable_system_overlay_is_localized(
+    tmp_path,
+):
+    relative = (
+        "retrovault/nes/classic/"
+        "RetroVault_NES_Classic.cfg"
+    )
+
+    manual = PresentationResolver(
+        systems={
+            NES: PresentationProfile(
+                overlay=(
+                    "retro-vault://overlays/"
+                    f"{relative}"
+                )
+            ),
+        }
+    )
+
+    (
+        resolver,
+        _,
+        overlay_root,
+        _,
+    ) = make_effective_resolver(
+        tmp_path,
+        manual_resolver=manual,
+    )
+
+    overlay = create_asset(
+        overlay_root,
+        relative,
+    )
+
+    assert resolver.resolve(
+        make_game(tmp_path)
+    ) == PresentationProfile(
+        overlay=str(overlay),
+    )
+
+
+def test_manual_portable_default_without_platform_is_localized(
+    tmp_path,
+):
+    relative = "defaults/nes.cfg"
+
+    manual = PresentationResolver(
+        default=PresentationProfile(
+            overlay=(
+                "retro-vault://overlays/"
+                f"{relative}"
+            )
+        )
+    )
+
+    (
+        resolver,
+        _,
+        overlay_root,
+        _,
+    ) = make_effective_resolver(
+        tmp_path,
+        manual_resolver=manual,
+    )
+
+    overlay = create_asset(
+        overlay_root,
+        relative,
+    )
+
+    assert resolver.resolve(
+        make_game(
+            tmp_path,
+            platform_id="",
+        )
+    ) == PresentationProfile(
+        overlay=str(overlay),
+    )
+
+
+
 def test_unknown_platform_preserves_manual_resolution(
     tmp_path,
 ):
@@ -409,7 +491,60 @@ def test_constructor_requires_manual_resolver(
         EffectivePresentationResolver(
             manual_resolver=manual_resolver,
             recommendation_composer=composer,
+            asset_resolver=asset_resolver,
         )
+
+
+@pytest.mark.parametrize(
+    "asset_resolver",
+    [
+        None,
+        {},
+        "",
+    ],
+)
+def test_constructor_requires_asset_resolver(
+    tmp_path,
+    asset_resolver,
+):
+    (
+        _effective,
+        shader_root,
+        overlay_root,
+        artwork_root,
+    ) = make_effective_resolver(tmp_path)
+
+    recommendation_resolver = (
+        PresentationRecommendationResolver(
+            catalog=(
+                PresentationRecommendationCatalog()
+            ),
+            asset_resolver=(
+                PresentationAssetReferenceResolver(
+                    shader_root=shader_root,
+                    overlay_root=overlay_root,
+                    artwork_root=artwork_root,
+                )
+            ),
+        )
+    )
+
+    composer = PresentationRecommendationComposer(
+        recommendation_resolver=(
+            recommendation_resolver
+        )
+    )
+
+    with pytest.raises(
+        TypeError,
+        match="Asset resolver",
+    ):
+        EffectivePresentationResolver(
+            manual_resolver=PresentationResolver(),
+            recommendation_composer=composer,
+            asset_resolver=asset_resolver,
+        )
+
 
 
 @pytest.mark.parametrize(
@@ -431,5 +566,8 @@ def test_constructor_requires_recommendation_composer(
             manual_resolver=PresentationResolver(),
             recommendation_composer=(
                 recommendation_composer
+            ),
+            asset_resolver=(
+                PresentationAssetReferenceResolver()
             ),
         )
