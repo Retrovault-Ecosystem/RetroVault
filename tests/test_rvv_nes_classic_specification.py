@@ -155,7 +155,7 @@ def test_native_nes_branding_layout_is_approved():
 
     assert (
         layout["system_identity"]["position"]
-        == "top-center"
+        == "bottom-center-below-retrovault"
     )
 
     assert (
@@ -210,3 +210,58 @@ def test_native_nes_aperture_ratio_matches_geometry():
         viewport["width"] / viewport["height"]
         == 16 / 10
     )
+
+
+def test_native_nes_final_branding_layout():
+    layout = load_spec()["design"]["branding_layout"]
+
+    assert (
+        layout["retrovault_identity"]["position"]
+        == "bottom-center"
+    )
+
+    assert (
+        layout["system_identity"]["position"]
+        == "bottom-center-below-retrovault"
+    )
+
+    assert "red accent lines" in (
+        layout["retrovault_identity"]["accent"]
+    )
+
+    assert "without flanking red lines" in (
+        layout["system_identity"]["accent"]
+    )
+
+
+def test_native_nes_premium_finish_contract():
+    finish = load_spec()["design"]["finish"]
+
+    assert finish["quality_target"] == "premium showroom"
+
+    assert "naturally used" in finish["controls"]
+    assert "subtle wear" in finish["controls"]
+
+    assert "exceptionally crisp" in finish["branding"]
+    assert "precisely aligned" in finish["branding"]
+    assert "evenly spaced" in finish["branding"]
+
+
+def test_native_nes_master_visual_language_contract():
+    finish = load_spec()["design"]["finish"]
+
+    assert "master direction" in finish["consistency"]
+    assert "bezel and overlay families" in (
+        finish["consistency"]
+    )
+
+
+def test_native_nes_branding_remains_outside_aperture():
+    policy = (
+        load_spec()["design"]["runtime"][
+            "safe_zone"
+        ]["policy"]
+    )
+
+    assert "outside the transparent gameplay" in policy
+    assert "lower presentation area" in policy

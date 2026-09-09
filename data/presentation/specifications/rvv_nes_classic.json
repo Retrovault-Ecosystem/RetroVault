@@ -57,20 +57,29 @@
         "bottom": 70,
         "left": 40,
         "right": 40,
-        "policy": "System and RetroVault branding must remain outside the transparent gameplay viewport."
+        "policy": "Branding must remain outside the transparent gameplay aperture. The approved NES master places RetroVault and system identity in the lower presentation area."
       },
       "game_aspect_policy": "4:3 is the intended presentation aspect for NES gameplay. RetroArch and the active shader pipeline control final gameplay geometry independently inside the transparent overlay aperture."
     },
     "branding_layout": {
-      "system_identity": {
-        "position": "top-center",
-        "role": "platform identification"
-      },
       "retrovault_identity": {
         "position": "bottom-center",
-        "role": "presentation identity"
+        "role": "primary presentation identity",
+        "accent": "RetroVault wordmark flanked by restrained horizontal red accent lines."
       },
-      "hierarchy": "System identity above gameplay; RetroVault identity below gameplay."
+      "system_identity": {
+        "position": "bottom-center-below-retrovault",
+        "role": "secondary platform identification",
+        "accent": "System identity is centered beneath RetroVault without flanking red lines."
+      },
+      "hierarchy": "Gameplay remains visually dominant. RetroVault is centered below the gameplay aperture with red accent lines. System identity is centered directly beneath RetroVault."
+    },
+    "finish": {
+      "quality_target": "premium showroom",
+      "frame": "Clean restored-console presentation with subtle material texture and restrained age character.",
+      "controls": "POWER and RESET controls should appear maintained and clean but naturally used, with subtle wear appropriate to functional physical controls.",
+      "branding": "Branding must be exceptionally crisp, precisely aligned, evenly spaced, and visually cleaner than the surrounding functional controls.",
+      "consistency": "This premium restored-hardware presentation language is the master direction for native RetroVault bezel and overlay families."
     }
   },
   "production_assets": {
