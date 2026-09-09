@@ -87,3 +87,126 @@ def test_native_nes_specification_is_not_yet_production_asset():
     data = load_spec()
 
     assert data["production_status"] == "specified"
+
+
+def test_native_nes_canvas_geometry():
+    runtime = load_spec()["design"]["runtime"]
+
+    assert runtime["canvas"] == {
+        "width": 1920,
+        "height": 1080,
+    }
+
+
+def test_native_nes_game_viewport_geometry():
+    viewport = (
+        load_spec()["design"]["runtime"][
+            "game_viewport"
+        ]
+    )
+
+    assert viewport["x"] == 240
+    assert viewport["y"] == 90
+    assert viewport["width"] == 1440
+    assert viewport["height"] == 900
+
+    assert viewport["width"] / viewport["height"] == 1.6
+
+
+def test_native_nes_game_viewport_is_inside_canvas():
+    runtime = load_spec()["design"]["runtime"]
+
+    canvas = runtime["canvas"]
+    viewport = runtime["game_viewport"]
+
+    assert viewport["x"] >= 0
+    assert viewport["y"] >= 0
+
+    assert (
+        viewport["x"] + viewport["width"]
+        <= canvas["width"]
+    )
+
+    assert (
+        viewport["y"] + viewport["height"]
+        <= canvas["height"]
+    )
+
+
+def test_native_nes_game_viewport_normalization():
+    viewport = (
+        load_spec()["design"]["runtime"][
+            "game_viewport"
+        ]
+    )
+
+    normalized = viewport["normalized"]
+
+    assert normalized["x"] == 0.125
+    assert normalized["y"] == 0.0833333333
+    assert normalized["width"] == 0.75
+    assert normalized["height"] == 0.8333333333
+
+
+def test_native_nes_branding_layout_is_approved():
+    layout = load_spec()["design"][
+        "branding_layout"
+    ]
+
+    assert (
+        layout["system_identity"]["position"]
+        == "top-center"
+    )
+
+    assert (
+        layout["retrovault_identity"]["position"]
+        == "bottom-center"
+    )
+
+
+def test_native_nes_viewport_requires_transparency():
+    policy = (
+        load_spec()["design"]["runtime"][
+            "game_viewport"
+        ]["policy"]
+    )
+
+    assert "fully transparent" in policy
+
+
+def test_native_nes_aperture_is_not_game_aspect_contract():
+    data = load_spec()
+
+    runtime = data["design"]["runtime"]
+    composition = data["design"]["composition"]
+
+    assert runtime["game_aspect"] == "4:3"
+
+    assert (
+        runtime["game_viewport"]["aperture_aspect"]
+        == "16:10"
+    )
+
+    assert (
+        "does not define the emulated game's "
+        "display aspect ratio"
+        in composition["game_view"]
+    )
+
+    assert (
+        "RetroArch"
+        in runtime["game_aspect_policy"]
+    )
+
+
+def test_native_nes_aperture_ratio_matches_geometry():
+    viewport = (
+        load_spec()["design"]["runtime"][
+            "game_viewport"
+        ]
+    )
+
+    assert (
+        viewport["width"] / viewport["height"]
+        == 16 / 10
+    )
