@@ -7,17 +7,17 @@
   "asset_type": "overlay",
   "source": "rvv_native",
   "author": "RetroVault",
-  "copyright": "RetroVault",
+  "copyright": "Original RetroVault bezel composition and RetroVault branding © RetroVault. Third-party trademarks remain the property of their respective owners.",
   "production_status": "specified",
   "design": {
     "intent": "Create an original RetroVault-owned NES presentation that evokes the visual character of home console play while remaining clean, game-focused, and suitable for long play sessions.",
-    "originality": "The visual must be an original RetroVault composition and must not reproduce third-party bezel artwork, copyrighted Nintendo artwork, console photography, logos, trademarks, or external pack artwork.",
+    "originality": "The bezel composition, frame treatment, layout, materials, RetroVault branding, and presentation design must be original RetroVault work and must not reproduce third-party bezel artwork, console photography, or external pack artwork. Platform identification may include third-party trademark references when deliberately specified; ownership of those marks is not claimed by RetroVault.",
     "composition": {
       "game_view": "Centered transparent gameplay aperture with presentation framing that does not obscure gameplay. The aperture does not define the emulated game's display aspect ratio.",
       "frame": "Purpose-built RetroVault frame with restrained late-1980s home-console industrial character.",
       "surround": "Dark neutral presentation field designed to keep visual attention on gameplay.",
       "depth": "Subtle layered depth may be used around the game viewport without creating excessive visual bulk.",
-      "branding": "RetroVault branding only; understated and subordinate to gameplay."
+      "branding": "RetroVault is the primary presentation identity. Platform identification is secondary and remains visually subordinate to RetroVault and gameplay."
     },
     "visual_language": {
       "style": "clean retro-industrial",
@@ -88,6 +88,11 @@
   },
   "catalog": {
     "reference": "retro-vault://overlays/retrovault/nes/classic/RetroVault_NES_Classic.cfg",
-    "attribution": "Original RetroVault visual."
+    "attribution": "Original RetroVault bezel composition. Platform names and trademarks are the property of their respective owners."
+  },
+  "trademark_policy": {
+    "ownership_claim": "RetroVault claims ownership only of its original bezel composition, presentation design, and RetroVault branding.",
+    "platform_identity": "Nintendo platform identification is included as secondary system identification and is not claimed as RetroVault intellectual property.",
+    "separation": "Third-party platform identity must remain distinct from RetroVault branding and must not imply ownership of the third-party mark."
   }
 }

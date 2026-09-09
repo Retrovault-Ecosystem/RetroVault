@@ -46,7 +46,10 @@ def test_native_nes_visual_is_declared_original():
 
     assert "original RetroVault" in originality
     assert "third-party bezel artwork" in originality
-    assert "Nintendo artwork" in originality
+    assert "console photography" in originality
+    assert "external pack artwork" in originality
+    assert "third-party trademark" in originality
+    assert "ownership of those marks is not claimed" in originality
 
 
 def test_native_nes_runtime_contract():
@@ -265,3 +268,67 @@ def test_native_nes_branding_remains_outside_aperture():
 
     assert "outside the transparent gameplay" in policy
     assert "lower presentation area" in policy
+
+
+def test_native_nes_provenance_does_not_claim_platform_marks():
+    data = load_spec()
+
+    assert (
+        "Original RetroVault bezel composition"
+        in data["copyright"]
+    )
+
+    assert (
+        "Third-party trademarks"
+        in data["copyright"]
+    )
+
+    assert (
+        "ownership of those marks is not claimed"
+        in data["design"]["originality"]
+    )
+
+
+def test_native_nes_platform_identity_is_secondary():
+    data = load_spec()
+
+    branding = data["design"]["composition"]["branding"]
+    policy = data["trademark_policy"]
+
+    assert (
+        "RetroVault is the primary presentation identity"
+        in branding
+    )
+
+    assert (
+        "Platform identification is secondary"
+        in branding
+    )
+
+    assert (
+        "not claimed as RetroVault intellectual property"
+        in policy["platform_identity"]
+    )
+
+
+def test_native_nes_catalog_attribution_is_precise():
+    attribution = load_spec()["catalog"]["attribution"]
+
+    assert (
+        "Original RetroVault bezel composition"
+        in attribution
+    )
+
+    assert (
+        "trademarks are the property"
+        in attribution
+    )
+
+
+def test_native_nes_provenance_preserves_original_asset_boundary():
+    originality = load_spec()["design"]["originality"]
+
+    assert "frame treatment" in originality
+    assert "presentation design" in originality
+    assert "console photography" in originality
+    assert "external pack artwork" in originality
