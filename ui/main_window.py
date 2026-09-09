@@ -14,6 +14,7 @@ from ui.pages.library_page import LibraryPage
 from ui.pages.systems_page import SystemsPage
 from ui.pages.playlists_page import PlaylistsPage
 from ui.pages.overlays_page import OverlaysPage
+from ui.pages.visuals_page import NativeVisualsPage
 from ui.pages.shaders_page import ShadersPage
 from ui.pages.retroarch_page import RetroArchPage
 from ui.pages.settings_page import SettingsPage
@@ -159,6 +160,11 @@ class MainWindow(QMainWindow):
         self.pages.add_page(
             "Overlays",
             overlays_page
+        )
+
+        self.pages.add_page(
+            "RetroVault Visuals",
+            NativeVisualsPage()
         )
 
         shaders_page = ShadersPage(

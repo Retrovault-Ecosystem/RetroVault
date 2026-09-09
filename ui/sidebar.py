@@ -15,6 +15,7 @@ class Sidebar(QWidget):
         "Systems",
         "Playlists",
         "Overlays",
+        "RetroVault Visuals",
         "Shaders",
         "RetroArch",
     ]

@@ -1,0 +1,687 @@
+from pathlib import Path
+
+from PyQt6.QtCore import Qt
+from PyQt6.QtGui import QPixmap
+from PyQt6.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QListWidget,
+    QMessageBox,
+    QPushButton,
+    QVBoxLayout,
+    QWidget,
+)
+
+from services.presentation.service import (
+    NativeVisualInstallStatus,
+    NativeVisualService,
+)
+
+
+class NativeVisualsPage(QWidget):
+    """
+    Curated RetroVault-native visual collection.
+
+    This page deliberately consumes NativeVisualService rather than
+    scanning RetroArch visual directories.
+
+    Installed RetroArch, third-party, and user overlays remain the
+    responsibility of the existing OverlaysPage.
+    """
+
+    def __init__(
+        self,
+        native_visual_service=None,
+    ):
+        super().__init__()
+
+        self.native_visual_service = (
+            native_visual_service
+            or NativeVisualService()
+        )
+
+        self.assets = []
+        self.statuses = []
+
+        self.title_label = QLabel(
+            "RetroVault Visuals"
+        )
+        self.title_label.setObjectName(
+            "PageTitle"
+        )
+
+        self.subtitle_label = QLabel(
+            "Curated visual presentations created "
+            "for RetroVault."
+        )
+        self.subtitle_label.setObjectName(
+            "PageSubtitle"
+        )
+        self.subtitle_label.setWordWrap(
+            True
+        )
+
+        self.collection_label = QLabel(
+            "RetroVault Collection"
+        )
+        self.collection_label.setObjectName(
+            "SectionTitle"
+        )
+
+        self.count_label = QLabel()
+        self.status_label = QLabel()
+
+        self.visual_list = QListWidget()
+        self.visual_list.setMinimumWidth(
+            320
+        )
+
+        self.preview = QLabel(
+            "Select a RetroVault visual"
+        )
+        self.preview.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )
+        self.preview.setMinimumSize(
+            420,
+            240,
+        )
+
+        self.name_value = QLabel(
+            "Select a RetroVault visual"
+        )
+        self.name_value.setObjectName(
+            "SectionTitle"
+        )
+        self.name_value.setWordWrap(
+            True
+        )
+
+        self.source_value = QLabel("—")
+        self.type_value = QLabel("—")
+        self.author_value = QLabel("—")
+        self.install_status_value = QLabel("—")
+
+        self.reference_value = QLabel("—")
+        self.reference_value.setWordWrap(
+            True
+        )
+        self.reference_value.setTextInteractionFlags(
+            Qt.TextInteractionFlag.TextSelectableByMouse
+        )
+
+        self.attribution_value = QLabel("—")
+        self.attribution_value.setWordWrap(
+            True
+        )
+
+        self.install_button = QPushButton(
+            "Install"
+        )
+        self.install_button.setEnabled(
+            False
+        )
+
+        self.refresh_button = QPushButton(
+            "Refresh"
+        )
+
+        self._build_ui()
+        self._connect_signals()
+        self.refresh_visuals()
+
+    def _build_ui(self):
+        layout = QVBoxLayout(self)
+
+        layout.setContentsMargins(
+            32,
+            28,
+            32,
+            28,
+        )
+
+        layout.setSpacing(14)
+
+        layout.addWidget(
+            self.title_label
+        )
+
+        layout.addWidget(
+            self.subtitle_label
+        )
+
+        header = QHBoxLayout()
+        header.setSpacing(10)
+
+        header.addWidget(
+            self.collection_label
+        )
+
+        header.addStretch(1)
+
+        header.addWidget(
+            self.refresh_button
+        )
+
+        layout.addLayout(
+            header
+        )
+
+        layout.addWidget(
+            self.count_label
+        )
+
+        content = QHBoxLayout()
+        content.setSpacing(20)
+
+        content.addWidget(
+            self.visual_list,
+            1,
+        )
+
+        details_frame = QFrame()
+        details_frame.setFrameShape(
+            QFrame.Shape.StyledPanel
+        )
+
+        details = QVBoxLayout(
+            details_frame
+        )
+
+        details.setContentsMargins(
+            20,
+            20,
+            20,
+            20,
+        )
+
+        details.setSpacing(10)
+
+        details.addWidget(
+            self.name_value
+        )
+
+        details.addWidget(
+            self.preview,
+            1,
+        )
+
+        details.addWidget(
+            QLabel("Collection")
+        )
+
+        details.addWidget(
+            self.source_value
+        )
+
+        details.addWidget(
+            QLabel("Visual type")
+        )
+
+        details.addWidget(
+            self.type_value
+        )
+
+        details.addWidget(
+            QLabel("Author")
+        )
+
+        details.addWidget(
+            self.author_value
+        )
+
+        details.addWidget(
+            QLabel("Installation")
+        )
+
+        details.addWidget(
+            self.install_status_value
+        )
+
+        details.addWidget(
+            QLabel("Portable reference")
+        )
+
+        details.addWidget(
+            self.reference_value
+        )
+
+        details.addWidget(
+            QLabel("Attribution")
+        )
+
+        details.addWidget(
+            self.attribution_value
+        )
+
+        details.addSpacing(8)
+
+        details.addWidget(
+            self.install_button
+        )
+
+        details.addStretch(1)
+
+        content.addWidget(
+            details_frame,
+            2,
+        )
+
+        layout.addLayout(
+            content,
+            1,
+        )
+
+        layout.addWidget(
+            self.status_label
+        )
+
+        secondary_style = (
+            "color: #9aa0a6;"
+        )
+
+        self.count_label.setStyleSheet(
+            secondary_style
+        )
+
+        self.status_label.setStyleSheet(
+            secondary_style
+        )
+
+    def _connect_signals(self):
+        self.visual_list.currentRowChanged.connect(
+            self.show_visual
+        )
+
+        self.install_button.clicked.connect(
+            self.install_selected_visual
+        )
+
+        self.refresh_button.clicked.connect(
+            self.refresh_visuals
+        )
+
+    @staticmethod
+    def _status_display(
+        status,
+    ):
+        if (
+            status
+            is NativeVisualInstallStatus.CURRENT
+        ):
+            return "Installed"
+
+        if (
+            status
+            is NativeVisualInstallStatus.OUTDATED
+        ):
+            return "Update available"
+
+        return "Not installed"
+
+    @staticmethod
+    def _button_display(
+        status,
+    ):
+        if (
+            status
+            is NativeVisualInstallStatus.CURRENT
+        ):
+            return "Installed"
+
+        if (
+            status
+            is NativeVisualInstallStatus.OUTDATED
+        ):
+            return "Update"
+
+        return "Install"
+
+    def refresh_visuals(self):
+        try:
+            assets = tuple(
+                self.native_visual_service.native_assets()
+            )
+
+            statuses = tuple(
+                self.native_visual_service.status(
+                    asset.id
+                )
+                for asset in assets
+            )
+
+        except (
+            KeyError,
+            OSError,
+            TypeError,
+            ValueError,
+            RuntimeError,
+        ) as exc:
+            self.assets = []
+            self.statuses = []
+
+            self.visual_list.clear()
+            self.clear_details()
+
+            self.count_label.setText(
+                "0 RetroVault visuals"
+            )
+
+            self.status_label.setText(
+                "Unable to load RetroVault visuals: "
+                f"{exc}"
+            )
+
+            return
+
+        self.assets = list(
+            assets
+        )
+
+        self.statuses = list(
+            statuses
+        )
+
+        self.visual_list.blockSignals(
+            True
+        )
+
+        try:
+            self.visual_list.clear()
+
+            for asset, status in zip(
+                self.assets,
+                self.statuses,
+            ):
+                label = (
+                    f"{asset.display_name}  —  "
+                    f"{self._status_display(status.status)}"
+                )
+
+                self.visual_list.addItem(
+                    label
+                )
+
+        finally:
+            self.visual_list.blockSignals(
+                False
+            )
+
+        count = len(
+            self.assets
+        )
+
+        self.count_label.setText(
+            (
+                "1 RetroVault visual"
+                if count == 1
+                else f"{count} RetroVault visuals"
+            )
+        )
+
+        self.clear_details()
+
+        if count:
+            self.status_label.setText(
+                "Select a RetroVault visual "
+                "to preview and manage it."
+            )
+        else:
+            self.status_label.setText(
+                "No RetroVault-native visuals "
+                "are currently cataloged."
+            )
+
+    def clear_details(self):
+        self.name_value.setText(
+            "Select a RetroVault visual"
+        )
+
+        self.source_value.setText("—")
+        self.type_value.setText("—")
+        self.author_value.setText("—")
+        self.install_status_value.setText("—")
+        self.reference_value.setText("—")
+        self.attribution_value.setText("—")
+
+        self.preview.clear()
+        self.preview.setText(
+            "Select a RetroVault visual"
+        )
+
+        self.install_button.setText(
+            "Install"
+        )
+
+        self.install_button.setEnabled(
+            False
+        )
+
+    def _selected_status(self):
+        row = self.visual_list.currentRow()
+
+        if (
+            row < 0
+            or row >= len(
+                self.statuses
+            )
+        ):
+            return None
+
+        return self.statuses[row]
+
+    def show_visual(
+        self,
+        row,
+    ):
+        if (
+            row < 0
+            or row >= len(
+                self.statuses
+            )
+        ):
+            self.clear_details()
+            return
+
+        status = self.statuses[row]
+        asset = status.asset
+
+        self.name_value.setText(
+            asset.display_name
+        )
+
+        self.source_value.setText(
+            "RetroVault Visuals"
+        )
+
+        self.type_value.setText(
+            asset.asset_type.value.title()
+        )
+
+        self.author_value.setText(
+            asset.author or "RetroVault"
+        )
+
+        self.install_status_value.setText(
+            self._status_display(
+                status.status
+            )
+        )
+
+        self.reference_value.setText(
+            asset.reference
+        )
+
+        self.attribution_value.setText(
+            asset.attribution or "—"
+        )
+
+        self.install_button.setText(
+            self._button_display(
+                status.status
+            )
+        )
+
+        self.install_button.setEnabled(
+            status.status
+            is not NativeVisualInstallStatus.CURRENT
+        )
+
+        self._show_preview(
+            status
+        )
+
+    def _show_preview(
+        self,
+        status,
+    ):
+        self.preview.clear()
+        self.preview.setText(
+            "Preview unavailable"
+        )
+
+        image_extensions = {
+            ".jpeg",
+            ".jpg",
+            ".png",
+            ".webp",
+        }
+
+        for source in (
+            status.deployment.source_files
+        ):
+            path = Path(
+                source
+            )
+
+            if (
+                path.suffix.casefold()
+                not in image_extensions
+            ):
+                continue
+
+            if not path.is_file():
+                continue
+
+            pixmap = QPixmap(
+                str(path)
+            )
+
+            if pixmap.isNull():
+                continue
+
+            self.preview.setPixmap(
+                pixmap.scaled(
+                    self.preview.size(),
+                    Qt.AspectRatioMode.KeepAspectRatio,
+                    Qt.TransformationMode.SmoothTransformation,
+                )
+            )
+
+            return
+
+    def install_selected_visual(
+        self,
+    ):
+        selected = self._selected_status()
+
+        if selected is None:
+            return
+
+        if (
+            selected.status
+            is NativeVisualInstallStatus.CURRENT
+        ):
+            return
+
+        asset = selected.asset
+
+        action = (
+            "Update"
+            if (
+                selected.status
+                is NativeVisualInstallStatus.OUTDATED
+            )
+            else "Install"
+        )
+
+        answer = QMessageBox.question(
+            self,
+            f"{action} RetroVault Visual",
+            (
+                f"{action} this RetroVault visual?\n\n"
+                f"{asset.display_name}\n\n"
+                "The visual will be installed into "
+                "the configured RetroArch overlay "
+                "directory."
+            ),
+            (
+                QMessageBox.StandardButton.Yes
+                | QMessageBox.StandardButton.No
+            ),
+            QMessageBox.StandardButton.No,
+        )
+
+        if (
+            answer
+            != QMessageBox.StandardButton.Yes
+        ):
+            self.status_label.setText(
+                f"{action} cancelled."
+            )
+            return
+
+        try:
+            result = (
+                self.native_visual_service.install(
+                    asset.id
+                )
+            )
+
+        except (
+            KeyError,
+            OSError,
+            TypeError,
+            ValueError,
+            RuntimeError,
+        ) as exc:
+            QMessageBox.warning(
+                self,
+                "RetroVault Visual Installation Failed",
+                str(exc),
+            )
+
+            self.status_label.setText(
+                "Unable to install RetroVault visual."
+            )
+
+            return
+
+        if (
+            result.status
+            is not NativeVisualInstallStatus.CURRENT
+        ):
+            self.status_label.setText(
+                "RetroVault visual did not reach "
+                "Installed state."
+            )
+            return
+
+        selected_row = (
+            self.visual_list.currentRow()
+        )
+
+        self.refresh_visuals()
+
+        if (
+            0 <= selected_row
+            < self.visual_list.count()
+        ):
+            self.visual_list.setCurrentRow(
+                selected_row
+            )
+
+        self.status_label.setText(
+            f"Installed {asset.display_name}."
+        )

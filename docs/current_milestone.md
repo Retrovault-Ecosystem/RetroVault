@@ -1943,3 +1943,76 @@ No user-facing RVV selection UI is included in C.4-B.
 Next milestone:
 
 RVA1-C.4-C — User-Facing RVV Visual Selection.
+
+## RVA1-C.4-C — User-Facing RVV Visual Selection
+
+Status:
+
+CLOSED
+
+Closure establishes the first production user-facing
+RetroVault Visuals collection surface.
+
+Implemented application surface:
+
+- dedicated `RetroVault Visuals` page
+- separate from the existing installed-filesystem
+  `Overlays` browser
+- catalog-driven native RVV visual discovery
+- no duplicate or parallel visual catalog
+- no native-asset filesystem scanning from the UI
+- installation state supplied by `NativeVisualService`
+- authoritative production-package preview
+- explicit install/update action only
+- no automatic installation on selection
+- no automatic presentation assignment on installation
+- existing presentation assignment precedence unchanged
+- existing launch architecture unchanged
+
+First production collection entry:
+
+- ID: `rvv.overlay.nes.classic`
+- Display name: `Nintendo NES — RetroVault Classic`
+- Source: `rvv_native`
+- Type: `overlay`
+- Author: `RetroVault`
+- Production installation state: `current`
+
+Navigation integration:
+
+- `RetroVault Visuals` registered in `MainWindow`
+- sidebar entry registered explicitly
+- sidebar placement between `Overlays` and `Shaders`
+- navigation opens the dedicated native RVV page
+- UI shell regression updated for the new navigation entry
+
+Live human acceptance:
+
+PASS
+
+Confirmed in the production application:
+
+- `RetroVault Visuals` physically appears in the sidebar
+- navigation opens the correct page
+- `Nintendo NES — RetroVault Classic` is listed
+- production NES bezel preview is visible
+- visual metadata is correct
+- installation state displays `Installed`
+- Installed button is disabled while the package is current
+- page layout is visually acceptable
+
+This closure establishes curated browsing, preview,
+production installation status, and explicit deployment
+management for native RetroVault visuals.
+
+Default/system/game presentation assignment is intentionally
+not introduced by this milestone. Assignment remains behind
+the existing `PresentationStore` boundary for subsequent
+controlled integration.
+
+No recommendation precedence changes were made.
+
+No launch architecture changes were made.
+
+No parallel catalog, configuration, or assignment
+architecture was introduced.

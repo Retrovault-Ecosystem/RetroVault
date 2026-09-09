@@ -33,6 +33,7 @@ def test_sidebar_has_clear_active_navigation(
         "Systems",
         "Playlists",
         "Overlays",
+        "RetroVault Visuals",
         "Shaders",
         "RetroArch",
         "Settings",
