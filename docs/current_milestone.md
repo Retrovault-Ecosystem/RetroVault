@@ -1732,3 +1732,214 @@ Temporary proof content, including the Duck Tales 2
 validation game and earlier development visual debris,
 remains outside the native production visual contract
 and may be cleaned up independently.
+## RVA1-C.4-B — Native RVV Visual Selection and Deployment Foundation
+
+Status:
+
+COMPLETE
+
+RetroVault Visuals / Presentation Engine (RVV) now has a
+production-grade native visual deployment boundary for cataloged
+RetroVault-owned overlay packages.
+
+### C.4-B.1 — Architecture Audit
+
+The native visual selection and deployment audit confirmed that the
+existing RVV architecture already provided the required metadata,
+portable-reference, presentation-assignment, and runtime composition
+boundaries.
+
+The existing visual catalog remains authoritative for:
+
+- visual identity
+- asset type
+- ownership/source classification
+- portable references
+- author and attribution metadata
+
+No parallel visual database or alternate catalog architecture was
+introduced.
+
+Deployment and presentation assignment remain separate operations.
+
+### C.4-B.2 / C.4-B.2a — Native Deployment Contract
+
+`NativeVisualDeploymentService` establishes the filesystem deployment
+boundary for cataloged RVV-native overlays.
+
+The catalog-relative path is authoritative for both locations:
+
+repository root + catalog-relative path
+
+→ configured RetroArch overlay root + catalog-relative path
+
+For the first native production visual:
+
+`retro-vault://overlays/retrovault/nes/classic/RetroVault_NES_Classic.cfg`
+
+maps from:
+
+`retrovault/nes/classic/RetroVault_NES_Classic.cfg`
+
+to the same `retrovault/nes/classic/...` namespace beneath the
+configured RetroArch overlay root.
+
+The deployment layer rejects:
+
+- non-RVV-native assets
+- unsupported visual asset types
+- non-portable overlay references
+- unsafe relative paths
+- source paths escaping the native production package root
+- overlay image references escaping their production package
+- destinations escaping the configured overlay root
+
+### C.4-B.3 / C.4-B.3a — Transactional Package Deployment
+
+Native RVV package installation is transactional at the package
+directory boundary.
+
+The deployment process:
+
+1. creates a staging package beside the final destination;
+2. copies every authoritative production file into staging;
+3. verifies staged bytes against the source package;
+4. moves an existing installed package to a temporary backup;
+5. atomically replaces the destination with the completed staged
+   package;
+6. restores the previous package if final replacement fails;
+7. removes obsolete files by replacing the complete package rather
+   than merging file-by-file;
+8. removes staging and backup transaction debris after success.
+
+Planning remains read-only.
+
+Presentation assignment, recommendation precedence, generic overlay
+discovery, and RetroArch launch behavior remain outside this
+deployment boundary.
+
+### C.4-B.4 — Configured Native RVV Application Service
+
+`NativeVisualService` provides the application-facing boundary above
+native deployment.
+
+It consumes the existing RetroVault configuration system through
+`ConfigLoader` and the existing visual catalog through
+`VisualAssetCatalogManifest`.
+
+The service exposes three installation states:
+
+- `NOT_INSTALLED`
+- `CURRENT`
+- `OUTDATED`
+
+`CURRENT` requires the deployed package to match the authoritative
+production package exactly.
+
+Missing files, changed bytes, or unexpected files cause an installed
+package to report `OUTDATED`.
+
+Installation is explicit. Merely querying status or browsing the
+catalog does not deploy files and does not alter presentation
+assignments.
+
+Effective configuration is reloaded for operations so a user change
+to the configured overlay directory can be honored without introducing
+a second path configuration mechanism.
+
+### C.4-B.5 — Production-Path Proof
+
+The configured application service was exercised against the real
+RetroVault environment.
+
+Verified production chain:
+
+RetroVault `ConfigLoader`
+
+→ RVV visual catalog
+
+→ `NativeVisualService`
+
+→ `NativeVisualDeploymentService`
+
+→ configured RetroArch overlay root
+
+→ portable RVV reference resolution
+
+The effective overlay root resolved to the live RetroArch overlay
+location.
+
+The production asset:
+
+`rvv.overlay.nes.classic`
+
+resolved to:
+
+`Nintendo NES — RetroVault Classic`
+
+and reported `CURRENT` before the live proof installation.
+
+A live transactional reinstall completed successfully and remained
+`CURRENT`.
+
+The deployed CFG and PNG were byte-identical to the locked production
+source files.
+
+The portable RVV reference resolved to the exact deployed descriptor.
+
+No staging or backup transaction debris remained.
+
+The proof did not modify:
+
+- the RVV visual catalog
+- presentation assignments
+- recommendation precedence
+- RetroArch launch behavior
+- user configuration
+- the locked production NES visual
+- unrelated repository files
+
+### C.4-B Closure Contract
+
+Native RVV visual deployment is now an application service rather than
+a UI or launch-time filesystem concern.
+
+The protected boundary is:
+
+User-facing RVV selection
+
+→ native visual application service
+
+→ effective RetroVault configuration + visual catalog
+
+→ transactional native deployment
+
+→ configured RetroArch visual root
+
+Presentation selection and assignment remain an independent layer.
+
+This allows future system-level and game-level native RVV visual
+collections to reuse the same deployment infrastructure without
+reopening the RetroArch launch architecture.
+
+### C.4-B Validation
+
+Closure validation includes:
+
+- dedicated native deployment tests
+- dedicated configured native-service tests
+- configuration regression
+- presentation regression
+- full RetroVault regression
+- repository scope validation
+- production NES checksum lock validation
+- real configured-path deployment proof
+- source/deployed byte-identity proof
+- portable-reference resolution proof
+- transaction cleanup proof
+
+No user-facing RVV selection UI is included in C.4-B.
+
+Next milestone:
+
+RVA1-C.4-C — User-Facing RVV Visual Selection.
