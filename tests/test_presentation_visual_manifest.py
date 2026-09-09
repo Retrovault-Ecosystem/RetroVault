@@ -58,7 +58,45 @@ def test_production_visual_catalog_manifest_loads():
         VisualAssetCatalog,
     )
 
-    assert catalog.all() == ()
+    assets = catalog.all()
+
+    assert len(assets) == 1
+
+    asset = catalog.require(
+        "rvv.overlay.nes.classic"
+    )
+
+    assert (
+        asset.display_name
+        == "Nintendo NES — RetroVault Classic"
+    )
+
+    assert (
+        asset.asset_type
+        is VisualAssetType.OVERLAY
+    )
+
+    assert (
+        asset.source
+        is VisualAssetSource.RVV_NATIVE
+    )
+
+    assert asset.reference == (
+        "retro-vault://overlays/"
+        "retrovault/nes/classic/"
+        "RetroVault_NES_Classic.cfg"
+    )
+
+    assert asset.author == "RetroVault"
+
+    assert (
+        asset.attribution
+        == (
+            "Original RetroVault bezel composition. "
+            "Platform names and trademarks are the "
+            "property of their respective owners."
+        )
+    )
 
 
 def test_manifest_loads_typed_visual_asset(

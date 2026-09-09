@@ -8,7 +8,7 @@
   "source": "rvv_native",
   "author": "RetroVault",
   "copyright": "Original RetroVault bezel composition and RetroVault branding © RetroVault. Third-party trademarks remain the property of their respective owners.",
-  "production_status": "specified",
+  "production_status": "production",
   "design": {
     "intent": "Create an original RetroVault-owned NES presentation that evokes the visual character of home console play while remaining clean, game-focused, and suitable for long play sessions.",
     "originality": "The bezel composition, frame treatment, layout, materials, RetroVault branding, and presentation design must be original RetroVault work and must not reproduce third-party bezel artwork, console photography, or external pack artwork. Platform identification may include third-party trademark references when deliberately specified; ownership of those marks is not claimed by RetroVault.",
@@ -39,18 +39,18 @@
         "height": 1080
       },
       "game_viewport": {
-        "x": 240,
-        "y": 90,
-        "width": 1440,
-        "height": 900,
+        "x": 355,
+        "y": 100,
+        "width": 1188,
+        "height": 751,
         "normalized": {
-          "x": 0.125,
-          "y": 0.0833333333,
-          "width": 0.75,
-          "height": 0.8333333333
+          "x": 0.18489583333333334,
+          "y": 0.09259259259259259,
+          "width": 0.61875,
+          "height": 0.6953703703703704
         },
-        "policy": "The overlay artwork must be fully transparent inside this rectangle. Gameplay geometry remains controlled independently by RetroArch and the active shader/presentation pipeline.",
-        "aperture_aspect": "16:10"
+        "policy": "The production overlay artwork is fully transparent inside this exact rectangle. Gameplay geometry remains controlled independently by RetroArch and the active shader/presentation pipeline.",
+        "aperture_aspect": "1188:751"
       },
       "safe_zone": {
         "top": 70,

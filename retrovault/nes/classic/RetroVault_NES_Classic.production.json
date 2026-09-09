@@ -1,0 +1,26 @@
+{
+  "canvas": {
+    "width": 1920,
+    "height": 1080
+  },
+  "aperture": {
+    "x": 355,
+    "y": 100,
+    "width": 1188,
+    "height": 751
+  },
+  "aperture_normalized": {
+    "x": 0.18489583333333334,
+    "y": 0.09259259259259259,
+    "width": 0.61875,
+    "height": 0.6953703703703704
+  },
+  "source_reference": "approved RetroVault NES master concept",
+  "notes": [
+    "Approved premium showroom/restored-hardware design preserved.",
+    "Checkerboard gameplay field converted deterministically to alpha=0.",
+    "Black inner bezel retained.",
+    "RetroVault branding retained with red accent lines.",
+    "Nintendo system identity retained beneath RetroVault without flanking red lines."
+  ]
+}

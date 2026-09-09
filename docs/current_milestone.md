@@ -1586,3 +1586,149 @@ management, broader system/game coverage, automated presentation
 selection, curated RetroVault visual packs, and higher-level
 presentation workflows without reopening the foundational
 launch architecture established here.
+
+## RVA1-C.4-A.4b — First Native RVV Visual Production Closure
+
+Status:
+
+PRODUCTION COMPLETE
+
+RetroVault now contains its first original native
+RetroVault Visuals / Presentation Engine (RVV)
+production visual:
+
+`Nintendo NES — RetroVault Classic`
+
+Production identity:
+
+- visual ID: `rvv.overlay.nes.classic`
+- family: `RetroVault Classic`
+- platform: `platform.nintendo.nes`
+- asset type: `overlay`
+- source: `rvv_native`
+- author: `RetroVault`
+- production status: `production`
+
+The approved native visual is stored as a portable
+RetroArch overlay package:
+
+- `retrovault/nes/classic/RetroVault_NES_Classic_1080p.png`
+- `retrovault/nes/classic/RetroVault_NES_Classic.cfg`
+- `retrovault/nes/classic/RetroVault_NES_Classic.production.json`
+
+The production PNG uses a 1920x1080 RGBA canvas with
+one exact transparent gameplay aperture:
+
+- x: 355
+- y: 100
+- width: 1188
+- height: 751
+
+The gameplay aperture is presentation geometry only.
+NES gameplay remains independently controlled as 4:3
+by RetroArch and the active shader/presentation
+pipeline.
+
+The approved production visual preserves the native
+RVV design language established during C.4-A:
+
+- premium showroom / restored-hardware presentation
+- clean NES-inspired industrial character
+- gameplay-dominant composition
+- RetroVault as primary presentation identity
+- RetroVault branding centered below gameplay with
+  restrained red accent lines
+- Nintendo platform identity centered beneath
+  RetroVault without flanking red lines
+- maintained POWER and RESET controls with restrained
+  functional wear
+- exceptionally crisp and aligned presentation
+  branding
+
+Originality and provenance remain explicitly bounded:
+
+- the bezel composition, frame treatment, layout,
+  materials, RetroVault branding, and presentation
+  design are original RetroVault work
+- no third-party bezel artwork, console photography,
+  or external visual-pack artwork is incorporated
+- third-party platform names and trademarks remain
+  the property of their respective owners
+- RetroVault does not claim ownership of Nintendo
+  platform identification
+
+The production asset was deployed through the actual
+configured RetroArch overlay root and resolved through
+the normal RetroVault portable presentation reference:
+
+`retro-vault://overlays/retrovault/nes/classic/RetroVault_NES_Classic.cfg`
+
+The native overlay was then selected through
+RetroVault's normal presentation state and composed
+with the existing Nintendo NES Orionsangel `[STD]`
+shader through the production application path.
+
+The controlled live proof used the temporary
+`Duck Tales 2 (U)` NES validation game.
+
+Live acceptance confirmed:
+
+- game launched successfully through RetroVault
+- FCEUmm operated through the configured application
+  core boundary
+- native RetroVault NES Classic bezel was visible
+- gameplay appeared correctly through the transparent
+  aperture
+- Orionsangel Nintendo NES `[STD]` shader was visible
+- RetroVault and platform branding were correctly
+  positioned
+- bezel/game alignment was correct
+- controls operated normally
+- audio operated normally
+
+The temporary presentation assignment was restored
+after the proof and repository state remained
+unchanged by the runtime validation.
+
+The production visual is registered in:
+
+`data/presentation/visual_catalog.json`
+
+The catalog entry is loaded through the typed
+`VisualAssetCatalogManifest` boundary and preserves
+the portable overlay reference.
+
+The approved production artifacts are locked by the
+following SHA-256 values:
+
+- CFG:
+  `8ed0e8f5828e65c573bca87a4537705e791d17fe54b40d422b7acb626438a3f2`
+- production metadata:
+  `68732c989666f53f1ddc5d0e485d4b76bb1b274e64c60ad59bb922147b5b2694`
+- PNG:
+  `991f4f67999a3d466025d597cdce662b396b3ccfecf2b754a6c68c18f5fb4d05`
+
+This closes the first complete native RVV production
+asset lifecycle:
+
+specification
+→ approved master design
+→ production geometry
+→ deterministic transparent aperture
+→ portable RetroArch descriptor
+→ runtime deployment
+→ RetroVault portable-reference resolution
+→ application-path live proof
+→ human visual acceptance
+→ production promotion
+→ typed visual-catalog registration
+
+The first native RVV visual therefore establishes the
+production pattern that later RetroVault system and
+game visual families can follow without reopening the
+RVV launch architecture.
+
+Temporary proof content, including the Duck Tales 2
+validation game and earlier development visual debris,
+remains outside the native production visual contract
+and may be cleaned up independently.
