@@ -1,0 +1,80 @@
+{
+  "version": 1,
+  "id": "rvv.overlay.snes.classic",
+  "family": "RetroVault Classic",
+  "display_name": "Nintendo SNES — RetroVault Classic",
+  "platform_id": "platform.nintendo.snes",
+  "asset_type": "overlay",
+  "source": "rvv_native",
+  "author": "RetroVault",
+  "copyright": "Original RetroVault bezel composition and RetroVault branding © RetroVault. Third-party trademarks remain the property of their respective owners.",
+  "production_status": "design",
+  "design": {
+    "intent": "Create an original RetroVault-owned Super Nintendo presentation that evokes the visual character of the 16-bit home-console era while remaining clean, game-focused, and suitable for long play sessions.",
+    "originality": "The bezel composition, frame treatment, layout, materials, RetroVault branding, and presentation design must be original RetroVault work and must not reproduce third-party bezel artwork, console photography, or external pack artwork. Platform identification may include third-party trademark references when deliberately specified; ownership of those marks is not claimed by RetroVault.",
+    "composition": {
+      "game_view": "Centered transparent gameplay aperture with presentation framing that does not obscure gameplay. The aperture does not define the emulated game's display aspect ratio.",
+      "frame": "Purpose-built RetroVault frame with restrained early-1990s 16-bit home-console industrial character.",
+      "surround": "Dark neutral presentation field designed to keep visual attention on gameplay.",
+      "depth": "Subtle layered depth may be used around the game viewport without creating excessive visual bulk.",
+      "branding": "RetroVault is the primary presentation identity. Platform identification is secondary and remains visually subordinate to RetroVault and gameplay."
+    },
+    "visual_language": {
+      "style": "clean retro-industrial",
+      "era_reference": "early-1990s 16-bit home console",
+      "surface_character": "subtle molded-material and display-surround cues",
+      "decoration": "minimal",
+      "game_priority": "high"
+    },
+    "runtime": {
+      "target_aspect": "16:9",
+      "game_aspect": "4:3",
+      "target_resolution": "1920x1080",
+      "overlay_format": "PNG",
+      "descriptor_format": "RetroArch overlay CFG",
+      "shader_independent": true,
+      "shader_compatible": true,
+      "canvas": {
+        "width": 1920,
+        "height": 1080
+      },
+      "game_viewport": {
+        "status": "design_pending",
+        "policy": "Final transparent gameplay aperture geometry must be established from the accepted SNES master design. Gameplay geometry remains controlled independently by RetroArch and the active shader/presentation pipeline."
+      },
+      "safe_zone": {
+        "status": "design_pending",
+        "policy": "Final branding safe-zone geometry must be established from the accepted SNES master design. Branding must remain outside the transparent gameplay aperture."
+      },
+      "game_aspect_policy": "4:3 is the intended presentation aspect for SNES gameplay. RetroArch and the active shader pipeline control final gameplay geometry independently inside the transparent overlay aperture."
+    },
+    "branding_layout": {
+      "retrovault_identity": {
+        "role": "primary presentation identity"
+      },
+      "system_identity": {
+        "role": "secondary platform identification"
+      },
+      "policy": "Exact SNES branding positions and accents remain design-pending until the SNES master visual is accepted. Gameplay must remain visually dominant."
+    },
+    "finish": {
+      "quality_target": "premium showroom",
+      "frame": "Clean restored-console presentation with subtle material texture and restrained age character.",
+      "controls": "Any physical-console-inspired controls should appear maintained and clean but naturally used, with subtle wear appropriate to functional hardware.",
+      "branding": "Branding must be exceptionally crisp, precisely aligned, evenly spaced, and visually cleaner than surrounding functional details.",
+      "consistency": "The SNES visual must belong unmistakably to the RetroVault Classic family while retaining a system-specific early-1990s 16-bit identity."
+    }
+  },
+  "production_assets": {
+    "status": "design_pending"
+  },
+  "catalog": {
+    "planned_reference": "retro-vault://overlays/retrovault/snes/classic/RetroVault_SNES_Classic.cfg",
+    "attribution": "Original RetroVault bezel composition. Platform names and trademarks are the property of their respective owners."
+  },
+  "trademark_policy": {
+    "ownership_claim": "RetroVault claims ownership only of its original bezel composition, presentation design, and RetroVault branding.",
+    "platform_identity": "Nintendo platform identification is included as secondary system identification and is not claimed as RetroVault intellectual property.",
+    "separation": "Third-party platform identity must remain distinct from RetroVault branding and must not imply ownership of the third-party mark."
+  }
+}
