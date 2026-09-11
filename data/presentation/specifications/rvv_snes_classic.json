@@ -63,6 +63,51 @@
       "controls": "Any physical-console-inspired controls should appear maintained and clean but naturally used, with subtle wear appropriate to functional hardware.",
       "branding": "Branding must be exceptionally crisp, precisely aligned, evenly spaced, and visually cleaner than surrounding functional details.",
       "consistency": "The SNES visual must belong unmistakably to the RetroVault Classic family while retaining a system-specific early-1990s 16-bit identity."
+    },
+    "master_visual_selection": {
+      "status": "selected",
+      "family_direction": "Preserve the established RetroVault Classic visual language and overall presentation relationship of the protected NES master while expressing the distinct industrial identity of the Super Nintendo generation.",
+      "housing": {
+        "identity": "SNES-console-inspired light gray and lavender molded-plastic presentation housing",
+        "finish": "premium restored-console finish with subtle texture, depth, seams, bevels, and restrained age character",
+        "nes_relationship": "Use the NES master as the family-level composition reference, not as literal SNES geometry."
+      },
+      "gameplay_aperture": {
+        "presentation": "Large centered dark gameplay aperture remains the dominant visual element.",
+        "geometry_status": "design_pending"
+      },
+      "left_panel": {
+        "platform_identity": "Super Nintendo Entertainment System identification",
+        "hardware_controls": [
+          "POWER",
+          "RESET",
+          "EJECT"
+        ],
+        "accent_family": "SNES purple"
+      },
+      "right_panel": {
+        "controller_imagery": "excluded",
+        "joystick_imagery": "excluded",
+        "replacement_direction": "Console-derived architectural detailing using SNES-style venting, molded panel structure, restrained purple accents, and 16-bit hardware-era presentation.",
+        "identity_element": "16-BIT",
+        "supporting_text": [
+          "POWER",
+          "PERFORMANCE",
+          "PLAY FOREVER"
+        ]
+      },
+      "lower_branding": {
+        "retrovault_position": "centered above platform identity",
+        "platform_identity_position": "centered directly below RetroVault",
+        "selected_platform_mark": "Super Nintendo Entertainment System bottom logo",
+        "accent_lines": "Purple horizontal RetroVault accent lines",
+        "selection_status": "approved"
+      },
+      "controller": {
+        "included": false,
+        "policy": "No controller or joystick imagery is part of the selected SNES master visual direction."
+      },
+      "production_boundary": "This selection locks visual direction only. Exact viewport geometry, safe zones, production PNG, RetroArch descriptor, catalog registration, deployment, and production promotion remain pending."
     }
   },
   "production_assets": {

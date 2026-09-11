@@ -145,3 +145,86 @@ def test_native_snes_trademark_boundary():
         "must remain distinct"
         in policy["separation"]
     )
+
+
+def test_native_snes_selected_master_visual_direction():
+    data = load_spec()
+    selection = data["design"]["master_visual_selection"]
+
+    assert selection["status"] == "selected"
+
+    assert (
+        "RetroVault Classic"
+        in selection["family_direction"]
+    )
+
+    assert (
+        "NES master"
+        in selection["housing"]["nes_relationship"]
+    )
+
+    assert (
+        selection["gameplay_aperture"]["geometry_status"]
+        == "design_pending"
+    )
+
+    assert (
+        selection["right_panel"]["controller_imagery"]
+        == "excluded"
+    )
+
+    assert (
+        selection["right_panel"]["joystick_imagery"]
+        == "excluded"
+    )
+
+    assert (
+        selection["right_panel"]["identity_element"]
+        == "16-BIT"
+    )
+
+    assert (
+        selection["lower_branding"]["retrovault_position"]
+        == "centered above platform identity"
+    )
+
+    assert (
+        selection["lower_branding"]
+        ["platform_identity_position"]
+        == "centered directly below RetroVault"
+    )
+
+    assert (
+        "Super Nintendo Entertainment System"
+        in selection["lower_branding"]
+        ["selected_platform_mark"]
+    )
+
+    assert (
+        selection["lower_branding"]["selection_status"]
+        == "approved"
+    )
+
+    assert selection["controller"]["included"] is False
+
+
+def test_native_snes_master_selection_does_not_promote_production():
+    data = load_spec()
+
+    assert data["production_status"] == "design"
+
+    assert data["production_assets"] == {
+        "status": "design_pending"
+    }
+
+    runtime = data["design"]["runtime"]
+
+    assert (
+        runtime["game_viewport"]["status"]
+        == "design_pending"
+    )
+
+    assert (
+        runtime["safe_zone"]["status"]
+        == "design_pending"
+    )
