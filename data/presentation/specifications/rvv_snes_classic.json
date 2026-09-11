@@ -39,8 +39,36 @@
         "height": 1080
       },
       "game_viewport": {
-        "status": "design_pending",
-        "policy": "Final transparent gameplay aperture geometry must be established from the accepted SNES master design. Gameplay geometry remains controlled independently by RetroArch and the active shader/presentation pipeline."
+        "status": "accepted_geometry",
+        "derivation": {
+          "source": "selected G.3 SNES master preview",
+          "source_canvas": {
+            "width": 1672,
+            "height": 941
+          },
+          "measured_aperture": {
+            "x": 307,
+            "y": 76,
+            "width": 1059,
+            "height": 653
+          },
+          "target_canvas": {
+            "width": 1920,
+            "height": 1080
+          },
+          "method": "Scale the selected-master gameplay opening proportionally from the approved preview canvas to the canonical 1920x1080 RVV production canvas."
+        },
+        "x": 353,
+        "y": 87,
+        "width": 1216,
+        "height": 750,
+        "normalized": {
+          "x": 0.183854,
+          "y": 0.080556,
+          "width": 0.633333,
+          "height": 0.694444
+        },
+        "policy": "This rectangle defines the transparent SNES overlay aperture only. It does not force the emulated game to fill or adopt the aperture aspect ratio. RetroArch and the active shader/presentation pipeline retain control of the intended 4:3 gameplay geometry."
       },
       "safe_zone": {
         "status": "design_pending",
@@ -74,7 +102,13 @@
       },
       "gameplay_aperture": {
         "presentation": "Large centered dark gameplay aperture remains the dominant visual element.",
-        "geometry_status": "design_pending"
+        "geometry_status": "accepted_geometry",
+        "production_geometry": {
+          "x": 353,
+          "y": 87,
+          "width": 1216,
+          "height": 750
+        }
       },
       "left_panel": {
         "platform_identity": "Super Nintendo Entertainment System identification",

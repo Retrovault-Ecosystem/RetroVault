@@ -75,23 +75,22 @@ def test_native_snes_runtime_family_contract():
     }
 
 
-def test_native_snes_geometry_remains_design_pending():
-    runtime = load_spec()["design"]["runtime"]
 
-    assert (
-        runtime["game_viewport"]["status"]
-        == "design_pending"
-    )
+def test_native_snes_geometry_contract():
+    runtime = load_spec()["design"]["runtime"]
+    viewport = runtime["game_viewport"]
+
+    assert viewport["status"] == "accepted_geometry"
+
     assert (
         runtime["safe_zone"]["status"]
         == "design_pending"
     )
 
-    assert "x" not in runtime["game_viewport"]
-    assert "y" not in runtime["game_viewport"]
-    assert "width" not in runtime["game_viewport"]
-    assert "height" not in runtime["game_viewport"]
-
+    assert viewport["x"] == 353
+    assert viewport["y"] == 87
+    assert viewport["width"] == 1216
+    assert viewport["height"] == 750
 
 def test_native_snes_is_not_prematurely_production():
     data = load_spec()
@@ -147,6 +146,7 @@ def test_native_snes_trademark_boundary():
     )
 
 
+
 def test_native_snes_selected_master_visual_direction():
     data = load_spec()
     selection = data["design"]["master_visual_selection"]
@@ -165,7 +165,7 @@ def test_native_snes_selected_master_visual_direction():
 
     assert (
         selection["gameplay_aperture"]["geometry_status"]
-        == "design_pending"
+        == "accepted_geometry"
     )
 
     assert (
@@ -221,10 +221,111 @@ def test_native_snes_master_selection_does_not_promote_production():
 
     assert (
         runtime["game_viewport"]["status"]
-        == "design_pending"
+        == "accepted_geometry"
     )
 
     assert (
         runtime["safe_zone"]["status"]
         == "design_pending"
     )
+
+def test_native_snes_selected_master_geometry():
+    data = load_spec()
+    runtime = data["design"]["runtime"]
+    viewport = runtime["game_viewport"]
+
+    assert viewport["status"] == "accepted_geometry"
+
+    assert viewport["x"] == 353
+    assert viewport["y"] == 87
+    assert viewport["width"] == 1216
+    assert viewport["height"] == 750
+
+    assert viewport["normalized"] == {
+        "x": 0.183854,
+        "y": 0.080556,
+        "width": 0.633333,
+        "height": 0.694444,
+    }
+
+    derivation = viewport["derivation"]
+
+    assert derivation["source"] == (
+        "selected G.3 SNES master preview"
+    )
+
+    assert derivation["source_canvas"] == {
+        "width": 1672,
+        "height": 941,
+    }
+
+    assert derivation["measured_aperture"] == {
+        "x": 307,
+        "y": 76,
+        "width": 1059,
+        "height": 653,
+    }
+
+    assert derivation["target_canvas"] == {
+        "width": 1920,
+        "height": 1080,
+    }
+
+
+def test_native_snes_aperture_does_not_replace_game_aspect():
+    data = load_spec()
+    runtime = data["design"]["runtime"]
+
+    assert runtime["game_aspect"] == "4:3"
+
+    assert (
+        "does not force"
+        in runtime["game_viewport"]["policy"]
+    )
+
+    assert (
+        "RetroArch"
+        in runtime["game_viewport"]["policy"]
+    )
+
+
+def test_native_snes_master_selection_tracks_geometry():
+    data = load_spec()
+
+    aperture = (
+        data["design"]
+        ["master_visual_selection"]
+        ["gameplay_aperture"]
+    )
+
+    assert (
+        aperture["geometry_status"]
+        == "accepted_geometry"
+    )
+
+    assert aperture["production_geometry"] == {
+        "x": 353,
+        "y": 87,
+        "width": 1216,
+        "height": 750,
+    }
+
+
+def test_native_snes_safe_zone_remains_unlocked():
+    data = load_spec()
+    runtime = data["design"]["runtime"]
+
+    assert (
+        runtime["safe_zone"]["status"]
+        == "design_pending"
+    )
+
+
+def test_native_snes_geometry_does_not_promote_production():
+    data = load_spec()
+
+    assert data["production_status"] == "design"
+
+    assert data["production_assets"] == {
+        "status": "design_pending"
+    }
