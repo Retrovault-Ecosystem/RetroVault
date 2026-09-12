@@ -92,6 +92,21 @@ class ProcessLifecycleAdapter:
 
         return self._runtime.launch_requested()
 
+    def launch_failed(self) -> HardwareIndicatorSnapshot:
+        """
+        Normalize a failure that occurs before process startup.
+
+        This is used when application preparation fails after the user's
+        launch request but before the emulator launcher returns a result.
+        """
+
+        if self._runtime.state is not HardwareRuntimeState.LAUNCH_REQUESTED:
+            raise RuntimeError(
+                "Launch failure requires a pending launch request."
+            )
+
+        return self._runtime.launch_failed()
+
     def launch_result(
         self,
         result: dict,

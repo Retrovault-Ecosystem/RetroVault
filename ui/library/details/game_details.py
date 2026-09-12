@@ -475,6 +475,9 @@ Future:
 
             return
 
+        if self.process_lifecycle is not None:
+            self.process_lifecycle.launch_requested()
+
 
 
         core_path = self.core_resolver.find(
@@ -495,6 +498,9 @@ Future:
                 ]
 
             )
+
+            if self.process_lifecycle is not None:
+                self.process_lifecycle.launch_failed()
 
             return
 
@@ -571,6 +577,9 @@ Future:
 
         if not result["ready"]:
 
+            if self.process_lifecycle is not None:
+                self.process_lifecycle.launch_failed()
+
             return
 
 
@@ -581,6 +590,11 @@ Future:
 
         )
 
+
+        if self.process_lifecycle is not None:
+            self.process_lifecycle.launch_result(
+                launch_result
+            )
 
         if (
             launch_result.get(

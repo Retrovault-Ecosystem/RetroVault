@@ -274,3 +274,24 @@ def test_runtime_type_is_enforced():
             object(),
             session,
         )
+
+
+def test_explicit_launch_failed_returns_pending_request_to_idle():
+    adapter, _session = make_adapter()
+
+    adapter.launch_requested()
+
+    snapshot = adapter.launch_failed()
+
+    assert adapter.state is HardwareRuntimeState.IDLE
+    assert snapshot.power is IndicatorState.OFF
+
+
+def test_explicit_launch_failed_requires_pending_request():
+    adapter, _session = make_adapter()
+
+    with pytest.raises(
+        RuntimeError,
+        match="pending launch request",
+    ):
+        adapter.launch_failed()
