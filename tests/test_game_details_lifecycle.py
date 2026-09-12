@@ -78,7 +78,7 @@ def test_launch_request_precedes_core_resolution(
     order = []
 
     lifecycle.launch_requested.side_effect = (
-        lambda: order.append("launch_requested")
+        lambda *_args: order.append("launch_requested")
     )
 
     details.core_resolver.find = (
@@ -109,7 +109,9 @@ def test_missing_core_normalizes_pending_launch(
 
     details.launch_game()
 
-    lifecycle.launch_requested.assert_called_once_with()
+    lifecycle.launch_requested.assert_called_once_with(
+        "platform.nintendo.nes"
+    )
     lifecycle.launch_failed.assert_called_once_with()
     lifecycle.launch_result.assert_not_called()
 
@@ -133,7 +135,9 @@ def test_validation_failure_normalizes_pending_launch(
 
     details.launch_game()
 
-    lifecycle.launch_requested.assert_called_once_with()
+    lifecycle.launch_requested.assert_called_once_with(
+        "platform.nintendo.nes"
+    )
     lifecycle.launch_failed.assert_called_once_with()
     lifecycle.launch_result.assert_not_called()
 
@@ -166,7 +170,9 @@ def test_failed_launcher_result_reaches_lifecycle(
 
     details.launch_game()
 
-    lifecycle.launch_requested.assert_called_once_with()
+    lifecycle.launch_requested.assert_called_once_with(
+        "platform.nintendo.nes"
+    )
     lifecycle.launch_failed.assert_not_called()
 
     lifecycle.launch_result.assert_called_once_with(
@@ -200,7 +206,9 @@ def test_successful_launcher_result_reaches_lifecycle(
 
     details.launch_game()
 
-    lifecycle.launch_requested.assert_called_once_with()
+    lifecycle.launch_requested.assert_called_once_with(
+        "platform.nintendo.nes"
+    )
     lifecycle.launch_failed.assert_not_called()
 
     lifecycle.launch_result.assert_called_once_with(
@@ -257,3 +265,19 @@ def test_standalone_game_details_remains_safe(
     details.launch_game()
 
     details.launcher.launch.assert_called_once()
+
+
+def test_launch_hands_canonical_platform_to_lifecycle(
+    app,
+):
+    details, lifecycle = make_details(app)
+
+    details.core_resolver.find = (
+        lambda _core: None
+    )
+
+    details.launch_game()
+
+    lifecycle.launch_requested.assert_called_once_with(
+        "platform.nintendo.nes"
+    )

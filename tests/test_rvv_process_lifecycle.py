@@ -64,7 +64,7 @@ def test_adapter_starts_idle_and_off():
 def test_launch_request_immediately_turns_nes_power_green():
     adapter, _session = make_adapter()
 
-    snapshot = adapter.launch_requested()
+    snapshot = adapter.launch_requested("platform.nintendo.nes")
 
     assert adapter.state is HardwareRuntimeState.LAUNCH_REQUESTED
     assert snapshot.power is IndicatorState.GREEN
@@ -77,7 +77,7 @@ def test_successful_live_process_becomes_running():
     process.poll.return_value = None
     session.active_process = process
 
-    adapter.launch_requested()
+    adapter.launch_requested("platform.nintendo.nes")
 
     snapshot = adapter.launch_result(
         {"success": True}
@@ -143,7 +143,7 @@ def test_poll_keeps_running_process_active():
     process.poll.return_value = None
     session.active_process = process
 
-    adapter.launch_requested()
+    adapter.launch_requested("platform.nintendo.nes")
     adapter.launch_result(
         {"success": True}
     )
@@ -295,3 +295,119 @@ def test_explicit_launch_failed_requires_pending_request():
         match="pending launch request",
     ):
         adapter.launch_failed()
+
+
+def test_launch_request_selects_nes_policy_before_launch():
+    from services.presentation.hardware_runtime import (
+        HardwareRuntimeOrchestrator,
+    )
+    from services.presentation.hardware_state import (
+        HardwareIndicatorPolicy,
+        HardwareRuntimeState,
+        IndicatorState,
+    )
+    from services.presentation.process_lifecycle import (
+        ProcessLifecycleAdapter,
+    )
+
+    class Session:
+        active_process = None
+
+        def process_running(self):
+            return False
+
+        def clear_exited_process(self):
+            return None
+
+    runtime = HardwareRuntimeOrchestrator(
+        HardwareIndicatorPolicy()
+    )
+
+    adapter = ProcessLifecycleAdapter(
+        runtime,
+        Session(),
+    )
+
+    snapshot = adapter.launch_requested(
+        "platform.nintendo.nes"
+    )
+
+    assert (
+        runtime.state
+        is HardwareRuntimeState.LAUNCH_REQUESTED
+    )
+    assert snapshot.power is IndicatorState.GREEN
+
+
+def test_launch_request_unknown_platform_remains_all_off():
+    from services.presentation.hardware_runtime import (
+        HardwareRuntimeOrchestrator,
+    )
+    from services.presentation.hardware_state import (
+        HardwareIndicatorPolicy,
+        IndicatorState,
+    )
+    from services.presentation.process_lifecycle import (
+        ProcessLifecycleAdapter,
+    )
+
+    class Session:
+        active_process = None
+
+        def process_running(self):
+            return False
+
+        def clear_exited_process(self):
+            return None
+
+    runtime = HardwareRuntimeOrchestrator(
+        HardwareIndicatorPolicy()
+    )
+
+    adapter = ProcessLifecycleAdapter(
+        runtime,
+        Session(),
+    )
+
+    snapshot = adapter.launch_requested(
+        "platform.unknown.future"
+    )
+
+    assert snapshot.power is IndicatorState.OFF
+    assert snapshot.reset is IndicatorState.OFF
+
+
+def test_launch_request_without_platform_remains_backward_compatible():
+    from services.presentation.hardware_runtime import (
+        HardwareRuntimeOrchestrator,
+    )
+    from services.presentation.hardware_state import (
+        HardwareIndicatorPolicy,
+        IndicatorState,
+    )
+    from services.presentation.process_lifecycle import (
+        ProcessLifecycleAdapter,
+    )
+
+    class Session:
+        active_process = None
+
+        def process_running(self):
+            return False
+
+        def clear_exited_process(self):
+            return None
+
+    runtime = HardwareRuntimeOrchestrator(
+        HardwareIndicatorPolicy()
+    )
+
+    adapter = ProcessLifecycleAdapter(
+        runtime,
+        Session(),
+    )
+
+    snapshot = adapter.launch_requested()
+
+    assert snapshot.power is IndicatorState.OFF
+    assert snapshot.reset is IndicatorState.OFF

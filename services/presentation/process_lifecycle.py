@@ -1,5 +1,6 @@
 from typing import Protocol
 
+from .hardware_policy import HardwareIndicatorPolicyResolver
 from .hardware_runtime import HardwareRuntimeOrchestrator
 from .hardware_state import (
     HardwareIndicatorSnapshot,
@@ -74,6 +75,7 @@ class ProcessLifecycleAdapter:
 
         self._runtime = runtime
         self._session = session
+        self._policy_resolver = HardwareIndicatorPolicyResolver()
 
     @property
     def state(self) -> HardwareRuntimeState:
@@ -83,12 +85,28 @@ class ProcessLifecycleAdapter:
     def snapshot(self) -> HardwareIndicatorSnapshot:
         return self._runtime.snapshot
 
-    def launch_requested(self) -> HardwareIndicatorSnapshot:
+    def launch_requested(
+        self,
+        platform_id=None,
+    ) -> HardwareIndicatorSnapshot:
         """
         Record the user's Play/Open action before emulator startup.
 
+        Canonical RVDB platform identity selects the RVV hardware policy
+        before the launch lifecycle becomes active. Unknown, missing, or
+        unsupported platforms deliberately receive the generic all-off
+        policy.
+
         For the NES policy this is the point where power becomes green.
         """
+
+        policy = self._policy_resolver.resolve(
+            platform_id
+        )
+
+        self._runtime.select_indicator_policy(
+            policy
+        )
 
         return self._runtime.launch_requested()
 

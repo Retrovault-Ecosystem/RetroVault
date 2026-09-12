@@ -476,7 +476,13 @@ Future:
             return
 
         if self.process_lifecycle is not None:
-            self.process_lifecycle.launch_requested()
+            self.process_lifecycle.launch_requested(
+                getattr(
+                    self.current_game,
+                    "rvdb_platform_id",
+                    "",
+                )
+            )
 
 
 
