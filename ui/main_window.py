@@ -1,3 +1,5 @@
+from PyQt6.QtCore import QTimer
+
 from PyQt6.QtWidgets import (
     QMainWindow,
     QWidget,
@@ -115,6 +117,13 @@ class MainWindow(QMainWindow):
                 self.retroarch_launcher,
             )
         )
+
+        self.process_lifecycle_timer = QTimer(self)
+        self.process_lifecycle_timer.setInterval(250)
+        self.process_lifecycle_timer.timeout.connect(
+            self.process_lifecycle.poll
+        )
+        self.process_lifecycle_timer.start()
 
         presentation_store = PresentationStore()
 
