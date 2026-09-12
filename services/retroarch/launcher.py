@@ -25,10 +25,61 @@ class RetroArchLauncher:
             or ShaderRuntimeConfig()
         )
 
+        self._active_process = None
+
+    @property
+    def active_process(self):
+        """Return the currently owned RetroArch process handle."""
+
+        return self._active_process
+
+    def process_running(self) -> bool:
+        """
+        Return True only while the owned RetroArch process is alive.
+
+        No process is treated as not running.
+        """
+
+        if self._active_process is None:
+            return False
+
+        return self._active_process.poll() is None
+
+    def clear_exited_process(self):
+        """
+        Release ownership after the RetroArch process has exited.
+
+        A still-running process is never cleared.
+        """
+
+        if self._active_process is None:
+            return None
+
+        returncode = self._active_process.poll()
+
+        if returncode is None:
+            return None
+
+        process = self._active_process
+        self._active_process = None
+
+        return process
+
     def launch(
         self,
         profile: LaunchProfile,
     ):
+        if self._active_process is not None:
+            if self._active_process.poll() is None:
+                return {
+                    "success": False,
+                    "error": (
+                        "RetroArch process is already running."
+                    ),
+                }
+
+            self._active_process = None
+
         command = [
             self.command,
             "-L",
@@ -103,9 +154,11 @@ class RetroArchLauncher:
             )
 
         try:
-            subprocess.Popen(
+            process = subprocess.Popen(
                 command
             )
+
+            self._active_process = process
 
             return {
                 "success": True,
@@ -113,6 +166,8 @@ class RetroArchLauncher:
             }
 
         except Exception as error:
+            self._active_process = None
+
             return {
                 "success": False,
                 "error": str(error),
