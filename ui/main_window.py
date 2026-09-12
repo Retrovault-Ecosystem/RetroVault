@@ -35,6 +35,22 @@ from services.library.rvdb_resolver import (
 
 from config import ConfigLoader
 
+from services.retroarch.launcher import (
+    RetroArchLauncher,
+)
+
+from services.presentation.hardware_runtime import (
+    HardwareRuntimeOrchestrator,
+)
+
+from services.presentation.hardware_state import (
+    HardwareIndicatorPolicy,
+)
+
+from services.presentation.process_lifecycle import (
+    ProcessLifecycleAdapter,
+)
+
 from services.presentation import (
     PresentationCompositionFactory,
     PresentationRecommendationManifest,
@@ -83,6 +99,23 @@ class MainWindow(QMainWindow):
             rvdb_resolver=rvdb_resolver
         )
 
+        self.retroarch_launcher = (
+            RetroArchLauncher()
+        )
+
+        self.hardware_runtime = (
+            HardwareRuntimeOrchestrator(
+                HardwareIndicatorPolicy()
+            )
+        )
+
+        self.process_lifecycle = (
+            ProcessLifecycleAdapter(
+                self.hardware_runtime,
+                self.retroarch_launcher,
+            )
+        )
+
         presentation_store = PresentationStore()
 
         presentation_composition_factory = (
@@ -122,6 +155,8 @@ class MainWindow(QMainWindow):
             presentation_resolver_provider=(
                 presentation_composition_factory.build
             ),
+            launcher=self.retroarch_launcher,
+            process_lifecycle=self.process_lifecycle,
         )
 
         self.pages.add_page(
@@ -141,6 +176,8 @@ class MainWindow(QMainWindow):
             PlaylistsPage(
                 controller,
                 rvdb_service=rvdb_service,
+                launcher=self.retroarch_launcher,
+                process_lifecycle=self.process_lifecycle,
             )
         )
 

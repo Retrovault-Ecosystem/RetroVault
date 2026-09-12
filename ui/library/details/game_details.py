@@ -40,6 +40,8 @@ class GameDetails(QWidget):
         collection_names_provider=None,
         collection_add_handler=None,
         presentation_resolver_provider=None,
+        launcher=None,
+        process_lifecycle=None,
     ):
 
         super().__init__()
@@ -80,7 +82,15 @@ class GameDetails(QWidget):
         )
 
 
-        self.launcher = RetroArchLauncher()
+        self.launcher = (
+            launcher
+            if launcher is not None
+            else RetroArchLauncher()
+        )
+
+        self.process_lifecycle = (
+            process_lifecycle
+        )
 
 
         self.diagnostics = LaunchDiagnostics()

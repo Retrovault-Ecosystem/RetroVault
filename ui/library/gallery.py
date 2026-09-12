@@ -30,6 +30,8 @@ class GalleryView(QWidget):
         collection_names_provider=None,
         collection_add_handler=None,
         presentation_resolver_provider=None,
+        launcher=None,
+        process_lifecycle=None,
     ):
 
         super().__init__()
@@ -118,6 +120,8 @@ class GalleryView(QWidget):
             presentation_resolver_provider=(
                 presentation_resolver_provider
             ),
+            launcher=launcher,
+            process_lifecycle=process_lifecycle,
         )
 
 

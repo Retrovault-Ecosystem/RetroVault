@@ -23,6 +23,8 @@ class PlaylistsPage(QWidget):
         self,
         controller,
         rvdb_service=None,
+        launcher=None,
+        process_lifecycle=None,
     ):
         super().__init__()
 
@@ -87,6 +89,8 @@ class PlaylistsPage(QWidget):
                 "add_to_collection",
                 None,
             ),
+            launcher=launcher,
+            process_lifecycle=process_lifecycle,
         )
 
         self.collection_title = QLabel(
