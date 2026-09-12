@@ -92,6 +92,39 @@ class HardwareRuntimeOrchestrator:
     def reset_deadline(self) -> float | None:
         return self._reset_deadline
 
+    def select_indicator_policy(
+        self,
+        indicator_policy: HardwareIndicatorPolicy,
+    ) -> HardwareIndicatorSnapshot:
+        """
+        Select the platform policy for the next launch lifecycle.
+
+        Policy selection is allowed only while RetroVault is idle or
+        observing a completed EXITED lifecycle. An active emulator
+        lifecycle cannot change platform hardware semantics underneath
+        itself.
+        """
+        if not isinstance(
+            indicator_policy,
+            HardwareIndicatorPolicy,
+        ):
+            raise TypeError(
+                "Indicator policy must be a "
+                "HardwareIndicatorPolicy."
+            )
+
+        if self._machine.state not in {
+            HardwareRuntimeState.IDLE,
+            HardwareRuntimeState.EXITED,
+        }:
+            raise RuntimeError(
+                "Indicator policy can only be selected "
+                "while idle or exited."
+            )
+
+        self._policy = indicator_policy
+        return self.snapshot
+
     def launch_requested(self) -> HardwareIndicatorSnapshot:
         """
         A user chose Play/Open in RetroVault.

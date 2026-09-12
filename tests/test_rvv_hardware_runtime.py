@@ -1,3 +1,5 @@
+from services.presentation.hardware_state import HardwareIndicatorPolicy
+
 import pytest
 
 from services.presentation.hardware_runtime import (
@@ -269,3 +271,86 @@ def test_launch_failure_requires_pending_launch():
         match="requires a pending launch",
     ):
         runtime.launch_failed()
+
+
+def test_runtime_can_select_nes_policy_while_idle():
+    from services.presentation.hardware_state import (
+        IndicatorState,
+        NESHardwareIndicatorPolicy,
+    )
+
+    runtime = HardwareRuntimeOrchestrator(
+        HardwareIndicatorPolicy()
+    )
+
+    snapshot = runtime.select_indicator_policy(
+        NESHardwareIndicatorPolicy()
+    )
+
+    assert snapshot.power is IndicatorState.OFF
+
+    snapshot = runtime.launch_requested()
+
+    assert snapshot.power is IndicatorState.GREEN
+
+
+def test_runtime_rejects_policy_change_during_active_launch():
+    import pytest
+
+    from services.presentation.hardware_state import (
+        NESHardwareIndicatorPolicy,
+    )
+
+    runtime = HardwareRuntimeOrchestrator(
+        HardwareIndicatorPolicy()
+    )
+
+    runtime.launch_requested()
+
+    with pytest.raises(
+        RuntimeError,
+        match="idle or exited",
+    ):
+        runtime.select_indicator_policy(
+            NESHardwareIndicatorPolicy()
+        )
+
+
+def test_runtime_can_select_policy_after_exit():
+    from services.presentation.hardware_state import (
+        HardwareIndicatorPolicy,
+        NESHardwareIndicatorPolicy,
+    )
+
+    runtime = HardwareRuntimeOrchestrator(
+        NESHardwareIndicatorPolicy()
+    )
+
+    runtime.launch_requested()
+    runtime.process_exited()
+
+    runtime.select_indicator_policy(
+        HardwareIndicatorPolicy()
+    )
+
+    snapshot = runtime.launch_requested()
+
+    assert snapshot.power.value == "off"
+
+
+def test_runtime_policy_selection_rejects_invalid_policy():
+    from services.presentation.hardware_state import HardwareIndicatorPolicy
+
+    import pytest
+
+    runtime = HardwareRuntimeOrchestrator(
+        HardwareIndicatorPolicy()
+    )
+
+    with pytest.raises(
+        TypeError,
+        match="HardwareIndicatorPolicy",
+    ):
+        runtime.select_indicator_policy(
+            object()
+        )
