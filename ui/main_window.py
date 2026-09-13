@@ -53,6 +53,10 @@ from services.presentation.process_lifecycle import (
     ProcessLifecycleAdapter,
 )
 
+from services.presentation.indicator_rendering import (
+    HardwareIndicatorRenderBridge,
+)
+
 from services.presentation import (
     PresentationCompositionFactory,
     PresentationRecommendationManifest,
@@ -61,6 +65,16 @@ from services.presentation import (
 
 
 class MainWindow(QMainWindow):
+
+
+    def _poll_process_lifecycle(self):
+        snapshot = self.process_lifecycle.poll()
+
+        self.hardware_indicator_render_frame = (
+            self.hardware_indicator_render_bridge.frame_for(
+                snapshot
+            )
+        )
 
 
     def __init__(self):
@@ -118,10 +132,20 @@ class MainWindow(QMainWindow):
             )
         )
 
+        self.hardware_indicator_render_bridge = (
+            HardwareIndicatorRenderBridge()
+        )
+
+        self.hardware_indicator_render_frame = (
+            self.hardware_indicator_render_bridge.frame_for(
+                self.process_lifecycle.snapshot
+            )
+        )
+
         self.process_lifecycle_timer = QTimer(self)
         self.process_lifecycle_timer.setInterval(250)
         self.process_lifecycle_timer.timeout.connect(
-            self.process_lifecycle.poll
+            self._poll_process_lifecycle
         )
         self.process_lifecycle_timer.start()
 
