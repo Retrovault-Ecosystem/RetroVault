@@ -8,7 +8,7 @@
     },
     "platform.nintendo.snes": {
       "shader": "retro-vault://shaders/Mega_Bezel_Packs/Orionsangel-Original-Console-main/Presets/Standard/Nintendo_SNES/Nintendo_SNES-[STD].slangp",
-      "overlay": "",
+      "overlay": "retro-vault://overlays/retrovault/snes/classic/RetroVault_SNES_Classic.cfg",
       "artwork": ""
     }
   },
