@@ -9,6 +9,15 @@
       "reference": "retro-vault://overlays/retrovault/nes/classic/RetroVault_NES_Classic.cfg",
       "author": "RetroVault",
       "attribution": "Original RetroVault bezel composition. Platform names and trademarks are the property of their respective owners."
+    },
+    {
+      "id": "rvv.overlay.snes.classic",
+      "display_name": "Nintendo SNES — RetroVault Classic",
+      "asset_type": "overlay",
+      "source": "rvv_native",
+      "reference": "retro-vault://overlays/retrovault/snes/classic/RetroVault_SNES_Classic.cfg",
+      "author": "RetroVault",
+      "attribution": "Original RetroVault bezel composition. Platform names and trademarks are the property of their respective owners."
     }
   ]
 }

@@ -60,7 +60,7 @@ def test_production_visual_catalog_manifest_loads():
 
     assets = catalog.all()
 
-    assert len(assets) == 1
+    assert len(assets) == 2
 
     asset = catalog.require(
         "rvv.overlay.nes.classic"
