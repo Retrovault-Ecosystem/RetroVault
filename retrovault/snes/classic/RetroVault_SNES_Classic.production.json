@@ -1,0 +1,24 @@
+{
+  "canvas": {
+    "width": 1920,
+    "height": 1080
+  },
+  "alpha_presentation": {
+    "mode": "blended_screen",
+    "center": "fully_transparent",
+    "edge_transition": "partially_transparent",
+    "outer_bezel": "fully_opaque",
+    "gameplay_policy": "The fully transparent gameplay center transitions through a feathered alpha blend into the dark recessed screen treatment. The blend is presentation framing and does not define the emulated game's aspect ratio."
+  },
+  "source_reference": "final approved RetroVault SNES Classic master",
+  "source_sha256": "eea5c7c438fa75c040c962bc8a574284c8eecc3b8d0bc320bcfd9906e7539833",
+  "notes": [
+    "Final human-approved premium showroom SNES master preserved.",
+    "Production canvas normalized to 1920x1080 RGBA.",
+    "Gameplay center is fully transparent.",
+    "Partially transparent pixels preserve the approved soft CRT-style screen blend on all four sides.",
+    "Outer molded SNES-inspired housing remains fully opaque.",
+    "No permanent illuminated runtime hardware indicator is required by the static alpha contract.",
+    "RetroVault branding and secondary Nintendo platform identification remain visually distinct."
+  ]
+}

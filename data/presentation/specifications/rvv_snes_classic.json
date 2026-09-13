@@ -39,40 +39,18 @@
         "height": 1080
       },
       "game_viewport": {
-        "status": "accepted_geometry",
-        "derivation": {
-          "source": "selected G.3 SNES master preview",
-          "source_canvas": {
-            "width": 1672,
-            "height": 941
-          },
-          "measured_aperture": {
-            "x": 307,
-            "y": 76,
-            "width": 1059,
-            "height": 653
-          },
-          "target_canvas": {
-            "width": 1920,
-            "height": 1080
-          },
-          "method": "Scale the selected-master gameplay opening proportionally from the approved preview canvas to the canonical 1920x1080 RVV production canvas."
+        "status": "superseded_by_production_alpha",
+        "legacy_geometry": {
+          "x": 353,
+          "y": 87,
+          "width": 1216,
+          "height": 750
         },
-        "x": 353,
-        "y": 87,
-        "width": 1216,
-        "height": 750,
-        "normalized": {
-          "x": 0.183854,
-          "y": 0.080556,
-          "width": 0.633333,
-          "height": 0.694444
-        },
-        "policy": "This rectangle defines the transparent SNES overlay aperture only. It does not force the emulated game to fill or adopt the aperture aspect ratio. RetroArch and the active shader/presentation pipeline retain control of the intended 4:3 gameplay geometry."
+        "production_policy": "The final approved SNES master replaces the earlier hard rectangular aperture with a fully transparent gameplay center and a feathered partially transparent transition into the dark recessed screen treatment. RetroArch and the active shader pipeline retain control of the intended 4:3 gameplay geometry."
       },
       "safe_zone": {
-        "status": "design_pending",
-        "policy": "Final branding safe-zone geometry must be established from the accepted SNES master design. Branding must remain outside the transparent gameplay aperture."
+        "status": "production_locked",
+        "policy": "Branding and hardware-inspired presentation elements remain outside the gameplay center. The approved feathered screen transition is presentation framing and may partially overlay only the perimeter of the gameplay presentation."
       },
       "game_aspect_policy": "4:3 is the intended presentation aspect for SNES gameplay. RetroArch and the active shader pipeline control final gameplay geometry independently inside the transparent overlay aperture."
     },
@@ -101,9 +79,9 @@
         "nes_relationship": "Use the NES master as the family-level composition reference, not as literal SNES geometry."
       },
       "gameplay_aperture": {
-        "presentation": "Large centered dark gameplay aperture remains the dominant visual element.",
-        "geometry_status": "accepted_geometry",
-        "production_geometry": {
+        "geometry_status": "production_alpha_locked",
+        "presentation": "Large centered gameplay surface with fully transparent center and approved soft CRT-style alpha blend into the dark recessed screen on all four sides.",
+        "legacy_geometry": {
           "x": 353,
           "y": 87,
           "width": 1216,
@@ -141,15 +119,21 @@
         "included": false,
         "policy": "No controller or joystick imagery is part of the selected SNES master visual direction."
       },
-      "production_boundary": "This selection locks visual direction only. Exact viewport geometry, safe zones, production PNG, RetroArch descriptor, catalog registration, deployment, and production promotion remain pending."
+      "production_boundary": "Final visual master and blended alpha presentation are approved. Repository production package is established; catalog registration, deployment, live RetroArch proof, and final production promotion remain pending."
     }
   },
   "production_assets": {
-    "status": "design_pending"
+    "status": "package_created",
+    "png": "retrovault/snes/classic/RetroVault_SNES_Classic_1080p.png",
+    "descriptor": "retrovault/snes/classic/RetroVault_SNES_Classic.cfg",
+    "runtime_descriptor": "retrovault/snes/classic/RetroVault_SNES_Classic.runtime.cfg",
+    "shader_descriptor": "retrovault/snes/classic/RetroVault_SNES_Classic.shader.cfg",
+    "production_manifest": "retrovault/snes/classic/RetroVault_SNES_Classic.production.json"
   },
   "catalog": {
     "planned_reference": "retro-vault://overlays/retrovault/snes/classic/RetroVault_SNES_Classic.cfg",
-    "attribution": "Original RetroVault bezel composition. Platform names and trademarks are the property of their respective owners."
+    "attribution": "Original RetroVault bezel composition. Platform names and trademarks are the property of their respective owners.",
+    "reference": "retro-vault://overlays/retrovault/snes/classic/RetroVault_SNES_Classic.cfg"
   },
   "trademark_policy": {
     "ownership_claim": "RetroVault claims ownership only of its original bezel composition, presentation design, and RetroVault branding.",

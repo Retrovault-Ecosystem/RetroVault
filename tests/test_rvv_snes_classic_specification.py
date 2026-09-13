@@ -75,38 +75,73 @@ def test_native_snes_runtime_family_contract():
     }
 
 
-
-def test_native_snes_geometry_contract():
+def test_native_snes_legacy_geometry_is_preserved():
     runtime = load_spec()["design"]["runtime"]
     viewport = runtime["game_viewport"]
 
-    assert viewport["status"] == "accepted_geometry"
-
     assert (
-        runtime["safe_zone"]["status"]
-        == "design_pending"
+        viewport["status"]
+        == "superseded_by_production_alpha"
     )
 
-    assert viewport["x"] == 353
-    assert viewport["y"] == 87
-    assert viewport["width"] == 1216
-    assert viewport["height"] == 750
+    assert viewport["legacy_geometry"] == {
+        "x": 353,
+        "y": 87,
+        "width": 1216,
+        "height": 750,
+    }
 
-def test_native_snes_is_not_prematurely_production():
+    assert (
+        "fully transparent"
+        in viewport["production_policy"]
+    )
+
+    assert (
+        "feathered"
+        in viewport["production_policy"]
+    )
+
+
+def test_native_snes_package_does_not_prematurely_promote():
     data = load_spec()
 
     assert data["production_status"] == "design"
-    assert data["production_assets"] == {
-        "status": "design_pending"
-    }
 
+    assets = data["production_assets"]
 
-def test_native_snes_planned_reference_is_portable():
-    reference = (
-        load_spec()["catalog"]["planned_reference"]
+    assert assets["status"] == "package_created"
+
+    assert assets["png"].endswith(
+        "RetroVault_SNES_Classic_1080p.png"
     )
 
-    assert reference == (
+    assert assets["descriptor"].endswith(
+        "RetroVault_SNES_Classic.cfg"
+    )
+
+    assert assets["runtime_descriptor"].endswith(
+        "RetroVault_SNES_Classic.runtime.cfg"
+    )
+
+    assert assets["shader_descriptor"].endswith(
+        "RetroVault_SNES_Classic.shader.cfg"
+    )
+
+    assert assets["production_manifest"].endswith(
+        "RetroVault_SNES_Classic.production.json"
+    )
+
+
+def test_native_snes_reference_is_portable():
+    data = load_spec()
+
+    assert data["catalog"]["planned_reference"] == (
+        "retro-vault://overlays/"
+        "retrovault/snes/classic/"
+        "RetroVault_SNES_Classic.cfg"
+    )
+
+    assert data["catalog"]["reference"] == (
         "retro-vault://overlays/"
         "retrovault/snes/classic/"
         "RetroVault_SNES_Classic.cfg"
@@ -146,7 +181,6 @@ def test_native_snes_trademark_boundary():
     )
 
 
-
 def test_native_snes_selected_master_visual_direction():
     data = load_spec()
     selection = data["design"]["master_visual_selection"]
@@ -164,27 +198,32 @@ def test_native_snes_selected_master_visual_direction():
     )
 
     assert (
-        selection["gameplay_aperture"]["geometry_status"]
-        == "accepted_geometry"
+        selection["gameplay_aperture"]
+        ["geometry_status"]
+        == "production_alpha_locked"
     )
 
     assert (
-        selection["right_panel"]["controller_imagery"]
+        selection["right_panel"]
+        ["controller_imagery"]
         == "excluded"
     )
 
     assert (
-        selection["right_panel"]["joystick_imagery"]
+        selection["right_panel"]
+        ["joystick_imagery"]
         == "excluded"
     )
 
     assert (
-        selection["right_panel"]["identity_element"]
+        selection["right_panel"]
+        ["identity_element"]
         == "16-BIT"
     )
 
     assert (
-        selection["lower_branding"]["retrovault_position"]
+        selection["lower_branding"]
+        ["retrovault_position"]
         == "centered above platform identity"
     )
 
@@ -201,95 +240,15 @@ def test_native_snes_selected_master_visual_direction():
     )
 
     assert (
-        selection["lower_branding"]["selection_status"]
+        selection["lower_branding"]
+        ["selection_status"]
         == "approved"
     )
 
     assert selection["controller"]["included"] is False
 
 
-def test_native_snes_master_selection_does_not_promote_production():
-    data = load_spec()
-
-    assert data["production_status"] == "design"
-
-    assert data["production_assets"] == {
-        "status": "design_pending"
-    }
-
-    runtime = data["design"]["runtime"]
-
-    assert (
-        runtime["game_viewport"]["status"]
-        == "accepted_geometry"
-    )
-
-    assert (
-        runtime["safe_zone"]["status"]
-        == "design_pending"
-    )
-
-def test_native_snes_selected_master_geometry():
-    data = load_spec()
-    runtime = data["design"]["runtime"]
-    viewport = runtime["game_viewport"]
-
-    assert viewport["status"] == "accepted_geometry"
-
-    assert viewport["x"] == 353
-    assert viewport["y"] == 87
-    assert viewport["width"] == 1216
-    assert viewport["height"] == 750
-
-    assert viewport["normalized"] == {
-        "x": 0.183854,
-        "y": 0.080556,
-        "width": 0.633333,
-        "height": 0.694444,
-    }
-
-    derivation = viewport["derivation"]
-
-    assert derivation["source"] == (
-        "selected G.3 SNES master preview"
-    )
-
-    assert derivation["source_canvas"] == {
-        "width": 1672,
-        "height": 941,
-    }
-
-    assert derivation["measured_aperture"] == {
-        "x": 307,
-        "y": 76,
-        "width": 1059,
-        "height": 653,
-    }
-
-    assert derivation["target_canvas"] == {
-        "width": 1920,
-        "height": 1080,
-    }
-
-
-def test_native_snes_aperture_does_not_replace_game_aspect():
-    data = load_spec()
-    runtime = data["design"]["runtime"]
-
-    assert runtime["game_aspect"] == "4:3"
-
-    assert (
-        "does not force"
-        in runtime["game_viewport"]["policy"]
-    )
-
-    assert (
-        "RetroArch"
-        in runtime["game_viewport"]["policy"]
-    )
-
-
-def test_native_snes_master_selection_tracks_geometry():
+def test_native_snes_blended_aperture_contract():
     data = load_spec()
 
     aperture = (
@@ -300,32 +259,72 @@ def test_native_snes_master_selection_tracks_geometry():
 
     assert (
         aperture["geometry_status"]
-        == "accepted_geometry"
+        == "production_alpha_locked"
     )
 
-    assert aperture["production_geometry"] == {
+    assert aperture["legacy_geometry"] == {
         "x": 353,
         "y": 87,
         "width": 1216,
         "height": 750,
     }
 
+    presentation = aperture["presentation"]
 
-def test_native_snes_safe_zone_remains_unlocked():
-    data = load_spec()
-    runtime = data["design"]["runtime"]
+    assert "fully transparent" in presentation
+    assert "soft CRT-style alpha blend" in presentation
+    assert "all four sides" in presentation
+
+
+def test_native_snes_safe_zone_is_production_locked():
+    runtime = load_spec()["design"]["runtime"]
+
+    safe_zone = runtime["safe_zone"]
 
     assert (
-        runtime["safe_zone"]["status"]
-        == "design_pending"
+        safe_zone["status"]
+        == "production_locked"
+    )
+
+    assert (
+        "Branding"
+        in safe_zone["policy"]
+    )
+
+    assert (
+        "gameplay center"
+        in safe_zone["policy"]
     )
 
 
-def test_native_snes_geometry_does_not_promote_production():
+def test_native_snes_blend_does_not_replace_game_aspect():
+    runtime = load_spec()["design"]["runtime"]
+
+    assert runtime["game_aspect"] == "4:3"
+
+    policy = runtime["game_viewport"][
+        "production_policy"
+    ]
+
+    assert "RetroArch" in policy
+    assert "4:3" in policy
+
+
+def test_native_snes_package_remains_pre_live_proof():
     data = load_spec()
 
     assert data["production_status"] == "design"
 
-    assert data["production_assets"] == {
-        "status": "design_pending"
-    }
+    assert (
+        data["production_assets"]["status"]
+        == "package_created"
+    )
+
+    boundary = (
+        data["design"]
+        ["master_visual_selection"]
+        ["production_boundary"]
+    )
+
+    assert "live RetroArch proof" in boundary
+    assert "final production promotion" in boundary
