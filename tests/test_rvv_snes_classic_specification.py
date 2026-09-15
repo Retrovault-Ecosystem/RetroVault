@@ -102,14 +102,22 @@ def test_native_snes_legacy_geometry_is_preserved():
     )
 
 
-def test_native_snes_package_does_not_prematurely_promote():
+def test_native_snes_package_is_production_validated():
     data = load_spec()
-
-    assert data["production_status"] == "design"
 
     assets = data["production_assets"]
 
-    assert assets["status"] == "package_created"
+    assert assets["status"] == "production_validated"
+    assert (
+        assets["crt_preset"]
+        == "retrovault/snes/classic/RetroVault_SNES_Classic_CRT.slangp"
+    )
+
+    validation = data["production_validation"]
+
+    assert validation["status"] == "pass"
+    assert validation["geometry"]["aspect_ratio"] == "4:3"
+    assert validation["geometry"]["aspect_ratio_index"] == 23
 
     assert assets["png"].endswith(
         "RetroVault_SNES_Classic_1080p.png"
@@ -310,14 +318,18 @@ def test_native_snes_blend_does_not_replace_game_aspect():
     assert "4:3" in policy
 
 
-def test_native_snes_package_remains_pre_live_proof():
+def test_native_snes_package_tracks_live_production_proof():
     data = load_spec()
 
-    assert data["production_status"] == "design"
+    assert data["production_assets"]["status"] == "production_validated"
 
+    validation = data["production_validation"]
+
+    assert validation["status"] == "pass"
+    assert validation["cross_game_validation"]["Super Mario World"] == "pass"
     assert (
-        data["production_assets"]["status"]
-        == "package_created"
+        validation["cross_game_validation"]["Street Fighter II Turbo"]
+        == "pass"
     )
 
     boundary = (

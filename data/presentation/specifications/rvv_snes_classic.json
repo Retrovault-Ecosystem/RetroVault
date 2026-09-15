@@ -123,12 +123,13 @@
     }
   },
   "production_assets": {
-    "status": "package_created",
+    "status": "production_validated",
     "png": "retrovault/snes/classic/RetroVault_SNES_Classic_1080p.png",
     "descriptor": "retrovault/snes/classic/RetroVault_SNES_Classic.cfg",
     "runtime_descriptor": "retrovault/snes/classic/RetroVault_SNES_Classic.runtime.cfg",
     "shader_descriptor": "retrovault/snes/classic/RetroVault_SNES_Classic.shader.cfg",
-    "production_manifest": "retrovault/snes/classic/RetroVault_SNES_Classic.production.json"
+    "production_manifest": "retrovault/snes/classic/RetroVault_SNES_Classic.production.json",
+    "crt_preset": "retrovault/snes/classic/RetroVault_SNES_Classic_CRT.slangp"
   },
   "catalog": {
     "planned_reference": "retro-vault://overlays/retrovault/snes/classic/RetroVault_SNES_Classic.cfg",
@@ -139,5 +140,29 @@
     "ownership_claim": "RetroVault claims ownership only of its original bezel composition, presentation design, and RetroVault branding.",
     "platform_identity": "Nintendo platform identification is included as secondary system identification and is not claimed as RetroVault intellectual property.",
     "separation": "Third-party platform identity must remain distinct from RetroVault branding and must not imply ownership of the third-party mark."
+  },
+  "production_validation": {
+    "status": "pass",
+    "geometry": {
+      "canvas": "1920x1080",
+      "viewport": {
+        "x": 438,
+        "y": 71,
+        "width": 1044,
+        "height": 783
+      },
+      "aspect_ratio": "4:3",
+      "aspect_ratio_index": 23,
+      "viewport_bias_x": 0.5,
+      "viewport_bias_y": 0.239057239
+    },
+    "architecture": {
+      "geometry_owner": "RetroVault",
+      "crt_image_treatment_owner": "Guest/GDV"
+    },
+    "cross_game_validation": {
+      "Super Mario World": "pass",
+      "Street Fighter II Turbo": "pass"
+    }
   }
 }

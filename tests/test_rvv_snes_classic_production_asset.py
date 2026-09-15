@@ -242,52 +242,52 @@ def test_snes_overlay_cfg_is_portable():
 
 
 def test_snes_runtime_descriptor_is_owned():
-    assert RUNTIME.read_text(encoding="utf-8") == (
-        'aspect_ratio_index = "22"\n'
-        'video_force_aspect = "true"\n'
-        'custom_viewport_x = "0"\n'
-        'custom_viewport_y = "0"\n'
-        'custom_viewport_width = "1920"\n'
-        'custom_viewport_height = "1080"\n'
+    text = RUNTIME.read_text(encoding="utf-8")
+
+    required = (
+        'aspect_ratio_index = "23"',
+        'video_force_aspect = "true"',
+        'video_scale_integer = "false"',
+        'custom_viewport_width = "1044"',
+        'custom_viewport_height = "783"',
+        'video_viewport_bias_x = "0.500000"',
+        'video_viewport_bias_y = "0.239057239"',
     )
 
+    for value in required:
+        assert value in text
 
-def test_snes_shader_descriptor_preserves_4_3():
+def test_snes_shader_descriptor_preserves_approved_crt_contract():
     text = SHADER.read_text(encoding="utf-8")
 
-    assert (
-        'HSM_ASPECT_RATIO_EXPLICIT = "1.333333333"'
-        in text
-    )
-    assert (
-        'HSM_ASPECT_RATIO_MODE = "1.000000"'
-        in text
+    required = (
+        'post_br = "2.200000"',
+        'bloom = "0.100000"',
+        'scans = "0.500000"',
+        'beam_max = "1.100000"',
+        'scanline1 = "6.000000"',
+        'scanline2 = "8.000000"',
+        'shadowMask = "6.000000"',
+        'maskstr = "0.500000"',
+        'HSM_CURVATURE_MODE = "0.000000"',
+        'HSM_NON_INTEGER_SCALE = "100.000000"',
     )
 
+    for value in required:
+        assert value in text
 
-def test_snes_spec_tracks_package_without_promotion():
+def test_snes_spec_tracks_validated_production_package():
     data = load_json(SPEC)
 
-    assert data["production_status"] == "design"
+    assert data["production_assets"]["status"] == "production_validated"
 
-    assert (
-        data["production_assets"]["status"]
-        == "package_created"
-    )
+    validation = data["production_validation"]
 
-    assert (
-        data["design"]["runtime"]["safe_zone"]["status"]
-        == "production_locked"
-    )
-
-    assert (
-        data["design"]["runtime"]
-        ["game_viewport"]["status"]
-        == "superseded_by_production_alpha"
-    )
-
-    assert data["catalog"]["reference"] == (
-        "retro-vault://overlays/"
-        "retrovault/snes/classic/"
-        "RetroVault_SNES_Classic.cfg"
-    )
+    assert validation["status"] == "pass"
+    assert validation["geometry"]["viewport"] == {
+        "x": 438,
+        "y": 71,
+        "width": 1044,
+        "height": 783,
+    }
+    assert validation["geometry"]["aspect_ratio"] == "4:3"

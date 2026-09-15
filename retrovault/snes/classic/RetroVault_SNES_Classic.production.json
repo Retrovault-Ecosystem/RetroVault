@@ -10,8 +10,8 @@
     "outer_bezel": "fully_opaque",
     "gameplay_policy": "The fully transparent gameplay center transitions through a feathered alpha blend into the dark recessed screen treatment. The blend is presentation framing and does not define the emulated game's aspect ratio."
   },
-  "source_reference": "final approved RetroVault SNES Classic master",
-  "source_sha256": "eea5c7c438fa75c040c962bc8a574284c8eecc3b8d0bc320bcfd9906e7539833",
+  "source_reference": "final human-approved RetroVault SNES Classic production visual",
+  "source_sha256": "48605c31ded058dce6c1e3b4800ccdb6bc9e25517d48a3d16156fac10b5e1f6c",
   "notes": [
     "Final human-approved premium showroom SNES master preserved.",
     "Production canvas normalized to 1920x1080 RGBA.",
@@ -19,6 +19,47 @@
     "Partially transparent pixels preserve the approved soft CRT-style screen blend on all four sides.",
     "Outer molded SNES-inspired housing remains fully opaque.",
     "No permanent illuminated runtime hardware indicator is required by the static alpha contract.",
-    "RetroVault branding and secondary Nintendo platform identification remain visually distinct."
-  ]
+    "RetroVault branding and secondary Nintendo platform identification remain visually distinct.",
+    "Final production geometry is frozen at X438 Y71 W1044 H783 on a 1920x1080 canvas.",
+    "The gameplay viewport is exact 4:3.",
+    "RetroVault owns physical viewport geometry; Guest/GDV owns CRT image treatment.",
+    "The approved native CRT preset is activated with RetroArch --set-shader.",
+    "Game-authored internal black regions are preserved and do not alter system-level geometry."
+  ],
+  "status": "production_validated",
+  "production_geometry": {
+    "canvas_width": 1920,
+    "canvas_height": 1080,
+    "viewport_x": 438,
+    "viewport_y": 71,
+    "viewport_width": 1044,
+    "viewport_height": 783,
+    "aspect_ratio": "4:3",
+    "aspect_ratio_index": 23,
+    "video_force_aspect": true,
+    "video_scale_integer": false,
+    "viewport_bias_x": 0.5,
+    "viewport_bias_y": 0.239057239
+  },
+  "production_assets": {
+    "overlay_png": "RetroVault_SNES_Classic_1080p.png",
+    "overlay_descriptor": "RetroVault_SNES_Classic.cfg",
+    "runtime_descriptor": "RetroVault_SNES_Classic.runtime.cfg",
+    "shader_contract": "RetroVault_SNES_Classic.shader.cfg",
+    "crt_preset": "RetroVault_SNES_Classic_CRT.slangp"
+  },
+  "sha256": {
+    "overlay_png": "48605c31ded058dce6c1e3b4800ccdb6bc9e25517d48a3d16156fac10b5e1f6c",
+    "overlay_descriptor": "8ca2dc2ab8c701b17a1634d250e74b50f1763429f2b923cfe3ff15712721fd37",
+    "runtime_descriptor": "61092fd129ef4cca39af4e0c0d75174f17da58cf07ebabfd15b2928efc898f6b",
+    "shader_contract": "b4fe9dd33c21c7916895c30215850855836d8c524caabd980bddc9bbf755ad04",
+    "crt_preset": "68cb4c46652568920f0b372859a3ae7543eed98d7bbcf99d11fa7026321d5af1"
+  },
+  "validation": {
+    "live_production_visual": "pass",
+    "super_mario_world": "pass",
+    "street_fighter_ii_turbo": "pass",
+    "game_authored_internal_black_regions_preserved": true,
+    "bezel_created_pillar_bars": false
+  }
 }
