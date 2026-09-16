@@ -600,3 +600,120 @@ def test_archive_member_path_safety_accepts_relative_members(
         ArchiveRuntime._member_is_safe(member)
         is True
     )
+
+
+def test_resolve_can_extract_explicit_archive_member(
+    tmp_path,
+):
+    archive = tmp_path / "Variant Game.7z"
+    archive.write_bytes(b"archive")
+
+    executable = tmp_path / "fake-7z"
+    executable.write_text("", encoding="utf-8")
+
+    runtime = ArchiveRuntime(
+        cache_root=tmp_path / "cache",
+        executable=str(executable),
+    )
+
+    members = [
+        "Variant Game (U) [!].nes",
+        "Variant Game (J).nes",
+    ]
+
+    selected = "Variant Game (J).nes"
+
+    def fake_run(command, **_kwargs):
+        class Result:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+
+        if "x" in command:
+            output = next(
+                item[2:]
+                for item in command
+                if item.startswith("-o")
+            )
+            destination = Path(output)
+            extracted = destination / selected
+            extracted.parent.mkdir(
+                parents=True,
+                exist_ok=True,
+            )
+            extracted.write_bytes(b"rom")
+
+        return Result()
+
+    with patch.object(
+        runtime,
+        "_list_members",
+        return_value=members,
+    ), patch(
+        "services.retroarch.archive_runtime.subprocess.run",
+        side_effect=fake_run,
+    ):
+        resolved = runtime.resolve(
+            archive,
+            member=selected,
+        )
+
+    assert Path(resolved).name == selected
+    assert Path(resolved).read_bytes() == b"rom"
+
+
+def test_resolve_rejects_unknown_explicit_archive_member(
+    tmp_path,
+):
+    archive = tmp_path / "Variant Game.7z"
+    archive.write_bytes(b"archive")
+
+    runtime = ArchiveRuntime(
+        cache_root=tmp_path / "cache",
+        executable="7z",
+    )
+
+    with patch.object(
+        runtime,
+        "_list_members",
+        return_value=[
+            "Variant Game (U) [!].nes",
+            "Variant Game (J).nes",
+        ],
+    ):
+        with pytest.raises(
+            ValueError,
+            match="not playable or is not present",
+        ):
+            runtime.resolve(
+                archive,
+                member="Variant Game (E).nes",
+            )
+
+
+def test_resolve_rejects_unsafe_explicit_archive_member(
+    tmp_path,
+):
+    archive = tmp_path / "Variant Game.7z"
+    archive.write_bytes(b"archive")
+
+    runtime = ArchiveRuntime(
+        cache_root=tmp_path / "cache",
+        executable="7z",
+    )
+
+    with patch.object(
+        runtime,
+        "_list_members",
+        return_value=[
+            "Variant Game (U) [!].nes",
+        ],
+    ):
+        with pytest.raises(
+            ValueError,
+            match="unsafe path",
+        ):
+            runtime.resolve(
+                archive,
+                member="../Variant Game (U) [!].nes",
+            )

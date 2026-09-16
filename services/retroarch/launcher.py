@@ -91,7 +91,11 @@ class RetroArchLauncher:
             runtime_rom = (
                 self.archive_runtime
                 .resolve(
-                    profile.rom
+                    profile.rom,
+                    member=(
+                        profile.archive_member
+                        or None
+                    ),
                 )
             )
         except (

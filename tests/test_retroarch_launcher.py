@@ -1,4 +1,4 @@
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from models.launch_profile import (
     LaunchProfile,
@@ -563,3 +563,79 @@ def test_launcher_reports_shader_runtime_failure():
         "success": False,
         "error": "broken shader runtime",
     }
+
+
+def test_launcher_passes_explicit_archive_member_to_runtime():
+    archive_runtime = Mock()
+
+    archive_runtime.resolve.return_value = (
+        "/tmp/runtime/Variant Game (J).nes"
+    )
+
+    launcher = RetroArchLauncher(
+        archive_runtime=archive_runtime,
+    )
+
+    profile = LaunchProfile(
+        game="Variant Game",
+        rom="/library/Variant Game.7z",
+        core="/cores/fceumm_libretro.so",
+        archive_member="Variant Game (J).nes",
+    )
+
+    with patch(
+        "services.retroarch.launcher.subprocess.Popen"
+    ) as popen:
+        process = Mock()
+        process.poll.return_value = None
+        popen.return_value = process
+
+        result = launcher.launch(profile)
+
+    assert result["success"] is True
+
+    archive_runtime.resolve.assert_called_once_with(
+        "/library/Variant Game.7z",
+        member="Variant Game (J).nes",
+    )
+
+    assert result["command"][:4] == [
+        "retroarch",
+        "-L",
+        "/cores/fceumm_libretro.so",
+        "/tmp/runtime/Variant Game (J).nes",
+    ]
+
+
+def test_launcher_preserves_automatic_archive_selection_by_default():
+    archive_runtime = Mock()
+
+    archive_runtime.resolve.return_value = (
+        "/tmp/runtime/Variant Game (U) [!].nes"
+    )
+
+    launcher = RetroArchLauncher(
+        archive_runtime=archive_runtime,
+    )
+
+    profile = LaunchProfile(
+        game="Variant Game",
+        rom="/library/Variant Game.7z",
+        core="/cores/fceumm_libretro.so",
+    )
+
+    with patch(
+        "services.retroarch.launcher.subprocess.Popen"
+    ) as popen:
+        process = Mock()
+        process.poll.return_value = None
+        popen.return_value = process
+
+        result = launcher.launch(profile)
+
+    assert result["success"] is True
+
+    archive_runtime.resolve.assert_called_once_with(
+        "/library/Variant Game.7z",
+        member=None,
+    )

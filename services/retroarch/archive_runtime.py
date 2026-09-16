@@ -111,7 +111,11 @@ class ArchiveRuntime:
             playable,
         )
 
-    def resolve(self, rom):
+    def resolve(
+        self,
+        rom,
+        member=None,
+    ):
         source = (
             Path(rom)
             .expanduser()
@@ -156,10 +160,25 @@ class ArchiveRuntime:
                 f"ROM content: {source.name}"
             )
 
-        member = self._select_member(
-            source,
-            playable,
-        )
+        if member:
+            if not self._member_is_safe(
+                member
+            ):
+                raise ValueError(
+                    "Selected archive member has "
+                    f"an unsafe path: {member}"
+                )
+
+            if member not in playable:
+                raise ValueError(
+                    "Selected archive member is not "
+                    f"playable or is not present: {member}"
+                )
+        else:
+            member = self._select_member(
+                source,
+                playable,
+            )
 
         destination = self._destination(
             source

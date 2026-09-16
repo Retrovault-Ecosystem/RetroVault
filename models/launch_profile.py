@@ -18,3 +18,5 @@ class LaunchProfile:
     overlay: str = ""
 
     shader: str = ""
+
+    archive_member: str = ""
