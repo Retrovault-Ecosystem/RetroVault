@@ -2301,3 +2301,127 @@ assignment, or launch architecture.
 Future visual collection expansion can build on this discovery
 boundary while preserving the accepted native NES production
 baseline.
+
+
+---
+
+## RVA1-C.9 — Application Experience Integration
+
+Status:
+
+**COMPLETE**
+
+RVA1-C.9 advanced RetroVault from the established application foundation
+into a substantially integrated user-facing library and systems experience.
+
+The milestone preserved the protected RVDB service boundary while expanding
+game metadata, Settings accuracy, Systems integration, and direct navigation
+between canonical RVDB systems and local Library content.
+
+### Completed Capabilities
+
+Game Profile integration now provides:
+
+- canonical RetroVault game identity;
+- canonical RVDB game identity;
+- canonical RVDB game name;
+- release year;
+- genre;
+- developer;
+- publisher;
+- RVDB-backed metadata enrichment through the protected application service
+  and resolver boundaries.
+
+Settings now accurately represents its writable runtime configuration
+contract and persistence behavior.
+
+Obsolete development-only placeholder infrastructure was removed.
+
+Systems now integrates with the local Library and provides live per-system
+access to:
+
+- local games;
+- favorites;
+- recently played games;
+- collections containing games for the selected system.
+
+Systems counts refresh when the page is activated.
+
+Direct Systems-to-Library navigation supports:
+
+- all games for the selected canonical system;
+- favorites for the selected canonical system;
+- recently played games for the selected canonical system.
+
+Direct Systems-to-Playlists navigation can open a collection containing
+games for the selected canonical system.
+
+### Canonical System Filtering Guarantee
+
+Systems-to-Library navigation is keyed by canonical `rvdb_platform_id`.
+
+A canonical platform may contain local games whose user-facing platform
+labels differ. Direct navigation therefore preserves canonical platform
+identity instead of reducing the result set to one display label.
+
+Ordinary manual Library system filtering remains display-name based.
+
+Canonical direct filtering composes with:
+
+- Favorites;
+- Recently Played;
+- search and normal Library refresh behavior.
+
+Manual system-filter selection relinquishes the direct canonical navigation
+context and resumes ordinary display-name filtering.
+
+### RVA1-C.9 Protected Checkpoints
+
+Key checkpoints:
+
+- `1f510bb` — replace game profile placeholder
+- `0ebc1c0` — add game profile metadata fields
+- `7e5b6b9` — show canonical game identity in profile
+- `1ae4044` — show canonical RVDB game name
+- `0719911` — enrich game profiles from RVDB
+- `40dec9f` — correct Settings persistence messaging
+- `4253a2a` — align Settings page contract with persistence
+- `9324bf6` — remove obsolete development placeholder page
+- `1f414c9` — integrate local Library counts into Systems
+- `449348b` — refresh Systems Library counts on activation
+- `c8de78c` — open system games in filtered Library
+- `cb4f9b5` — open system favorites in filtered Library
+- `dc83201` — open system recent games in filtered Library
+- `80428af` — show live recent counts for Systems
+- `3b876c9` — open system collections from Systems
+- `0047017` — preserve canonical system filtering in Library
+
+Technical closure checkpoint before documentation:
+
+`0047017d0cd9b3a05428311a4767b840b9433b67`
+
+### Regression Baseline
+
+RVA1-C.9 technical closure regression baseline:
+
+**1121 passing tests**
+
+### Protected Architecture
+
+RVA1-C.9 preserves the established RVDB application boundary.
+
+User-facing application code continues to consume RVDB through application
+services and typed models rather than directly interpreting the protected
+RVDB portable bundle.
+
+The protected RVDB source repository is not modified by this milestone.
+
+### Next Application Operation
+
+Continue normal RetroVault application development from the completed
+RVA1-C.9 experience boundary.
+
+The next feature milestone should build on the integrated Library, Systems,
+Playlists, RVDB metadata, launch, presentation, archive, and bulk-import
+capabilities without reopening completed protected contracts unless new
+evidence requires a repair.
