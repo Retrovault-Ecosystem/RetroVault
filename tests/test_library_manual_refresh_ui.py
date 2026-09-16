@@ -250,3 +250,283 @@ def test_manual_refresh_failure_uses_no_popup():
     assert "QMessageBox" not in method
     assert ".warning(" not in method
     assert ".critical(" not in method
+
+
+def test_manual_refresh_preserves_search_state():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes",
+        name="Mega Man",
+    )
+
+    view = GalleryView(
+        [game],
+        refresh_handler=lambda: [game],
+    )
+
+    view.toolbar.search.setText(
+        "mega"
+    )
+
+    view.reload_library()
+
+    assert view.toolbar.search.text() == "mega"
+
+
+def test_manual_refresh_preserves_system_filter():
+    _app()
+
+    nes = RefreshGame(
+        "/roms/nes.nes",
+        name="NES Game",
+        platform="NES",
+    )
+
+    snes = RefreshGame(
+        "/roms/snes.sfc",
+        name="SNES Game",
+        platform="SNES",
+    )
+
+    view = GalleryView(
+        [nes, snes],
+        refresh_handler=lambda: [
+            nes,
+            snes,
+        ],
+    )
+
+    view.toolbar.system_filter.setCurrentText(
+        "SNES"
+    )
+
+    view.reload_library()
+
+    assert (
+        view.toolbar.system_filter.currentText()
+        == "SNES"
+    )
+
+
+def test_manual_refresh_falls_back_when_system_removed():
+    _app()
+
+    nes = RefreshGame(
+        "/roms/nes.nes",
+        name="NES Game",
+        platform="NES",
+    )
+
+    snes = RefreshGame(
+        "/roms/snes.sfc",
+        name="SNES Game",
+        platform="SNES",
+    )
+
+    view = GalleryView(
+        [nes, snes],
+        refresh_handler=lambda: [nes],
+    )
+
+    view.toolbar.system_filter.setCurrentText(
+        "SNES"
+    )
+
+    view.reload_library()
+
+    assert (
+        view.toolbar.system_filter.currentText()
+        == "All Systems"
+    )
+
+
+def test_manual_refresh_preserves_sort_state():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes"
+    )
+
+    view = GalleryView(
+        [game],
+        refresh_handler=lambda: [game],
+    )
+
+    view.toolbar.sort.setCurrentText(
+        "Year"
+    )
+
+    view.reload_library()
+
+    assert (
+        view.toolbar.sort.currentText()
+        == "Year"
+    )
+
+
+def test_manual_refresh_preserves_favorites_filter():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes"
+    )
+
+    game.favorite = True
+
+    view = GalleryView(
+        [game],
+        refresh_handler=lambda: [game],
+    )
+
+    view.toolbar.favorites_only.setChecked(
+        True
+    )
+
+    view.reload_library()
+
+    assert (
+        view.toolbar.favorites_only.isChecked()
+        is True
+    )
+
+
+def test_manual_refresh_preserves_recent_filter():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes"
+    )
+
+    view = GalleryView(
+        [game],
+        recent_provider=lambda: [
+            game.rom
+        ],
+        refresh_handler=lambda: [game],
+    )
+
+    view.toolbar.recent_only.setChecked(
+        True
+    )
+
+    view.reload_library()
+
+    assert (
+        view.toolbar.recent_only.isChecked()
+        is True
+    )
+
+
+def test_manual_refresh_preserves_details_view():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes"
+    )
+
+    view = GalleryView(
+        [game],
+        refresh_handler=lambda: [game],
+    )
+
+    view.show_details_view()
+
+    view.reload_library()
+
+    assert (
+        view.library_view_stack.currentWidget()
+        is view.details_view
+    )
+
+
+def test_manual_refresh_preserves_compact_view():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes"
+    )
+
+    view = GalleryView(
+        [game],
+        refresh_handler=lambda: [game],
+    )
+
+    view.show_compact_view()
+
+    view.reload_library()
+
+    assert (
+        view.library_view_stack.currentWidget()
+        is view.compact_view
+    )
+
+
+def test_manual_refresh_preserves_selected_game_identity():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes",
+        name="Selected",
+    )
+
+    view = GalleryView(
+        [game],
+        refresh_handler=lambda: [game],
+    )
+
+    view.details.show_game(
+        game
+    )
+
+    view.reload_library()
+
+    assert (
+        view.details.current_game
+        is game
+    )
+
+
+def test_manual_refresh_clears_removed_selection():
+    _app()
+
+    game = RefreshGame(
+        "/roms/removed.nes",
+        name="Removed",
+    )
+
+    view = GalleryView(
+        [game],
+        refresh_handler=lambda: [],
+    )
+
+    view.details.show_game(
+        game
+    )
+
+    view.reload_library()
+
+    assert (
+        view.details.current_game
+        is None
+    )
+
+
+def test_manual_refresh_reports_success_non_modally():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes"
+    )
+
+    view = GalleryView(
+        [game],
+        refresh_handler=lambda: [game],
+    )
+
+    view.reload_library()
+
+    assert (
+        view.toolbar.toolTip()
+        == "Library refreshed."
+    )

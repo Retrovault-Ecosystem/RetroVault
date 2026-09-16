@@ -280,6 +280,34 @@ class GalleryView(QWidget):
         if self.refresh_handler is None:
             return
 
+        selected_game = (
+            self.details.current_game
+        )
+
+        search_text = (
+            self.toolbar.search.text()
+        )
+
+        current_system = (
+            self.toolbar.system_filter.currentText()
+        )
+
+        current_sort = (
+            self.toolbar.sort.currentText()
+        )
+
+        favorites_only = (
+            self.toolbar.favorites_only.isChecked()
+        )
+
+        recent_only = (
+            self.toolbar.recent_only.isChecked()
+        )
+
+        current_view = (
+            self.library_view_stack.currentWidget()
+        )
+
         try:
             games = self.refresh_handler()
         except (
@@ -295,6 +323,53 @@ class GalleryView(QWidget):
 
         self.set_games(
             games
+        )
+
+        self.toolbar.search.setText(
+            search_text
+        )
+
+        if (
+            self.toolbar.system_filter.findText(
+                current_system
+            )
+            >= 0
+        ):
+            self.toolbar.system_filter.setCurrentText(
+                current_system
+            )
+
+        self.toolbar.sort.setCurrentText(
+            current_sort
+        )
+
+        self.toolbar.favorites_only.setChecked(
+            favorites_only
+        )
+
+        self.toolbar.recent_only.setChecked(
+            recent_only
+        )
+
+        if current_view is self.details_view:
+            self.show_details_view()
+        elif current_view is self.compact_view:
+            self.show_compact_view()
+        else:
+            self.show_gallery_view()
+
+        if (
+            selected_game is not None
+            and selected_game in self.all_games
+        ):
+            self.details.show_game(
+                selected_game
+            )
+        elif selected_game is not None:
+            self.details.clear_game()
+
+        self.toolbar.setToolTip(
+            "Library refreshed."
         )
 
         if (
