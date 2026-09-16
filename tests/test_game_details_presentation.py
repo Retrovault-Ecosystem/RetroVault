@@ -12,6 +12,21 @@ from ui.library.details.game_details import (
 )
 
 
+# RETROVAULT_PRESENTATION_MODAL_TEST_GUARD
+# Production presentation warnings remain modal. Automated tests
+# intercept QMessageBox.warning so headless development regression
+# cannot block on a real popup.
+@pytest.fixture(autouse=True)
+def _suppress_presentation_warning_popups(monkeypatch):
+    from PyQt6.QtWidgets import QMessageBox
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda *args, **kwargs: QMessageBox.StandardButton.Ok,
+    )
+
+
 @pytest.fixture(scope="module")
 def app():
     instance = QApplication.instance()

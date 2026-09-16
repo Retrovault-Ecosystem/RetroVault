@@ -12,6 +12,24 @@ if _APP is None:
     _APP = QApplication([])
 
 
+
+import pytest
+
+# RETROVAULT_ARCHIVE_MODAL_TEST_GUARD
+# Production archive warnings remain modal. Automated tests intercept
+# QMessageBox.warning so development regressions cannot block headless
+# pytest execution with a real popup.
+@pytest.fixture(autouse=True)
+def _suppress_archive_warning_popups(monkeypatch):
+    from PyQt6.QtWidgets import QMessageBox
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda *args, **kwargs: QMessageBox.StandardButton.Ok,
+    )
+
+
 def _game(rom):
     return Game(
         name="Variant Game",

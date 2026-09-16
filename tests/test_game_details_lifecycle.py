@@ -8,6 +8,20 @@ from services.library.models import Game
 from ui.library.details.game_details import GameDetails
 
 
+# RETROVAULT_LIFECYCLE_MODAL_TEST_GUARD
+# Production launch warnings remain modal. Automated tests intercept
+# QMessageBox.warning so headless development regression cannot block.
+@pytest.fixture(autouse=True)
+def _suppress_lifecycle_warning_popups(monkeypatch):
+    from PyQt6.QtWidgets import QMessageBox
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda *args, **kwargs: QMessageBox.StandardButton.Ok,
+    )
+
+
 @pytest.fixture(scope="module")
 def app():
     instance = QApplication.instance()
