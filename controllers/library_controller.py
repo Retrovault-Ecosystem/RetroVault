@@ -1,4 +1,5 @@
 from services.library import LibraryService
+from services.library.bulk_import import BulkImporter
 
 
 class LibraryController:
@@ -7,10 +8,19 @@ class LibraryController:
     def __init__(
         self,
         rvdb_resolver=None,
+        bulk_importer=None,
     ):
 
         self.library = LibraryService(
             rvdb_resolver=rvdb_resolver
+        )
+
+        self.bulk_importer = (
+            bulk_importer
+            if bulk_importer is not None
+            else BulkImporter(
+                rvdb_resolver=rvdb_resolver
+            )
         )
 
         self.library.load()
@@ -19,6 +29,35 @@ class LibraryController:
     def get_games(self):
 
         return self.library.get_games()
+
+
+    def bulk_import(
+        self,
+        directory,
+        *,
+        source_id="bulk-import",
+        source_name="Bulk Import",
+    ):
+
+        discovered = (
+            self.bulk_importer
+            .import_directory(
+                directory,
+                source_id=source_id,
+                source_name=source_name,
+            )
+        )
+
+        merged = self.library.merge_bulk_import(
+            discovered
+        )
+
+        return {
+            "discovered": discovered,
+            "added": merged["added"],
+            "added_count": merged["added_count"],
+            "skipped_count": merged["skipped_count"],
+        }
 
 
     def refresh_artwork(
