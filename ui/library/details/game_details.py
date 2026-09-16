@@ -649,9 +649,12 @@ class GameDetails(QWidget):
             ValueError,
         ) as exc:
 
-            print(
-                "Unable to update Favorite: "
-                f"{exc}"
+            QMessageBox.warning(
+                self,
+                "Favorite Update Failed",
+                "RetroVault could not update "
+                "this game's Favorite status.\n\n"
+                f"{exc}",
             )
 
             return

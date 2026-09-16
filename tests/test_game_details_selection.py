@@ -105,3 +105,70 @@ def test_clear_game_is_repeatable(
 
     assert details.current_game is None
     assert not details.launch_button.isEnabled()
+
+
+def test_favorite_update_failure_is_reported_to_user(
+    monkeypatch,
+):
+    from unittest.mock import Mock
+
+    from PyQt6.QtWidgets import QMessageBox
+
+    from ui.library.details.game_details import (
+        GameDetails,
+    )
+
+    game = Mock()
+    game.name = "Failure Test"
+    game.favorite = False
+
+    def fail_update(
+        _game,
+        _favorite,
+    ):
+        raise OSError(
+            "favorite persistence failed"
+        )
+
+    warnings = []
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda parent, title, message: (
+            warnings.append(
+                (
+                    parent,
+                    title,
+                    message,
+                )
+            )
+        ),
+    )
+
+    details = GameDetails(
+        favorite_handler=fail_update
+    )
+    details.current_game = game
+
+    details.toggle_favorite()
+
+    assert len(warnings) == 1
+
+    parent, title, message = warnings[0]
+
+    assert parent is details
+    assert title == "Favorite Update Failed"
+
+    assert (
+        "RetroVault could not update "
+        "this game's Favorite status."
+        in message
+    )
+
+    assert (
+        "favorite persistence failed"
+        in message
+    )
+
+    assert game.favorite is False
