@@ -717,3 +717,63 @@ def test_resolve_rejects_unsafe_explicit_archive_member(
                 archive,
                 member="../Variant Game (U) [!].nes",
             )
+
+
+def test_preferred_from_members_reuses_existing_listing(
+    tmp_path,
+):
+    archive = tmp_path / "Variant Game.7z"
+    archive.write_bytes(b"archive")
+
+    runtime = ArchiveRuntime()
+
+    members = [
+        "Variant Game (U) [b1].nes",
+        "Variant Game (J) [!].nes",
+        "Variant Game (U) [!].nes",
+    ]
+
+    selected = runtime.preferred_from_members(
+        archive,
+        members,
+    )
+
+    assert selected == "Variant Game (U) [!].nes"
+
+
+def test_preferred_from_members_filters_unsafe_members(
+    tmp_path,
+):
+    archive = tmp_path / "Variant Game.7z"
+    archive.write_bytes(b"archive")
+
+    runtime = ArchiveRuntime()
+
+    selected = runtime.preferred_from_members(
+        archive,
+        [
+            "../Variant Game (U) [!].nes",
+            "Variant Game (E) [!].nes",
+        ],
+    )
+
+    assert selected == "Variant Game (E) [!].nes"
+
+
+def test_preferred_from_members_rejects_nonplayable_members(
+    tmp_path,
+):
+    archive = tmp_path / "Variant Game.7z"
+    archive.write_bytes(b"archive")
+
+    runtime = ArchiveRuntime()
+
+    selected = runtime.preferred_from_members(
+        archive,
+        [
+            "README.txt",
+            "manual.pdf",
+        ],
+    )
+
+    assert selected == ""

@@ -72,7 +72,7 @@ def test_multi_member_archive_preselects_preferred_variant(
 
     archive_runtime = Mock()
     archive_runtime.playable_members.return_value = members
-    archive_runtime.preferred_member.return_value = (
+    archive_runtime.preferred_from_members.return_value = (
         "Variant Game (U) [!].nes"
     )
 
@@ -129,7 +129,7 @@ def test_multi_member_archive_cancel_aborts_selection(
         "Variant Game (U) [!].nes",
         "Variant Game (J).nes",
     ]
-    archive_runtime.preferred_member.return_value = (
+    archive_runtime.preferred_from_members.return_value = (
         "Variant Game (U) [!].nes"
     )
 
@@ -167,7 +167,7 @@ def test_cancelled_archive_selector_does_not_start_lifecycle(
         "Variant Game (U) [!].nes",
         "Variant Game (J).nes",
     ]
-    archive_runtime.preferred_member.return_value = (
+    archive_runtime.preferred_from_members.return_value = (
         "Variant Game (U) [!].nes"
     )
 
@@ -214,7 +214,7 @@ def test_selected_archive_variant_reaches_launch_profile(
         "Variant Game (U) [!].nes",
         "Variant Game (J).nes",
     ]
-    archive_runtime.preferred_member.return_value = (
+    archive_runtime.preferred_from_members.return_value = (
         "Variant Game (U) [!].nes"
     )
 
@@ -329,3 +329,51 @@ def test_non_archive_launch_profile_has_no_archive_member(
     profile = launcher.launch.call_args.args[0]
 
     assert profile.archive_member == ""
+
+
+def test_multi_member_selector_does_not_reinspect_archive(
+    monkeypatch,
+):
+    members = [
+        "Variant Game (J).nes",
+        "Variant Game (U) [!].nes",
+        "Variant Game (U) [b1].nes",
+    ]
+
+    runtime = Mock()
+    runtime.playable_members.return_value = members
+    runtime.preferred_from_members.return_value = (
+        "Variant Game (U) [!].nes"
+    )
+
+    details = GameDetails(
+        archive_runtime=runtime,
+    )
+
+    monkeypatch.setattr(
+        QInputDialog,
+        "getItem",
+        Mock(
+            return_value=(
+                "Variant Game (J) — Japan",
+                True,
+            )
+        ),
+    )
+
+    selected = details._select_archive_member(
+        "/library/Variant Game.7z"
+    )
+
+    assert selected == "Variant Game (J).nes"
+
+    runtime.playable_members.assert_called_once_with(
+        "/library/Variant Game.7z"
+    )
+
+    runtime.preferred_from_members.assert_called_once_with(
+        "/library/Variant Game.7z",
+        members,
+    )
+
+    runtime.preferred_member.assert_not_called()

@@ -327,6 +327,41 @@ class ArchiveRuntime:
 
         return True
 
+    def preferred_from_members(
+        self,
+        rom,
+        members,
+    ):
+        """
+        Select RetroVault's preferred archive member from an
+        already-inspected playable-member list.
+
+        This avoids re-running the external archive listing when a
+        caller, such as the launch-time variant selector, already has
+        the authoritative member list.
+        """
+        source = Path(rom).expanduser().resolve()
+
+        playable = [
+            member
+            for member in members
+            if self._member_is_safe(member)
+            and (
+                Path(member)
+                .suffix
+                .lower()
+                in self.PLAYABLE_EXTENSIONS
+            )
+        ]
+
+        if not playable:
+            return ""
+
+        return self._select_member(
+            source,
+            playable,
+        )
+
     def _select_member(
         self,
         source,

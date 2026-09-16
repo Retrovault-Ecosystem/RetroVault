@@ -506,8 +506,9 @@ Future:
 
         preferred = (
             self.archive_runtime
-            .preferred_member(
-                rom
+            .preferred_from_members(
+                rom,
+                members,
             )
         )
 
