@@ -349,3 +349,475 @@ def test_controller_persists_successful_import(
     assert result["persisted"] == {
         "added": True,
     }
+
+
+def test_source_management_rename_preserves_other_sources(
+    tmp_path,
+):
+    import json
+
+    from config import (
+        ConfigLoader,
+        ConfigWriter,
+    )
+    from services.library.import_sources import (
+        ImportSourceStore,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    original_sources = [
+        {
+            "id": "primary",
+            "name": "Primary Library",
+            "enabled": True,
+            "type": "local",
+            "path": str(
+                tmp_path / "primary"
+            ),
+        },
+        {
+            "id": "bulk-import",
+            "name": "Bulk Import",
+            "enabled": True,
+            "type": "local",
+            "path": str(
+                tmp_path / "bulk"
+            ),
+        },
+    ]
+
+    runtime.write_text(
+        json.dumps(
+            {
+                "library": {
+                    "sources": original_sources,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loader = ConfigLoader(
+        runtime_file=runtime
+    )
+    writer = ConfigWriter(
+        runtime_file=runtime
+    )
+
+    store = ImportSourceStore(
+        config_loader=loader,
+        config_writer=writer,
+    )
+
+    result = store.rename_source(
+        "bulk-import",
+        "Imported Games",
+    )
+
+    assert (
+        result["source"]["name"]
+        == "Imported Games"
+    )
+
+    saved = json.loads(
+        runtime.read_text(
+            encoding="utf-8"
+        )
+    )["library"]["sources"]
+
+    assert saved[0] == original_sources[0]
+
+    assert saved[1] == {
+        **original_sources[1],
+        "name": "Imported Games",
+    }
+
+
+def test_source_management_enable_disable_preserves_sources(
+    tmp_path,
+):
+    import json
+
+    from config import (
+        ConfigLoader,
+        ConfigWriter,
+    )
+    from services.library.import_sources import (
+        ImportSourceStore,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    sources = [
+        {
+            "id": "primary",
+            "name": "Primary",
+            "enabled": True,
+            "type": "local",
+            "path": str(
+                tmp_path / "primary"
+            ),
+        },
+        {
+            "id": "secondary",
+            "name": "Secondary",
+            "enabled": True,
+            "type": "local",
+            "path": str(
+                tmp_path / "secondary"
+            ),
+        },
+    ]
+
+    runtime.write_text(
+        json.dumps(
+            {
+                "library": {
+                    "sources": sources,
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    store = ImportSourceStore(
+        config_loader=ConfigLoader(
+            runtime_file=runtime
+        ),
+        config_writer=ConfigWriter(
+            runtime_file=runtime
+        ),
+    )
+
+    disabled = store.set_source_enabled(
+        "secondary",
+        False,
+    )
+
+    assert (
+        disabled[
+            "source"
+        ][
+            "enabled"
+        ]
+        is False
+    )
+
+    saved = json.loads(
+        runtime.read_text(
+            encoding="utf-8"
+        )
+    )["library"]["sources"]
+
+    assert saved[0] == sources[0]
+    assert saved[1]["enabled"] is False
+
+    enabled = store.set_source_enabled(
+        "secondary",
+        True,
+    )
+
+    assert (
+        enabled[
+            "source"
+        ][
+            "enabled"
+        ]
+        is True
+    )
+
+
+def test_source_management_cannot_disable_last_enabled_source(
+    tmp_path,
+):
+    import json
+
+    import pytest
+
+    from config import (
+        ConfigLoader,
+        ConfigWriter,
+    )
+    from services.library.import_sources import (
+        ImportSourceStore,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    payload = {
+        "library": {
+            "sources": [
+                {
+                    "id": "primary",
+                    "name": "Primary",
+                    "enabled": True,
+                    "type": "local",
+                    "path": str(
+                        tmp_path / "primary"
+                    ),
+                },
+                {
+                    "id": "secondary",
+                    "name": "Secondary",
+                    "enabled": False,
+                    "type": "local",
+                    "path": str(
+                        tmp_path / "secondary"
+                    ),
+                },
+            ],
+        }
+    }
+
+    runtime.write_text(
+        json.dumps(
+            payload
+        ),
+        encoding="utf-8",
+    )
+
+    store = ImportSourceStore(
+        config_loader=ConfigLoader(
+            runtime_file=runtime
+        ),
+        config_writer=ConfigWriter(
+            runtime_file=runtime
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="must remain enabled",
+    ):
+        store.set_source_enabled(
+            "primary",
+            False,
+        )
+
+    assert json.loads(
+        runtime.read_text(
+            encoding="utf-8"
+        )
+    ) == payload
+
+
+def test_source_management_remove_preserves_remaining_sources(
+    tmp_path,
+):
+    import json
+
+    from config import (
+        ConfigLoader,
+        ConfigWriter,
+    )
+    from services.library.import_sources import (
+        ImportSourceStore,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    primary = {
+        "id": "primary",
+        "name": "Primary",
+        "enabled": True,
+        "type": "local",
+        "path": str(
+            tmp_path / "primary"
+        ),
+    }
+
+    secondary = {
+        "id": "secondary",
+        "name": "Secondary",
+        "enabled": False,
+        "type": "local",
+        "path": str(
+            tmp_path / "secondary"
+        ),
+    }
+
+    runtime.write_text(
+        json.dumps(
+            {
+                "library": {
+                    "sources": [
+                        primary,
+                        secondary,
+                    ],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    store = ImportSourceStore(
+        config_loader=ConfigLoader(
+            runtime_file=runtime
+        ),
+        config_writer=ConfigWriter(
+            runtime_file=runtime
+        ),
+    )
+
+    result = store.remove_source(
+        "secondary"
+    )
+
+    assert (
+        result[
+            "removed"
+        ][
+            "id"
+        ]
+        == "secondary"
+    )
+
+    saved = json.loads(
+        runtime.read_text(
+            encoding="utf-8"
+        )
+    )["library"]["sources"]
+
+    assert saved == [
+        primary
+    ]
+
+
+def test_source_management_cannot_remove_last_enabled_source(
+    tmp_path,
+):
+    import json
+
+    import pytest
+
+    from config import (
+        ConfigLoader,
+        ConfigWriter,
+    )
+    from services.library.import_sources import (
+        ImportSourceStore,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    payload = {
+        "library": {
+            "sources": [
+                {
+                    "id": "primary",
+                    "name": "Primary",
+                    "enabled": True,
+                    "type": "local",
+                    "path": str(
+                        tmp_path / "primary"
+                    ),
+                },
+            ],
+        }
+    }
+
+    runtime.write_text(
+        json.dumps(
+            payload
+        ),
+        encoding="utf-8",
+    )
+
+    store = ImportSourceStore(
+        config_loader=ConfigLoader(
+            runtime_file=runtime
+        ),
+        config_writer=ConfigWriter(
+            runtime_file=runtime
+        ),
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="must remain enabled",
+    ):
+        store.remove_source(
+            "primary"
+        )
+
+    assert json.loads(
+        runtime.read_text(
+            encoding="utf-8"
+        )
+    ) == payload
+
+
+def test_source_management_rejects_unknown_source_without_mutation(
+    tmp_path,
+):
+    import json
+
+    import pytest
+
+    from config import (
+        ConfigLoader,
+        ConfigWriter,
+    )
+    from services.library.import_sources import (
+        ImportSourceStore,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    payload = {
+        "library": {
+            "sources": [
+                {
+                    "id": "primary",
+                    "name": "Primary",
+                    "enabled": True,
+                    "type": "local",
+                    "path": str(
+                        tmp_path / "primary"
+                    ),
+                },
+            ],
+        }
+    }
+
+    runtime.write_text(
+        json.dumps(
+            payload
+        ),
+        encoding="utf-8",
+    )
+
+    store = ImportSourceStore(
+        config_loader=ConfigLoader(
+            runtime_file=runtime
+        ),
+        config_writer=ConfigWriter(
+            runtime_file=runtime
+        ),
+    )
+
+    for operation in (
+        lambda: store.rename_source(
+            "missing",
+            "Missing",
+        ),
+        lambda: store.set_source_enabled(
+            "missing",
+            False,
+        ),
+        lambda: store.remove_source(
+            "missing"
+        ),
+    ):
+        with pytest.raises(
+            ValueError,
+            match="Library source not found",
+        ):
+            operation()
+
+        assert json.loads(
+            runtime.read_text(
+                encoding="utf-8"
+            )
+        ) == payload
