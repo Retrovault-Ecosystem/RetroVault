@@ -98,6 +98,13 @@ class MainWindow(QMainWindow):
                 )
             )
 
+        for details in getattr(
+            self,
+            "_launch_status_details",
+            (),
+        ):
+            details.sync_process_session()
+
 
     def __init__(self):
 

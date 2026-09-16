@@ -107,3 +107,22 @@ def test_exit_is_consumed_only_inside_exited_branch():
     )
 
     assert idle > exit_check
+
+
+def test_process_poll_synchronizes_shared_session_controls():
+    method = poll_method()
+
+    assert (
+        "details.sync_process_session()"
+        in method
+    )
+
+    exit_check = method.index(
+        '== "EXITED"'
+    )
+
+    sync = method.index(
+        "details.sync_process_session()"
+    )
+
+    assert sync > exit_check

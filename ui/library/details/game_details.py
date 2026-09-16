@@ -298,9 +298,15 @@ class GameDetails(QWidget):
 
         if selection_changed:
             self._launch_session_active = False
-            self._set_launch_status(
-                "Ready when you are."
-            )
+
+            if self._process_session_running():
+                self._set_launch_status(
+                    "Another game session is running."
+                )
+            else:
+                self._set_launch_status(
+                    "Ready when you are."
+                )
 
         self._refresh_favorite_button()
         self._refresh_collection_button()
@@ -780,6 +786,52 @@ class GameDetails(QWidget):
         )
 
 
+    def _process_session_running(
+        self,
+    ) -> bool:
+        if self.launcher is None:
+            return False
+
+        process_running = getattr(
+            self.launcher,
+            "process_running",
+            None,
+        )
+
+        if process_running is None:
+            return False
+
+        try:
+            running = process_running()
+        except (
+            OSError,
+            RuntimeError,
+        ):
+            return False
+
+        if not isinstance(
+            running,
+            bool,
+        ):
+            return False
+
+        return running
+
+
+    def sync_process_session(
+        self,
+    ) -> None:
+        """
+        Synchronize controls with shared emulator process ownership.
+
+        A details pane owns launch-status text only for the game it
+        launched. Launch availability, however, follows the single
+        shared RetroArch process session across every details pane.
+        """
+
+        self._refresh_launch_button()
+
+
     def process_exited(
         self,
     ) -> None:
@@ -822,6 +874,13 @@ class GameDetails(QWidget):
 
         if not self.current_game:
 
+            return
+
+        if self._process_session_running():
+            self._set_launch_status(
+                "Unable to launch: another game session is running."
+            )
+            self._refresh_launch_button()
             return
 
         self._set_launch_status(
@@ -1148,6 +1207,10 @@ class GameDetails(QWidget):
     def _refresh_launch_button(
         self,
     ):
+        process_running = (
+            self._process_session_running()
+        )
+
         launch_enabled = (
             self.current_game is not None
             and bool(
@@ -1158,6 +1221,7 @@ class GameDetails(QWidget):
                 )
             )
             and not self._launch_session_active
+            and not process_running
         )
 
         self.launch_button.setEnabled(
@@ -1166,6 +1230,7 @@ class GameDetails(QWidget):
 
         self.stop_button.setEnabled(
             self._launch_session_active
+            and process_running
         )
 
 

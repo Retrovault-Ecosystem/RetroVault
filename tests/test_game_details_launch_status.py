@@ -504,6 +504,12 @@ def test_successful_launch_enables_stop_and_disables_launch(
             "command": ["retroarch"],
         }
     )
+    process_running = Mock(
+        side_effect=[False, True]
+    )
+    details.launcher.process_running = (
+        process_running
+    )
 
     details.launch_game()
 
@@ -516,6 +522,9 @@ def test_stop_game_requests_lifecycle_stop(
 ):
     details, lifecycle = make_details(app)
 
+    details.launcher.process_running = Mock(
+        return_value=True
+    )
     details._launch_session_active = True
     details._refresh_launch_button()
 
@@ -568,3 +577,129 @@ def test_stop_failure_remains_user_visible(
     assert details.launch_status.text() == (
         "Unable to stop game: stop failed"
     )
+
+
+def test_selecting_different_game_during_shared_session_disables_launch(
+    app,
+):
+    details = GameDetails()
+
+    first = make_game()
+    second = make_game()
+    second.name = "Mega Man 2"
+    second.rom = "/roms/mega-man-2.nes"
+
+    details.show_game(first)
+
+    details.launcher.process_running = Mock(
+        return_value=True
+    )
+
+    details._launch_session_active = True
+    details.show_game(second)
+
+    assert details._launch_session_active is False
+    assert details.launch_button.isEnabled() is False
+    assert details.stop_button.isEnabled() is False
+    assert details.launch_status.text() == (
+        "Another game session is running."
+    )
+
+
+def test_shared_running_process_disables_launch_without_local_ownership(
+    app,
+):
+    details = GameDetails()
+    details.show_game(
+        make_game()
+    )
+
+    details.launcher.process_running = Mock(
+        return_value=True
+    )
+
+    details._launch_session_active = False
+    details.sync_process_session()
+
+    assert details.launch_button.isEnabled() is False
+    assert details.stop_button.isEnabled() is False
+
+
+def test_launch_guard_rejects_shared_active_process_before_lifecycle_request(
+    app,
+):
+    details, lifecycle = make_details(app)
+
+    details.launcher.process_running = Mock(
+        return_value=True
+    )
+
+    details.launch_game()
+
+    lifecycle.launch_requested.assert_not_called()
+
+    assert details.launch_status.text() == (
+        "Unable to launch: another game session is running."
+    )
+    assert details.launch_button.isEnabled() is False
+
+
+def test_shared_session_exit_restores_non_owner_launch_availability(
+    app,
+):
+    details = GameDetails()
+    details.show_game(
+        make_game()
+    )
+
+    details.launcher.process_running = Mock(
+        return_value=True
+    )
+    details.sync_process_session()
+
+    assert details.launch_button.isEnabled() is False
+
+    details.launcher.process_running.return_value = False
+    details.sync_process_session()
+
+    assert details.launch_button.isEnabled() is True
+    assert details.stop_button.isEnabled() is False
+
+
+def test_local_session_owner_keeps_stop_control_while_process_runs(
+    app,
+):
+    details = GameDetails()
+    details.show_game(
+        make_game()
+    )
+
+    details.launcher.process_running = Mock(
+        return_value=True
+    )
+    details._launch_session_active = True
+    details.sync_process_session()
+
+    assert details.launch_button.isEnabled() is False
+    assert details.stop_button.isEnabled() is True
+
+
+def test_generic_launcher_mock_does_not_invent_running_session(
+    app,
+):
+    launcher = Mock()
+
+    details = GameDetails(
+        launcher=launcher,
+    )
+
+    details.show_game(
+        make_game()
+    )
+
+    assert (
+        details._process_session_running()
+        is False
+    )
+    assert details.launch_button.isEnabled() is True
+    assert details.stop_button.isEnabled() is False
