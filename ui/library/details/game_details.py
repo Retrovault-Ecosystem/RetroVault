@@ -246,6 +246,19 @@ class GameDetails(QWidget):
         )
 
 
+        self.launch_status = QLabel(
+            "Ready when you are."
+        )
+
+        self.launch_status.setWordWrap(
+            True
+        )
+
+        main.addWidget(
+            self.launch_status
+        )
+
+
         self.setLayout(
             main
         )
@@ -729,12 +742,25 @@ class GameDetails(QWidget):
         ].member
 
 
+    def _set_launch_status(
+        self,
+        message: str,
+    ) -> None:
+        self.launch_status.setText(
+            message
+        )
+
+
     def launch_game(self):
 
 
         if not self.current_game:
 
             return
+
+        self._set_launch_status(
+            f'Preparing "{self.current_game.name}"...'
+        )
 
         archive_member = ""
 
@@ -754,13 +780,22 @@ class GameDetails(QWidget):
                 OSError,
                 ValueError,
             ) as exc:
-                print(
+                message = (
                     "Unable to inspect archive variants: "
                     f"{exc}"
+                )
+                print(
+                    message
+                )
+                self._set_launch_status(
+                    message
                 )
                 return
 
             if archive_member is None:
+                self._set_launch_status(
+                    "Launch cancelled."
+                )
                 return
 
         if self.process_lifecycle is not None:
@@ -785,12 +820,17 @@ class GameDetails(QWidget):
         if not core_path:
 
 
+            message = (
+                "Unable to launch: required emulator core "
+                "is missing."
+            )
+
             print(
+                message
+            )
 
-                [
-                    "Required core is missing."
-                ]
-
+            self._set_launch_status(
+                message
             )
 
             if self.process_lifecycle is not None:
@@ -873,6 +913,15 @@ class GameDetails(QWidget):
 
         if not result["ready"]:
 
+            messages = self.diagnostics.explain(
+                result
+            )
+
+            self._set_launch_status(
+                "Unable to launch: "
+                + " ".join(messages)
+            )
+
             if self.process_lifecycle is not None:
                 self.process_lifecycle.launch_failed()
 
@@ -890,6 +939,28 @@ class GameDetails(QWidget):
         if self.process_lifecycle is not None:
             self.process_lifecycle.launch_result(
                 launch_result
+            )
+
+        if launch_result.get(
+            "success",
+            False,
+        ):
+            self._set_launch_status(
+                f'Running "{self.current_game.name}".'
+            )
+        else:
+            error = str(
+                launch_result.get(
+                    "error",
+                    "Unknown launch error.",
+                )
+            ).strip()
+
+            if not error:
+                error = "Unknown launch error."
+
+            self._set_launch_status(
+                f"Unable to launch: {error}"
             )
 
         if (
@@ -1035,6 +1106,10 @@ class GameDetails(QWidget):
         self.description.clear()
         self.profile.setText(
             "Launch Profile"
+        )
+
+        self._set_launch_status(
+            "Ready when you are."
         )
 
         self.cover.clear()
