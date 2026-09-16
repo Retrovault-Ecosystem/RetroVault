@@ -239,12 +239,104 @@ class ArchiveRuntime:
         if len(exact) == 1:
             return exact[0]
 
-        raise ValueError(
-            "Archive contains multiple supported "
-            "ROM files and RetroVault cannot safely "
-            "choose one automatically: "
-            f"{source.name}"
+        ranked = sorted(
+            playable,
+            key=lambda member: (
+                self._member_rank(
+                    source,
+                    member,
+                ),
+                Path(member).name.casefold(),
+                member.casefold(),
+            ),
         )
+
+        return ranked[0]
+
+    @staticmethod
+    def _member_rank(
+        source,
+        member,
+    ):
+        """
+        Deterministically select the preferred playable member
+        from GoodSet-style multi-ROM archives.
+
+        Preference order:
+        1. Good dump marker [!]
+        2. Verified/common region releases
+        3. Non-beta/non-prototype/non-hack/non-bad dumps
+        4. Stable lexical ordering as final tie-break
+        """
+
+        name = (
+            Path(member)
+            .name
+            .casefold()
+        )
+
+        score = 1000
+
+        if "[!]" in name:
+            score -= 500
+
+        preferred_regions = (
+            "(u)",
+            "(usa)",
+            "(e)",
+            "(europe)",
+            "(j)",
+            "(japan)",
+            "(w)",
+            "(world)",
+        )
+
+        for index, marker in enumerate(
+            preferred_regions
+        ):
+            if marker in name:
+                score -= (
+                    100
+                    - index
+                )
+                break
+
+        undesirable = (
+            "[b",
+            "[h",
+            "[t",
+            "[o",
+            "[p",
+            "(beta",
+            "(proto",
+            "(prototype",
+            "(sample",
+            "(demo",
+            "(hack",
+            "(pirate",
+        )
+
+        for marker in undesirable:
+            if marker in name:
+                score += 250
+
+        archive_name = (
+            source.stem
+            .casefold()
+        )
+
+        member_stem = (
+            Path(member)
+            .stem
+            .casefold()
+        )
+
+        if member_stem.startswith(
+            archive_name
+        ):
+            score -= 25
+
+        return score
 
     def _destination(
         self,

@@ -200,7 +200,7 @@ def test_archive_without_rom_is_rejected(
         )
 
 
-def test_ambiguous_multi_rom_archive_is_rejected(
+def test_multi_rom_archive_is_deterministic(
     tmp_path,
 ):
     archive = _make_7z(
@@ -208,12 +208,12 @@ def test_ambiguous_multi_rom_archive_is_rejected(
         "Collection.7z",
         [
             (
-                "Game A.nes",
-                b"A",
-            ),
-            (
                 "Game B.nes",
                 b"B",
+            ),
+            (
+                "Game A.nes",
+                b"A",
             ),
         ],
     )
@@ -225,13 +225,94 @@ def test_ambiguous_multi_rom_archive_is_rejected(
         )
     )
 
-    with pytest.raises(
-        ValueError,
-        match="multiple supported",
-    ):
+    resolved = Path(
         runtime.resolve(
             archive
         )
+    )
+
+    assert resolved.name == "Game A.nes"
+    assert resolved.read_bytes() == b"A"
+
+
+def test_goodset_verified_dump_is_preferred(
+    tmp_path,
+):
+    archive = _make_7z(
+        tmp_path,
+        "GoodSet Game.7z",
+        [
+            (
+                "GoodSet Game (U) [b1].nes",
+                b"BAD",
+            ),
+            (
+                "GoodSet Game (U) [!].nes",
+                b"GOOD",
+            ),
+            (
+                "GoodSet Game (J).nes",
+                b"JAPAN",
+            ),
+        ],
+    )
+
+    runtime = ArchiveRuntime(
+        cache_root=(
+            tmp_path
+            / "cache"
+        )
+    )
+
+    resolved = Path(
+        runtime.resolve(
+            archive
+        )
+    )
+
+    assert (
+        resolved.name
+        == "GoodSet Game (U) [!].nes"
+    )
+    assert resolved.read_bytes() == b"GOOD"
+
+
+def test_goodset_bad_dump_is_deprioritized(
+    tmp_path,
+):
+    archive = _make_7z(
+        tmp_path,
+        "Ranked Game.7z",
+        [
+            (
+                "Ranked Game (U) [b1].nes",
+                b"BAD",
+            ),
+            (
+                "Ranked Game (U).nes",
+                b"NORMAL",
+            ),
+        ],
+    )
+
+    runtime = ArchiveRuntime(
+        cache_root=(
+            tmp_path
+            / "cache"
+        )
+    )
+
+    resolved = Path(
+        runtime.resolve(
+            archive
+        )
+    )
+
+    assert (
+        resolved.name
+        == "Ranked Game (U).nes"
+    )
+    assert resolved.read_bytes() == b"NORMAL"
 
 
 def test_matching_archive_stem_wins_multi_rom(
