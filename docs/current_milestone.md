@@ -2425,3 +2425,231 @@ The next feature milestone should build on the integrated Library, Systems,
 Playlists, RVDB metadata, launch, presentation, archive, and bulk-import
 capabilities without reopening completed protected contracts unless new
 evidence requires a repair.
+
+
+---
+
+## RVA1-C.10 — Application Launch Experience
+
+Status:
+
+**COMPLETE**
+
+RVA1-C.10 establishes the protected RetroVault application launch and
+active-session experience on top of the existing RetroArch process and
+RVV hardware-lifecycle boundaries.
+
+Technical closure checkpoint before documentation:
+
+`f80b479ba274147822669b8df71abda7b42d0d1e`
+
+### Protected Launch Experience
+
+The completed milestone establishes:
+
+- user-facing launch preparation, running, failure, cancellation, and
+  completed-session status;
+- selection-safe launch status so status from one game does not leak into
+  another selected game;
+- preservation of status during same-game refresh operations;
+- process-exit feedback from the shared application lifecycle;
+- an application-visible Stop Game control for the locally owned session;
+- process termination through the RetroArch launcher ownership boundary;
+- lifecycle-driven STOP_REQUESTED and EXITED transitions;
+- process ownership retained until actual emulator exit is observed;
+- shared active-session ownership across Library and Playlists details
+  panes;
+- launch controls disabled while another RetroArch session is active;
+- Stop Game available only to the details pane that owns the active launch
+  session;
+- launch attempts rejected before lifecycle mutation when another emulator
+  process is already running;
+- launch availability restored after the shared emulator process exits;
+- automatic synchronization of Library and Playlists launch controls from
+  the MainWindow process-lifecycle poll;
+- completed EXITED lifecycle consumption back to the normal IDLE browsing
+  state after application-level exit notification;
+- preservation of the protected archive-variant launch contract;
+- compatibility with generic/mock launcher collaborators that do not
+  provide an authoritative Boolean running-process fact.
+
+### Process Ownership Contract
+
+`RetroArchLauncher` is the application owner of the active RetroArch
+process handle.
+
+Its protected process-session surface now includes:
+
+- `active_process`
+- `process_running()`
+- `clear_exited_process()`
+- `stop()`
+
+`stop()` requests process termination but deliberately retains ownership
+of the process handle.
+
+`ProcessLifecycleAdapter.poll()` remains authoritative for observing the
+actual process exit, transitioning RVV through the completed lifecycle,
+and releasing process ownership.
+
+This prevents RetroVault from treating a termination request as if the
+emulator had already exited.
+
+### Application Lifecycle Contract
+
+The protected launch/session path is:
+
+RetroVault GameDetails
+    |
+    v
+launch request
+    |
+    v
+ProcessLifecycleAdapter
+    |
+    v
+RVV launch lifecycle
+    |
+    v
+RetroArchLauncher
+    |
+    v
+owned RetroArch process
+    |
+    +-----------------------------+
+    |                             |
+    v                             v
+normal process exit          Stop Game
+    |                             |
+    |                             v
+    |                      launcher.stop()
+    |                             |
+    |                             v
+    |                      STOP_REQUESTED
+    |                             |
+    +-------------+---------------+
+                  |
+                  v
+          lifecycle poll
+                  |
+                  v
+               EXITED
+                  |
+                  v
+        Game session ended
+                  |
+                  v
+                IDLE
+
+### Global Session Ownership
+
+RetroVault has one shared RetroArch launcher/process session at the
+application composition boundary.
+
+Library and Playlists details panes therefore share the same emulator
+process fact.
+
+A details pane may own user-facing status for the game it launched, but
+launch availability follows the global process session.
+
+While an emulator process is active:
+
+- another selected game cannot launch;
+- another details pane cannot launch;
+- a non-owning details pane does not expose Stop Game;
+- the owning details pane retains Stop Game while the process is alive.
+
+When the process exits, the shared controls synchronize back to the
+available browsing state.
+
+### Protected UX States
+
+Representative protected user-facing states include:
+
+- `Ready when you are.`
+- `Preparing "<game>"...`
+- `Running "<game>".`
+- `Stopping game...`
+- `Game session ended.`
+- `Launch cancelled.`
+- `Another game session is running.`
+- `Unable to launch: another game session is running.`
+
+Launch validation and runtime failures continue to surface through the
+existing `Unable to launch:` status contract.
+
+Stop lifecycle failures surface through the existing
+`Unable to stop game:` status contract.
+
+### Selection Safety
+
+Launch status is selection-local.
+
+Selecting a different game clears local launch ownership and prevents
+running/completed/failure status from being incorrectly attributed to the
+new selection.
+
+Refreshing the same selected game object preserves its launch status.
+
+Global process ownership remains independent of that local status:
+
+switching selection while RetroArch is running does not make the process
+available for a second launch.
+
+### RVV Integration
+
+RVA1-C.10 preserves the RVV hardware lifecycle boundary.
+
+Application/process facts continue to drive:
+
+- launch requested;
+- running;
+- stop requested;
+- process exited;
+- return to idle.
+
+Platform-specific indicator behavior remains inside the RVV presentation
+policy/runtime architecture rather than the Library UI or RetroArch
+launcher.
+
+### Archive Compatibility
+
+The protected archive-variant workflow remains intact.
+
+RVA1-C.10 does not alter:
+
+- archive member discovery;
+- preferred archive member behavior;
+- user archive-member selection;
+- exact selected-member launch identity;
+- archive cancellation semantics;
+- archive runtime validation.
+
+### Closure Validation
+
+The final RVA1-C.10 closure boundary verified:
+
+- protected local checkpoint matched the remote branch;
+- worktree was clean;
+- launch/session static contracts passed;
+- focused launch/session regression: **149 passed**;
+- Library/Playlists integration regression: **93 passed**;
+- complete RetroVault regression: **1165 passed**;
+- Python compile validation passed;
+- no closure-boundary mutations were present.
+
+### RVA1-C.10 Checkpoint
+
+Protected technical checkpoint:
+
+`f80b479ba274147822669b8df71abda7b42d0d1e`
+
+Commit:
+
+`fix: synchronize active session controls`
+
+RVA1-C.10 is complete.
+
+Normal RVA1-C application development may continue from this protected
+launch/session boundary without reopening the completed launch-experience
+foundation.
