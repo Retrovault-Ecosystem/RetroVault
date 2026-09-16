@@ -6,6 +6,7 @@ pytest.importorskip(
     "PyQt6"
 )
 
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 
 from services.rvdb import (
@@ -608,3 +609,123 @@ def test_systems_page_library_provider_failure_is_safe(
         page.library_favorites_value.text()
         == SystemsPage.EMPTY
     )
+
+
+def test_systems_page_refresh_page_updates_live_library_counts(
+    app,
+    service,
+):
+    from types import SimpleNamespace
+
+    games = [
+        SimpleNamespace(
+            rvdb_platform_id=(
+                "platform.test.alpha"
+            ),
+            favorite=False,
+        ),
+    ]
+
+    page = SystemsPage(
+        service,
+        games_provider=lambda: games,
+    )
+
+    assert (
+        page.library_games_value.text()
+        == "1"
+    )
+    assert (
+        page.library_favorites_value.text()
+        == "0"
+    )
+
+    games.append(
+        SimpleNamespace(
+            rvdb_platform_id=(
+                "platform.test.alpha"
+            ),
+            favorite=True,
+        )
+    )
+
+    page.refresh_page()
+
+    assert (
+        page.library_games_value.text()
+        == "2"
+    )
+    assert (
+        page.library_favorites_value.text()
+        == "1"
+    )
+
+
+def test_systems_page_refresh_page_preserves_selection(
+    app,
+    service,
+):
+    from types import SimpleNamespace
+
+    games = [
+        SimpleNamespace(
+            rvdb_platform_id=(
+                "platform.test.beta"
+            ),
+            favorite=True,
+        ),
+    ]
+
+    page = SystemsPage(
+        service,
+        games_provider=lambda: games,
+    )
+
+    page.system_list.setCurrentRow(
+        1
+    )
+    app.processEvents()
+
+    selected = (
+        page.system_list
+        .currentItem()
+        .data(
+            Qt.ItemDataRole.UserRole
+        )
+    )
+
+    page.refresh_page()
+
+    assert (
+        page.system_list
+        .currentItem()
+        .data(
+            Qt.ItemDataRole.UserRole
+        )
+        == selected
+    )
+    assert (
+        page.library_games_value.text()
+        == "1"
+    )
+    assert (
+        page.library_favorites_value.text()
+        == "1"
+    )
+
+
+def test_systems_page_refresh_page_without_selection_is_safe(
+    app,
+    service,
+):
+    page = SystemsPage(
+        service,
+        games_provider=lambda: [],
+    )
+
+    page.system_list.clearSelection()
+    page.system_list.setCurrentItem(
+        None
+    )
+
+    page.refresh_page()

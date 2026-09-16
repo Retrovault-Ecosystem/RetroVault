@@ -741,6 +741,25 @@ class SystemsPage(QWidget):
             "local RVDB development bundle."
         )
 
+    def refresh_page(self) -> None:
+        current = (
+            self.system_list.currentItem()
+        )
+
+        if current is None:
+            return
+
+        platform_id = current.data(
+            Qt.ItemDataRole.UserRole
+        )
+
+        if not platform_id:
+            return
+
+        self._show_library_counts(
+            str(platform_id)
+        )
+
     def _show_library_counts(
         self,
         platform_id: str,

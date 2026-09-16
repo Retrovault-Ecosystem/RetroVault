@@ -19,6 +19,17 @@ class PageManager(QStackedWidget):
 
     def show_page(self, name):
 
+        page = self.pages[name]
+
+        refresh = getattr(
+            page,
+            "refresh_page",
+            None,
+        )
+
+        if callable(refresh):
+            refresh()
+
         self.setCurrentWidget(
-            self.pages[name]
+            page
         )
