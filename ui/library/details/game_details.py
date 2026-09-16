@@ -349,6 +349,27 @@ class GameDetails(QWidget):
             "RetroVault Game Profile",
         ]
 
+        rvdb_game_id = getattr(
+            game,
+            "rvdb_game_id",
+            "",
+        )
+
+        if (
+            isinstance(
+                rvdb_game_id,
+                str,
+            )
+            and rvdb_game_id.strip()
+        ):
+            profile_lines.extend(
+                [
+                    "",
+                    "RVDB Game:",
+                    f"RVDB ID: {rvdb_game_id.strip()}",
+                ]
+            )
+
         profile_metadata = []
 
         year = getattr(

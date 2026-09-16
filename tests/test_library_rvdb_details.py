@@ -398,3 +398,87 @@ def test_game_model_exposes_profile_metadata_defaults():
     assert game.description == ""
     assert game.developer == ""
     assert game.publisher == ""
+
+
+def test_identified_game_profile_displays_rvdb_game_identity(
+    app,
+):
+    details = GameDetails()
+
+    game = SimpleNamespace(
+        name="Duck Tales 2",
+        platform="Nintendo Entertainment System",
+        rom="/library/Duck Tales 2.nes",
+        core="fceumm",
+        artwork="",
+        favorite=False,
+        year=0,
+        genre="",
+        developer="",
+        publisher="",
+        description="",
+        rvdb_game_id="game.duck_tales_2",
+    )
+
+    details.show_game(game)
+
+    text = details.description.toPlainText()
+
+    assert "RVDB Game:" in text
+    assert (
+        "RVDB ID: game.duck_tales_2"
+        in text
+    )
+
+
+def test_unidentified_game_profile_omits_rvdb_game_identity(
+    app,
+):
+    details = GameDetails()
+
+    game = SimpleNamespace(
+        name="Unknown Game",
+        platform="Nintendo Entertainment System",
+        rom="/library/Unknown Game.nes",
+        core="fceumm",
+        artwork="",
+        favorite=False,
+        year=0,
+        genre="",
+        developer="",
+        publisher="",
+        description="",
+        rvdb_game_id="",
+    )
+
+    details.show_game(game)
+
+    text = details.description.toPlainText()
+
+    assert "RVDB Game:" not in text
+    assert "RVDB ID:" not in text
+
+
+def test_legacy_game_profile_without_rvdb_game_id_is_safe(
+    app,
+):
+    details = GameDetails()
+
+    game = SimpleNamespace(
+        name="Legacy Game",
+        platform="Legacy System",
+        rom="/library/Legacy Game.rom",
+        core="legacy_core",
+        artwork="",
+        favorite=False,
+        year=0,
+        genre="",
+    )
+
+    details.show_game(game)
+
+    text = details.description.toPlainText()
+
+    assert "Legacy Game" in text
+    assert "RetroVault Game Profile" in text
+    assert "RVDB Game:" not in text
