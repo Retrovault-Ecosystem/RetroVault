@@ -836,3 +836,284 @@ def test_manual_refresh_removed_selection_keeps_details_empty():
         view.toolbar.refresh_button.isEnabled()
         is True
     )
+
+
+def test_manual_refresh_starts_idle():
+    _app()
+
+    view = GalleryView(
+        [],
+        refresh_handler=lambda: [],
+    )
+
+    assert (
+        view._library_refresh_in_progress
+        is False
+    )
+
+
+def test_manual_refresh_sets_busy_state_while_handler_runs():
+    _app()
+
+    observed = []
+
+    view = None
+
+    def refresh():
+        observed.append(
+            view._library_refresh_in_progress
+        )
+
+        return []
+
+    view = GalleryView(
+        [],
+        refresh_handler=refresh,
+    )
+
+    view.reload_library()
+
+    assert observed == [True]
+
+    assert (
+        view._library_refresh_in_progress
+        is False
+    )
+
+
+def test_manual_refresh_reentrant_call_is_ignored():
+    _app()
+
+    calls = []
+
+    view = None
+
+    def refresh():
+        calls.append("outer")
+
+        view.reload_library()
+
+        return []
+
+    view = GalleryView(
+        [],
+        refresh_handler=refresh,
+    )
+
+    view.reload_library()
+
+    assert calls == ["outer"]
+
+    assert (
+        view._library_refresh_in_progress
+        is False
+    )
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+
+def test_manual_refresh_handler_failure_clears_busy_state():
+    _app()
+
+    def fail():
+        raise RuntimeError(
+            "simulated refresh failure"
+        )
+
+    view = GalleryView(
+        [],
+        refresh_handler=fail,
+    )
+
+    view.reload_library()
+
+    assert (
+        view._library_refresh_in_progress
+        is False
+    )
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+
+def test_manual_refresh_completion_failure_clears_busy_state():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes"
+    )
+
+    def completed(_games):
+        raise RuntimeError(
+            "dependent refresh failure"
+        )
+
+    view = GalleryView(
+        [game],
+        refresh_handler=lambda: [game],
+        refresh_completed_handler=completed,
+    )
+
+    view.reload_library()
+
+    assert (
+        view._library_refresh_in_progress
+        is False
+    )
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view.toolbar.refresh_status.text()
+        == "Refresh partially completed."
+    )
+
+
+def test_manual_refresh_can_run_again_after_success():
+    _app()
+
+    calls = []
+
+    def refresh():
+        calls.append("refresh")
+        return []
+
+    view = GalleryView(
+        [],
+        refresh_handler=refresh,
+    )
+
+    view.reload_library()
+    view.reload_library()
+
+    assert calls == [
+        "refresh",
+        "refresh",
+    ]
+
+
+def test_manual_refresh_can_retry_after_handler_failure():
+    _app()
+
+    calls = []
+
+    def refresh():
+        calls.append("refresh")
+
+        if len(calls) == 1:
+            raise RuntimeError(
+                "first refresh failed"
+            )
+
+        return []
+
+    view = GalleryView(
+        [],
+        refresh_handler=refresh,
+    )
+
+    view.reload_library()
+
+    assert (
+        view.toolbar.refresh_status.text()
+        == "Refresh failed."
+    )
+
+    view.reload_library()
+
+    assert calls == [
+        "refresh",
+        "refresh",
+    ]
+
+    assert (
+        view.toolbar.refresh_status.text()
+        == "Library refreshed."
+    )
+
+    assert (
+        view._library_refresh_in_progress
+        is False
+    )
+
+
+def test_manual_refresh_can_retry_after_completion_failure():
+    _app()
+
+    completion_calls = []
+
+    def completed(_games):
+        completion_calls.append(
+            "completed"
+        )
+
+        if len(completion_calls) == 1:
+            raise RuntimeError(
+                "first completion failed"
+            )
+
+    view = GalleryView(
+        [],
+        refresh_handler=lambda: [],
+        refresh_completed_handler=completed,
+    )
+
+    view.reload_library()
+
+    assert (
+        view.toolbar.refresh_status.text()
+        == "Refresh partially completed."
+    )
+
+    view.reload_library()
+
+    assert completion_calls == [
+        "completed",
+        "completed",
+    ]
+
+    assert (
+        view.toolbar.refresh_status.text()
+        == "Library refreshed."
+    )
+
+    assert (
+        view._library_refresh_in_progress
+        is False
+    )
+
+
+def test_manual_refresh_reentrancy_guard_is_non_modal():
+    text = Path(
+        "ui/library/gallery.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = text.index(
+        "    def reload_library(self):"
+    )
+
+    end = text.index(
+        "    def bulk_import(self):",
+        start,
+    )
+
+    method = text[start:end]
+
+    assert (
+        "if self._library_refresh_in_progress:"
+        in method
+    )
+
+    assert "QMessageBox" not in method
+    assert ".warning(" not in method
+    assert ".critical(" not in method

@@ -71,6 +71,8 @@ class GalleryView(QWidget):
             refresh_completed_handler
         )
 
+        self._library_refresh_in_progress = False
+
         self.bulk_import_handler = (
             bulk_import_handler
         )
@@ -280,6 +282,11 @@ class GalleryView(QWidget):
         if self.refresh_handler is None:
             return
 
+        if self._library_refresh_in_progress:
+            return
+
+        self._library_refresh_in_progress = True
+
         self.toolbar.refresh_button.setEnabled(
             False
         )
@@ -343,6 +350,8 @@ class GalleryView(QWidget):
             self.toolbar.setToolTip(
                 message
             )
+
+            self._library_refresh_in_progress = False
 
             self.toolbar.refresh_button.setEnabled(
                 True
@@ -428,6 +437,8 @@ class GalleryView(QWidget):
                     message
                 )
 
+                self._library_refresh_in_progress = False
+
                 self.toolbar.refresh_button.setEnabled(
                     True
                 )
@@ -445,6 +456,8 @@ class GalleryView(QWidget):
         self.toolbar.setToolTip(
             "Library refreshed."
         )
+
+        self._library_refresh_in_progress = False
 
         self.toolbar.refresh_button.setEnabled(
             True
