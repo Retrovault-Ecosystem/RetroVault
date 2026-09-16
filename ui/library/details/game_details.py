@@ -273,7 +273,17 @@ class GameDetails(QWidget):
     ):
 
 
+        selection_changed = (
+            self.current_game is not game
+        )
+
         self.current_game = game
+
+        if selection_changed:
+            self._launch_session_active = False
+            self._set_launch_status(
+                "Ready when you are."
+            )
 
         self._refresh_favorite_button()
         self._refresh_collection_button()

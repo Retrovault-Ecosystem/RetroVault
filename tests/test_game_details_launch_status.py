@@ -349,3 +349,127 @@ def test_clear_game_cancels_local_session_tracking(
     assert details.launch_status.text() == (
         "Ready when you are."
     )
+
+
+def test_selecting_different_game_resets_launch_status(
+    app,
+):
+    details = GameDetails()
+
+    first = make_game()
+
+    second = Game(
+        name="Super Mario Bros.",
+        platform="NES",
+        year=1985,
+        genre="Platformer",
+        core="fceumm",
+        rom="/roms/Super Mario Bros. (U).nes",
+        rvdb_platform_id="platform.nintendo.nes",
+    )
+
+    details.show_game(
+        first
+    )
+
+    details._launch_session_active = True
+    details._set_launch_status(
+        'Running "Duck Tales 2".'
+    )
+
+    details.show_game(
+        second
+    )
+
+    assert details.current_game is second
+    assert details._launch_session_active is False
+    assert details.launch_status.text() == (
+        "Ready when you are."
+    )
+
+
+def test_refreshing_same_game_preserves_running_status(
+    app,
+):
+    details = GameDetails()
+    game = make_game()
+
+    details.show_game(
+        game
+    )
+
+    details._launch_session_active = True
+    details._set_launch_status(
+        'Running "Duck Tales 2".'
+    )
+
+    details.show_game(
+        game
+    )
+
+    assert details.current_game is game
+    assert details._launch_session_active is True
+    assert details.launch_status.text() == (
+        'Running "Duck Tales 2".'
+    )
+
+
+def test_refreshing_same_game_preserves_failure_status(
+    app,
+):
+    details = GameDetails()
+    game = make_game()
+
+    details.show_game(
+        game
+    )
+
+    details._set_launch_status(
+        "Unable to launch: test failure."
+    )
+
+    details.show_game(
+        game
+    )
+
+    assert details.current_game is game
+    assert details.launch_status.text() == (
+        "Unable to launch: test failure."
+    )
+
+
+def test_switching_after_completed_session_returns_ready(
+    app,
+):
+    details = GameDetails()
+    first = make_game()
+
+    second = Game(
+        name="Metroid",
+        platform="NES",
+        year=1986,
+        genre="Action",
+        core="fceumm",
+        rom="/roms/Metroid (U).nes",
+        rvdb_platform_id="platform.nintendo.nes",
+    )
+
+    details.show_game(
+        first
+    )
+
+    details._launch_session_active = True
+    details.process_exited()
+
+    assert details.launch_status.text() == (
+        "Game session ended."
+    )
+
+    details.show_game(
+        second
+    )
+
+    assert details.launch_status.text() == (
+        "Ready when you are."
+    )
+    assert details._launch_session_active is False
