@@ -201,11 +201,12 @@ class ReadyCheckButton(QPushButton):
 
 
 class SettingsPage(QWidget):
+    """View and manage RetroVault\'s effective runtime configuration."""
+
 
     artwork_directory_saved = pyqtSignal(str)
     overlay_directory_saved = pyqtSignal(str)
 
-    """Read-only view of RetroVault's effective runtime configuration."""
 
     READY = "Ready"
     MISSING = "Missing"

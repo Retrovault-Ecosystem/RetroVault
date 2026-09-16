@@ -4743,4 +4743,21 @@ def test_settings_page_does_not_claim_to_be_read_only(
         in visible_text
     )
 
+    assert (
+        "Read-only"
+        not in (
+            SettingsPage.__doc__
+            or ""
+        )
+    )
+
+    assert (
+        "View and manage RetroVault's effective "
+        "runtime configuration."
+        in (
+            SettingsPage.__doc__
+            or ""
+        )
+    )
+
     assert not runtime.exists()
