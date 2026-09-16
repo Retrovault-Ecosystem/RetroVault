@@ -668,3 +668,171 @@ def test_manual_refresh_failure_feedback_is_non_modal():
     assert "QMessageBox" not in method
     assert ".warning(" not in method
     assert ".critical(" not in method
+
+
+def test_manual_refresh_completion_runs_before_success_feedback():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes"
+    )
+
+    observed = []
+
+    view = None
+
+    def completed(_games):
+        observed.append(
+            view.toolbar.refresh_button.isEnabled()
+        )
+        observed.append(
+            view.toolbar.refresh_status.text()
+        )
+
+    view = GalleryView(
+        [game],
+        refresh_handler=lambda: [game],
+        refresh_completed_handler=completed,
+    )
+
+    view.reload_library()
+
+    assert observed == [
+        False,
+        "Refreshing...",
+    ]
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view.toolbar.refresh_status.text()
+        == "Library refreshed."
+    )
+
+
+def test_manual_refresh_contains_completion_callback_failure():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes"
+    )
+
+    def completed(_games):
+        raise RuntimeError(
+            "dependent view refresh failed"
+        )
+
+    view = GalleryView(
+        [game],
+        refresh_handler=lambda: [game],
+        refresh_completed_handler=completed,
+    )
+
+    view.reload_library()
+
+    assert view.all_games == [game]
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view.toolbar.refresh_status.text()
+        == "Refresh partially completed."
+    )
+
+    assert (
+        "dependent view refresh failed"
+        in view.toolbar.refresh_status.toolTip()
+    )
+
+
+def test_manual_refresh_completion_failure_is_non_modal():
+    text = Path(
+        "ui/library/gallery.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = text.index(
+        "    def reload_library(self):"
+    )
+
+    end = text.index(
+        "    def bulk_import(self):",
+        start,
+    )
+
+    method = text[start:end]
+
+    assert (
+        '"Refresh partially completed."'
+        in method
+    )
+
+    assert (
+        '"dependent views could not "'
+        in method
+    )
+
+    assert "QMessageBox" not in method
+    assert ".warning(" not in method
+    assert ".critical(" not in method
+
+
+def test_manual_refresh_empty_library_reenables_control():
+    _app()
+
+    view = GalleryView(
+        [],
+        refresh_handler=lambda: [],
+    )
+
+    view.reload_library()
+
+    assert view.all_games == []
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view.toolbar.refresh_status.text()
+        == "Library refreshed."
+    )
+
+
+def test_manual_refresh_removed_selection_keeps_details_empty():
+    _app()
+
+    removed = RefreshGame(
+        "/roms/removed.nes"
+    )
+
+    view = GalleryView(
+        [removed],
+        refresh_handler=lambda: [],
+    )
+
+    view.details.show_game(
+        removed
+    )
+
+    view.reload_library()
+
+    assert view.details.current_game is None
+
+    assert (
+        view.details.title.text()
+        == "Select a game"
+    )
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )

@@ -397,6 +397,43 @@ class GalleryView(QWidget):
         elif selected_game is not None:
             self.details.clear_game()
 
+        if (
+            self.refresh_completed_handler
+            is not None
+        ):
+            try:
+                self.refresh_completed_handler(
+                    games
+                )
+            except (
+                OSError,
+                RuntimeError,
+                ValueError,
+            ) as exc:
+                message = (
+                    "Library refreshed, but "
+                    "dependent views could not "
+                    f"refresh: {exc}"
+                )
+
+                self.toolbar.refresh_status.setText(
+                    "Refresh partially completed."
+                )
+
+                self.toolbar.refresh_status.setToolTip(
+                    message
+                )
+
+                self.toolbar.setToolTip(
+                    message
+                )
+
+                self.toolbar.refresh_button.setEnabled(
+                    True
+                )
+
+                return
+
         self.toolbar.refresh_status.setText(
             "Library refreshed."
         )
@@ -412,14 +449,6 @@ class GalleryView(QWidget):
         self.toolbar.refresh_button.setEnabled(
             True
         )
-
-        if (
-            self.refresh_completed_handler
-            is not None
-        ):
-            self.refresh_completed_handler(
-                games
-            )
 
 
     def bulk_import(self):
