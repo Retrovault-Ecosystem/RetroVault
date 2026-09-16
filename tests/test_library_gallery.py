@@ -2156,3 +2156,107 @@ def test_show_platform_normal_access_clears_existing_favorites_filter():
         view.toolbar.favorites_only.isChecked()
         is False
     )
+
+
+def test_show_platform_can_open_only_platform_recent_games():
+    first = FakeGame(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+        rom="/roms/adventure.nes",
+    )
+    first.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    second = FakeGame(
+        name="Mega Man 2",
+        platform="Nintendo Entertainment System",
+        rom="/roms/mega-man-2.nes",
+    )
+    second.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    other_system = FakeGame(
+        name="Chrono Trigger",
+        platform="Super Nintendo",
+        rom="/roms/chrono-trigger.sfc",
+    )
+    other_system.rvdb_platform_id = (
+        "platform.nintendo.snes"
+    )
+
+    view = GalleryView(
+        [
+            first,
+            second,
+            other_system,
+        ],
+        recent_provider=lambda: [
+            other_system.rom,
+            second.rom,
+        ],
+    )
+
+    assert (
+        view.show_platform(
+            "platform.nintendo.nes",
+            recent_only=True,
+        )
+        is True
+    )
+
+    assert (
+        view.toolbar.system_filter.currentText()
+        == "Nintendo Entertainment System"
+    )
+
+    assert (
+        view.toolbar.recent_only.isChecked()
+        is True
+    )
+
+    assert (
+        view.toolbar.favorites_only.isChecked()
+        is False
+    )
+
+    assert _visible_game_names(
+        view
+    ) == [
+        "Mega Man 2"
+    ]
+
+
+def test_show_platform_normal_access_clears_existing_recent_filter():
+    game = FakeGame(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+        rom="/roms/adventure.nes",
+    )
+    game.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    view = GalleryView(
+        [game],
+        recent_provider=lambda: [
+            game.rom
+        ],
+    )
+
+    view.toolbar.recent_only.setChecked(
+        True
+    )
+
+    assert (
+        view.show_platform(
+            "platform.nintendo.nes"
+        )
+        is True
+    )
+
+    assert (
+        view.toolbar.recent_only.isChecked()
+        is False
+    )

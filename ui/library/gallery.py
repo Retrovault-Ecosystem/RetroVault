@@ -323,6 +323,7 @@ class GalleryView(QWidget):
         platform_id: str,
         *,
         favorites_only: bool = False,
+        recent_only: bool = False,
     ) -> bool:
         platform_names = sorted(
             {
@@ -363,11 +364,11 @@ class GalleryView(QWidget):
             return False
 
         self.toolbar.search.clear()
-        self.toolbar.recent_only.setChecked(
-            False
-        )
         self.toolbar.favorites_only.setChecked(
             favorites_only
+        )
+        self.toolbar.recent_only.setChecked(
+            recent_only
         )
 
         self.toolbar.system_filter.setCurrentIndex(

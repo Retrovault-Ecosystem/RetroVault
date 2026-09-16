@@ -871,3 +871,66 @@ def test_systems_page_favorites_action_disabled_without_favorites(
     page.view_favorites_button.click()
 
     assert requested == []
+
+
+def test_systems_page_recent_action_emits_selected_platform(
+    app,
+    service,
+):
+    from types import SimpleNamespace
+
+    games = [
+        SimpleNamespace(
+            rvdb_platform_id=(
+                "platform.test.alpha"
+            ),
+            favorite=False,
+        ),
+    ]
+
+    page = SystemsPage(
+        service,
+        games_provider=lambda: games,
+    )
+
+    requested = []
+
+    page.library_recent_requested.connect(
+        requested.append
+    )
+
+    assert (
+        page.view_recent_button.isEnabled()
+        is True
+    )
+
+    page.view_recent_button.click()
+
+    assert requested == [
+        "platform.test.alpha"
+    ]
+
+
+def test_systems_page_recent_action_disabled_without_local_games(
+    app,
+    service,
+):
+    page = SystemsPage(
+        service,
+        games_provider=lambda: [],
+    )
+
+    requested = []
+
+    page.library_recent_requested.connect(
+        requested.append
+    )
+
+    assert (
+        page.view_recent_button.isEnabled()
+        is False
+    )
+
+    page.view_recent_button.click()
+
+    assert requested == []

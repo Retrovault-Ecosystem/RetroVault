@@ -249,6 +249,25 @@ class MainWindow(QMainWindow):
             show_system_favorites
         )
 
+        def show_system_recent(
+            platform_id: str,
+        ) -> None:
+            library_page.set_games(
+                controller.get_games()
+            )
+
+            if library_page.show_platform(
+                platform_id,
+                recent_only=True,
+            ):
+                self.pages.show_page(
+                    "Library"
+                )
+
+        systems_page.library_recent_requested.connect(
+            show_system_recent
+        )
+
         self.pages.add_page(
             "Playlists",
             PlaylistsPage(
