@@ -4761,3 +4761,211 @@ def test_settings_page_does_not_claim_to_be_read_only(
     )
 
     assert not runtime.exists()
+
+
+def test_settings_save_preserves_additional_library_sources(
+    tmp_path,
+):
+    _app()
+
+    retroarch = (
+        tmp_path
+        / "retroarch"
+    )
+    cores = (
+        tmp_path
+        / "cores"
+    )
+    library = (
+        tmp_path
+        / "roms"
+    )
+    bulk_library = (
+        tmp_path
+        / "bulk-roms"
+    )
+    replacement_library = (
+        tmp_path
+        / "replacement-roms"
+    )
+    overlays = (
+        tmp_path
+        / "overlays"
+    )
+    shaders = (
+        tmp_path
+        / "shaders"
+    )
+    artwork = (
+        tmp_path
+        / "artwork"
+    )
+
+    _make_valid_retroarch(
+        retroarch
+    )
+    _make_valid_core_directory(
+        cores
+    )
+
+    for directory in (
+        library,
+        bulk_library,
+        replacement_library,
+        overlays,
+        shaders,
+        artwork,
+    ):
+        directory.mkdir()
+
+    defaults = _write_defaults(
+        tmp_path,
+        retroarch=retroarch,
+        cores=cores,
+        library=library,
+        overlays=overlays,
+        shaders=shaders,
+        artwork=artwork,
+    )
+
+    runtime = (
+        tmp_path
+        / "runtime.json"
+    )
+
+    runtime.write_text(
+        json.dumps(
+            {
+                "library": {
+                    "sources": [
+                        {
+                            "id": "test",
+                            "name": "Test Library",
+                            "enabled": True,
+                            "type": "local",
+                            "path": str(
+                                library
+                            ),
+                        },
+                        {
+                            "id": "bulk-import",
+                            "name": "Bulk Import",
+                            "enabled": True,
+                            "type": "local",
+                            "path": str(
+                                bulk_library
+                            ),
+                        },
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    from config import ConfigWriter
+
+    loader = ConfigLoader(
+        default_file=defaults,
+        runtime_file=runtime,
+    )
+
+    writer = ConfigWriter(
+        runtime_file=runtime
+    )
+
+    page = SettingsPage(
+        config_loader=loader,
+        config_writer=writer,
+    )
+
+    assert (
+        page.library_path_edit.text()
+        == str(library)
+    )
+
+    assert (
+        page.library_sources_value.text()
+        == (
+            f"Test Library — {library}\n"
+            f"Bulk Import — {bulk_library}"
+        )
+    )
+
+    page.library_path_edit.setText(
+        str(
+            replacement_library
+        )
+    )
+
+    page.save_runtime_settings()
+
+    assert (
+        page.save_status.text()
+        == "Settings saved"
+    )
+
+    saved = json.loads(
+        runtime.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    sources = (
+        saved[
+            "library"
+        ][
+            "sources"
+        ]
+    )
+
+    assert len(sources) == 2
+
+    assert (
+        sources[0]
+        == {
+            "id": "test",
+            "name": "Test Library",
+            "enabled": True,
+            "type": "local",
+            "path": str(
+                replacement_library
+            ),
+        }
+    )
+
+    assert (
+        sources[1]
+        == {
+            "id": "bulk-import",
+            "name": "Bulk Import",
+            "enabled": True,
+            "type": "local",
+            "path": str(
+                bulk_library
+            ),
+        }
+    )
+
+    effective = (
+        loader.load()
+    )
+
+    assert (
+        effective[
+            "library"
+        ][
+            "sources"
+        ]
+        == sources
+    )
+
+    assert (
+        page.library_sources_value.text()
+        == (
+            "Test Library — "
+            f"{replacement_library}\n"
+            "Bulk Import — "
+            f"{bulk_library}"
+        )
+    )

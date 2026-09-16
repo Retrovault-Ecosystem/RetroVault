@@ -1723,17 +1723,38 @@ class SettingsPage(QWidget):
             )
         )
 
-        if len(sources) != 1:
+        updated_sources = [
+            dict(source)
+            for source in sources
+        ]
+
+        editable_index = next(
+            (
+                index
+                for index, source in enumerate(
+                    updated_sources
+                )
+                if source.get(
+                    "enabled",
+                    False,
+                )
+            ),
+            (
+                0
+                if updated_sources
+                else None
+            ),
+        )
+
+        if editable_index is None:
             self.save_status.setText(
-                "Exactly one library source is required"
+                "At least one library source is required"
             )
             return
 
-        source = dict(
-            sources[0]
-        )
-
-        source[
+        updated_sources[
+            editable_index
+        ][
             "path"
         ] = library_path
 
@@ -1745,9 +1766,7 @@ class SettingsPage(QWidget):
                 },
             },
             "library": {
-                "sources": [
-                    source,
-                ],
+                "sources": updated_sources,
             },
             "paths": {
                 "artwork": {
