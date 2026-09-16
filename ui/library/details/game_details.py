@@ -529,10 +529,33 @@ Future:
             for member in members
         ]
 
-        labels = [
-            variant.display_name
-            for variant in variants
-        ]
+        labels = []
+        label_counts = {}
+
+        for variant in variants:
+            base_label = variant.display_name
+
+            occurrence = (
+                label_counts.get(
+                    base_label,
+                    0,
+                )
+                + 1
+            )
+
+            label_counts[
+                base_label
+            ] = occurrence
+
+            if occurrence == 1:
+                labels.append(
+                    base_label
+                )
+            else:
+                labels.append(
+                    f"{base_label} "
+                    f"[Variant {occurrence}]"
+                )
 
         selected, accepted = (
             QInputDialog.getItem(

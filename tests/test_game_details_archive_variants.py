@@ -547,3 +547,118 @@ def test_zero_playable_members_preserves_runtime_launch_path(
 
     assert profile.archive_member == ""
     assert profile.rom == "/library/Empty Archive.7z"
+
+
+def test_duplicate_display_labels_remain_individually_selectable(
+    monkeypatch,
+):
+    members = [
+        "set-a/Variant Game (U) [!].nes",
+        "set-b/Variant Game (U) [!].nes",
+    ]
+
+    runtime = Mock()
+    runtime.playable_members.return_value = members
+    runtime.preferred_from_members.return_value = ""
+
+    details = GameDetails(
+        archive_runtime=runtime,
+    )
+
+    dialog = Mock(
+        return_value=(
+            (
+                "Variant Game (U) [!] — "
+                "USA • Verified [Variant 2]"
+            ),
+            True,
+        )
+    )
+
+    monkeypatch.setattr(
+        QInputDialog,
+        "getItem",
+        dialog,
+    )
+
+    selected = details._select_archive_member(
+        "/library/Variant Game.7z"
+    )
+
+    assert selected == members[1]
+
+    args = dialog.call_args.args
+
+    assert args[3] == [
+        (
+            "Variant Game (U) [!] — "
+            "USA • Verified"
+        ),
+        (
+            "Variant Game (U) [!] — "
+            "USA • Verified [Variant 2]"
+        ),
+    ]
+
+    assert len(args[3]) == len(
+        set(args[3])
+    )
+
+
+def test_identical_nonpreferred_labels_receive_unique_suffix(
+    monkeypatch,
+):
+    members = [
+        "preferred/Variant Game (J) [!].nes",
+        "set-a/Variant Game (U) [b1].nes",
+        "set-b/Variant Game (U) [b1].nes",
+    ]
+
+    runtime = Mock()
+    runtime.playable_members.return_value = members
+    runtime.preferred_from_members.return_value = members[0]
+
+    details = GameDetails(
+        archive_runtime=runtime,
+    )
+
+    dialog = Mock(
+        return_value=(
+            (
+                "Variant Game (U) [b1] — "
+                "USA • Bad Dump [Variant 2]"
+            ),
+            True,
+        )
+    )
+
+    monkeypatch.setattr(
+        QInputDialog,
+        "getItem",
+        dialog,
+    )
+
+    selected = details._select_archive_member(
+        "/library/Variant Game.7z"
+    )
+
+    assert selected == members[2]
+
+    labels = dialog.call_args.args[3]
+
+    assert labels == [
+        (
+            "Variant Game (J) [!] — "
+            "Recommended • Japan • Verified"
+        ),
+        (
+            "Variant Game (U) [b1] — "
+            "USA • Bad Dump"
+        ),
+        (
+            "Variant Game (U) [b1] — "
+            "USA • Bad Dump [Variant 2]"
+        ),
+    ]
+
+    assert len(labels) == len(set(labels))
