@@ -417,6 +417,26 @@ class MainWindow(QMainWindow):
 
         settings_page = SettingsPage()
 
+        def library_sources_changed() -> None:
+            games = controller.reload_sources()
+
+            library_page.set_games(
+                games
+            )
+
+            systems_page.refresh_page()
+
+            playlists_page.refresh_collections(
+                select_name=(
+                    playlists_page
+                    .selected_collection()
+                )
+            )
+
+        settings_page.library_sources_changed.connect(
+            library_sources_changed
+        )
+
         settings_page.artwork_directory_saved.connect(
             lambda directory: (
                 library_page.set_games(

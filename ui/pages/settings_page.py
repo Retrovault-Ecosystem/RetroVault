@@ -207,7 +207,10 @@ class ReadyCheckButton(QPushButton):
 
 
 class SettingsPage(QWidget):
+
     """View and manage RetroVault\'s effective runtime configuration."""
+
+    library_sources_changed = pyqtSignal()
 
 
     artwork_directory_saved = pyqtSignal(str)
@@ -1441,6 +1444,8 @@ class SettingsPage(QWidget):
             "Library source renamed"
         )
 
+        self.library_sources_changed.emit()
+
     def _toggle_library_source(self):
         source = (
             self._selected_library_source()
@@ -1492,6 +1497,8 @@ class SettingsPage(QWidget):
             )
         )
 
+        self.library_sources_changed.emit()
+
     def _remove_library_source(self):
         source = (
             self._selected_library_source()
@@ -1528,6 +1535,8 @@ class SettingsPage(QWidget):
         self.save_status.setText(
             "Library source removed"
         )
+
+        self.library_sources_changed.emit()
 
     def _populate(
         self,
