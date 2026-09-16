@@ -27,10 +27,12 @@ class SystemsPage(QWidget):
     def __init__(
         self,
         service: RVDBService | None = None,
+        games_provider=None,
     ):
         super().__init__()
 
         self.service = service
+        self.games_provider = games_provider
 
         self.title_label = QLabel("Systems")
         self.subtitle_label = QLabel(
@@ -69,6 +71,9 @@ class SystemsPage(QWidget):
         self.cores_value = QLabel("—")
         self.emulators_value = QLabel("—")
         self.frontends_value = QLabel("—")
+
+        self.library_games_value = QLabel("—")
+        self.library_favorites_value = QLabel("—")
 
         self.status_label = QLabel()
 
@@ -309,6 +314,65 @@ class SystemsPage(QWidget):
         )
         details_layout.addWidget(
             self.frontends_value
+        )
+
+        details_layout.addSpacing(12)
+        details_layout.addWidget(
+            self._section_label(
+                "Local Library"
+            )
+        )
+
+        library_grid = QGridLayout()
+        library_grid.setHorizontalSpacing(24)
+        library_grid.setVerticalSpacing(10)
+
+        for row, (
+            label_text,
+            value_label,
+        ) in enumerate(
+            (
+                (
+                    "Games",
+                    self.library_games_value,
+                ),
+                (
+                    "Favorites",
+                    self.library_favorites_value,
+                ),
+            )
+        ):
+            label = QLabel(label_text)
+            label.setStyleSheet(
+                """
+                font-weight: 700;
+                color: #b8b8b8;
+                """
+            )
+
+            value_label.setTextInteractionFlags(
+                Qt.TextInteractionFlag.TextSelectableByMouse
+            )
+
+            library_grid.addWidget(
+                label,
+                row,
+                0,
+                Qt.AlignmentFlag.AlignTop,
+            )
+            library_grid.addWidget(
+                value_label,
+                row,
+                1,
+            )
+
+        library_grid.setColumnStretch(
+            1,
+            1,
+        )
+
+        details_layout.addLayout(
+            library_grid
         )
 
         details_layout.addStretch()
@@ -668,9 +732,74 @@ class SystemsPage(QWidget):
             )
         )
 
+        self._show_library_counts(
+            platform.id
+        )
+
         self.status_label.setText(
             "Showing live data from the "
             "local RVDB development bundle."
+        )
+
+    def _show_library_counts(
+        self,
+        platform_id: str,
+    ) -> None:
+        if self.games_provider is None:
+            self.library_games_value.setText(
+                self.EMPTY
+            )
+            self.library_favorites_value.setText(
+                self.EMPTY
+            )
+            return
+
+        try:
+            games = list(
+                self.games_provider()
+            )
+        except Exception:
+            self.library_games_value.setText(
+                self.EMPTY
+            )
+            self.library_favorites_value.setText(
+                self.EMPTY
+            )
+            return
+
+        matching = [
+            game
+            for game in games
+            if str(
+                getattr(
+                    game,
+                    "rvdb_platform_id",
+                    "",
+                )
+                or ""
+            )
+            == platform_id
+        ]
+
+        self.library_games_value.setText(
+            str(
+                len(matching)
+            )
+        )
+
+        self.library_favorites_value.setText(
+            str(
+                sum(
+                    bool(
+                        getattr(
+                            game,
+                            "favorite",
+                            False,
+                        )
+                    )
+                    for game in matching
+                )
+            )
         )
 
     @classmethod
@@ -786,5 +915,7 @@ class SystemsPage(QWidget):
             self.cores_value,
             self.emulators_value,
             self.frontends_value,
+            self.library_games_value,
+            self.library_favorites_value,
         ):
             label.setText("—")

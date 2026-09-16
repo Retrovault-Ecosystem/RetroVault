@@ -203,7 +203,10 @@ class MainWindow(QMainWindow):
         self.pages.add_page(
             "Systems",
             SystemsPage(
-                rvdb_service
+                rvdb_service,
+                games_provider=(
+                    controller.get_games
+                ),
             )
         )
 

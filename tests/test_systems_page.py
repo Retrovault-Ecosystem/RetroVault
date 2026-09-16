@@ -462,3 +462,149 @@ def test_systems_page_real_category_contract(
     }
 
     assert actual == expected
+
+
+def test_systems_page_displays_local_library_counts(
+    app,
+    service,
+):
+    from types import SimpleNamespace
+
+    games = [
+        SimpleNamespace(
+            rvdb_platform_id=(
+                "platform.test.alpha"
+            ),
+            favorite=True,
+        ),
+        SimpleNamespace(
+            rvdb_platform_id=(
+                "platform.test.alpha"
+            ),
+            favorite=False,
+        ),
+        SimpleNamespace(
+            rvdb_platform_id=(
+                "platform.test.beta"
+            ),
+            favorite=True,
+        ),
+    ]
+
+    page = SystemsPage(
+        service,
+        games_provider=lambda: games,
+    )
+
+    assert (
+        page.library_games_value.text()
+        == "2"
+    )
+    assert (
+        page.library_favorites_value.text()
+        == "1"
+    )
+
+    page.system_list.setCurrentRow(
+        1
+    )
+    app.processEvents()
+
+    assert (
+        page.library_games_value.text()
+        == "1"
+    )
+    assert (
+        page.library_favorites_value.text()
+        == "1"
+    )
+
+
+def test_systems_page_displays_zero_for_platform_not_in_library(
+    app,
+    service,
+):
+    page = SystemsPage(
+        service,
+        games_provider=lambda: [],
+    )
+
+    assert (
+        page.library_games_value.text()
+        == "0"
+    )
+    assert (
+        page.library_favorites_value.text()
+        == "0"
+    )
+
+
+def test_systems_page_library_counts_require_canonical_platform_identity(
+    app,
+    service,
+):
+    from types import SimpleNamespace
+
+    games = [
+        SimpleNamespace(
+            platform="Alpha System",
+            rvdb_platform_id="",
+            favorite=True,
+        ),
+    ]
+
+    page = SystemsPage(
+        service,
+        games_provider=lambda: games,
+    )
+
+    assert (
+        page.library_games_value.text()
+        == "0"
+    )
+    assert (
+        page.library_favorites_value.text()
+        == "0"
+    )
+
+
+def test_systems_page_without_library_provider_is_safe(
+    app,
+    service,
+):
+    page = SystemsPage(
+        service
+    )
+
+    assert (
+        page.library_games_value.text()
+        == SystemsPage.EMPTY
+    )
+    assert (
+        page.library_favorites_value.text()
+        == SystemsPage.EMPTY
+    )
+
+
+def test_systems_page_library_provider_failure_is_safe(
+    app,
+    service,
+):
+    def fail():
+        raise RuntimeError(
+            "library unavailable"
+        )
+
+    page = SystemsPage(
+        service,
+        games_provider=fail,
+    )
+
+    assert (
+        page.library_games_value.text()
+        == SystemsPage.EMPTY
+    )
+    assert (
+        page.library_favorites_value.text()
+        == SystemsPage.EMPTY
+    )
