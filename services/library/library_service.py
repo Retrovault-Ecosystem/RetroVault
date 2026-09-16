@@ -109,6 +109,7 @@ class LibraryService:
             )
 
         previous_sources = self.sources
+        previous_games = self.games
 
         self.sources = refreshed_sources
 
@@ -116,6 +117,7 @@ class LibraryService:
             return self.load()
         except Exception:
             self.sources = previous_sources
+            self.games = previous_games
             raise
 
 

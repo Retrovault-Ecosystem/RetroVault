@@ -163,3 +163,129 @@ def test_controller_exposes_library_source_reload_boundary():
 
     assert result == ["reloaded"]
     assert controller.library.calls == 1
+
+
+def test_reload_sources_restores_previous_games_when_state_apply_fails():
+    service = make_service()
+
+    original_games = [
+        object(),
+        object(),
+    ]
+
+    service.games = original_games
+
+    class Game:
+        def __init__(self):
+            self.artwork = ""
+
+    class SuccessfulBuilder:
+        def build(self, sources):
+            list(sources)
+            return [
+                Game(),
+            ]
+
+    class FailingState:
+        def apply(self, games):
+            raise RuntimeError(
+                "simulated state failure"
+            )
+
+    service.builder = SuccessfulBuilder()
+    service.state = FailingState()
+
+    try:
+        service.reload_sources()
+    except RuntimeError as exc:
+        assert str(exc) == (
+            "simulated state failure"
+        )
+    else:
+        raise AssertionError(
+            "Expected state failure."
+        )
+
+    assert service.games is original_games
+
+
+def test_reload_sources_restores_previous_games_when_artwork_fails():
+    service = make_service()
+
+    original_games = [
+        object(),
+    ]
+
+    service.games = original_games
+
+    class Game:
+        def __init__(self):
+            self.artwork = ""
+
+    class SuccessfulBuilder:
+        def build(self, sources):
+            list(sources)
+            return [
+                Game(),
+            ]
+
+    class FailingArtwork:
+        def get_artwork(self, game):
+            raise RuntimeError(
+                "simulated artwork failure"
+            )
+
+    service.builder = SuccessfulBuilder()
+    service.artwork = FailingArtwork()
+
+    try:
+        service.reload_sources()
+    except RuntimeError as exc:
+        assert str(exc) == (
+            "simulated artwork failure"
+        )
+    else:
+        raise AssertionError(
+            "Expected artwork failure."
+        )
+
+    assert service.games is original_games
+
+
+def test_reload_failure_restores_sources_and_games_as_one_live_snapshot():
+    service = make_service()
+
+    original_sources = service.sources
+    original_games = [
+        object(),
+    ]
+
+    service.games = original_games
+
+    class FailingBuilder:
+        def build(self, sources):
+            list(sources)
+
+            service.games = [
+                object(),
+            ]
+
+            raise RuntimeError(
+                "simulated partial reload"
+            )
+
+    service.builder = FailingBuilder()
+
+    try:
+        service.reload_sources()
+    except RuntimeError as exc:
+        assert str(exc) == (
+            "simulated partial reload"
+        )
+    else:
+        raise AssertionError(
+            "Expected partial reload failure."
+        )
+
+    assert service.sources is original_sources
+    assert service.games is original_games
