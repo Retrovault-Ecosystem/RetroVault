@@ -234,3 +234,82 @@ def test_missing_rvdb_entity_preserves_fallback_details(
     assert "System: Fallback Platform" in text
     assert "RVDB Platform:" not in text
     assert "RVDB ID:" not in text
+
+
+def test_game_profile_has_no_future_feature_placeholder(
+    app,
+):
+    details = GameDetails()
+
+    game = SimpleNamespace(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+        rom="/library/Adventure Island.nes",
+        core="fceumm",
+        artwork="",
+        favorite=False,
+    )
+
+    details.show_game(game)
+
+    text = details.description.toPlainText()
+
+    assert "Adventure Island" in text
+    assert "RetroVault Game Profile" in text
+    assert "Future:" not in text
+    assert "• ROM hacks" not in text
+    assert "• Overlays" not in text
+    assert "• Shaders" not in text
+    assert "• Saves" not in text
+    assert "• Config profiles" not in text
+
+
+def test_game_profile_displays_available_description(
+    app,
+):
+    details = GameDetails()
+
+    game = SimpleNamespace(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+        rom="/library/Adventure Island.nes",
+        core="fceumm",
+        artwork="",
+        favorite=False,
+        description=(
+            "A tropical platform adventure."
+        ),
+    )
+
+    details.show_game(game)
+
+    text = details.description.toPlainText()
+
+    assert "RetroVault Game Profile" in text
+    assert (
+        "A tropical platform adventure."
+        in text
+    )
+
+
+def test_game_profile_ignores_blank_description(
+    app,
+):
+    details = GameDetails()
+
+    game = SimpleNamespace(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+        rom="/library/Adventure Island.nes",
+        core="fceumm",
+        artwork="",
+        favorite=False,
+        description="   ",
+    )
+
+    details.show_game(game)
+
+    assert details.description.toPlainText() == (
+        "Adventure Island\n\n"
+        "RetroVault Game Profile"
+    )

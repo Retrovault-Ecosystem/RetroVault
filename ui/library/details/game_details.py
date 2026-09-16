@@ -343,22 +343,36 @@ class GameDetails(QWidget):
 
 
 
+        profile_lines = [
+            game.name,
+            "",
+            "RetroVault Game Profile",
+        ]
+
+        description = getattr(
+            game,
+            "description",
+            "",
+        )
+
+        if (
+            isinstance(
+                description,
+                str,
+            )
+            and description.strip()
+        ):
+            profile_lines.extend(
+                [
+                    "",
+                    description.strip(),
+                ]
+            )
+
         self.description.setText(
-
-            f"""
-{game.name}
-
-RetroVault Profile
-
-Future:
-
-• ROM hacks
-• Overlays
-• Shaders
-• Saves
-• Config profiles
-"""
-
+            "\n".join(
+                profile_lines
+            )
         )
 
 
