@@ -662,3 +662,147 @@ def test_identical_nonpreferred_labels_receive_unique_suffix(
     ]
 
     assert len(labels) == len(set(labels))
+
+
+def test_unknown_selector_display_value_is_rejected(
+    monkeypatch,
+):
+    members = [
+        "Variant Game (J).nes",
+        "Variant Game (U) [!].nes",
+    ]
+
+    runtime = Mock()
+    runtime.playable_members.return_value = members
+    runtime.preferred_from_members.return_value = members[1]
+
+    details = GameDetails(
+        archive_runtime=runtime,
+    )
+
+    monkeypatch.setattr(
+        QInputDialog,
+        "getItem",
+        Mock(
+            return_value=(
+                "Forged Variant Label",
+                True,
+            )
+        ),
+    )
+
+    try:
+        details._select_archive_member(
+            "/library/Variant Game.7z"
+        )
+    except ValueError as exc:
+        assert (
+            "unknown display value"
+            in str(exc)
+        )
+    else:
+        raise AssertionError(
+            "Unknown selector value was accepted."
+        )
+
+
+def test_unknown_selector_value_aborts_launch_before_lifecycle(
+    monkeypatch,
+):
+    members = [
+        "Variant Game (J).nes",
+        "Variant Game (U) [!].nes",
+    ]
+
+    runtime = Mock()
+    runtime.playable_members.return_value = members
+    runtime.preferred_from_members.return_value = members[1]
+
+    lifecycle = Mock()
+    launcher = Mock()
+
+    details = GameDetails(
+        archive_runtime=runtime,
+        process_lifecycle=lifecycle,
+        launcher=launcher,
+    )
+
+    details.current_game = Mock(
+        rom="/library/Variant Game.7z",
+        rvdb_platform_id="platform.nintendo.nes",
+    )
+
+    monkeypatch.setattr(
+        QInputDialog,
+        "getItem",
+        Mock(
+            return_value=(
+                "Forged Variant Label",
+                True,
+            )
+        ),
+    )
+
+    details.launch_game()
+
+    lifecycle.launch_requested.assert_not_called()
+    launcher.launch.assert_not_called()
+
+
+def test_duplicate_label_suffix_maps_to_exact_raw_member(
+    monkeypatch,
+):
+    members = [
+        "first/Variant Game (U) [b1].nes",
+        "second/Variant Game (U) [b1].nes",
+        "third/Variant Game (U) [b1].nes",
+    ]
+
+    runtime = Mock()
+    runtime.playable_members.return_value = members
+    runtime.preferred_from_members.return_value = ""
+
+    details = GameDetails(
+        archive_runtime=runtime,
+    )
+
+    dialog = Mock(
+        return_value=(
+            (
+                "Variant Game (U) [b1] — "
+                "USA • Bad Dump [Variant 3]"
+            ),
+            True,
+        )
+    )
+
+    monkeypatch.setattr(
+        QInputDialog,
+        "getItem",
+        dialog,
+    )
+
+    selected = details._select_archive_member(
+        "/library/Variant Game.7z"
+    )
+
+    assert selected == members[2]
+
+    labels = dialog.call_args.args[3]
+
+    assert labels == [
+        (
+            "Variant Game (U) [b1] — "
+            "USA • Bad Dump"
+        ),
+        (
+            "Variant Game (U) [b1] — "
+            "USA • Bad Dump [Variant 2]"
+        ),
+        (
+            "Variant Game (U) [b1] — "
+            "USA • Bad Dump [Variant 3]"
+        ),
+    ]
+
+    assert len(labels) == len(set(labels))

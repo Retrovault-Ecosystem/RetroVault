@@ -571,9 +571,25 @@ Future:
         if not accepted:
             return None
 
-        selected_index = labels.index(
-            selected
-        )
+        try:
+            selected_index = labels.index(
+                selected
+            )
+        except ValueError:
+            raise ValueError(
+                "Archive variant selector returned "
+                "an unknown display value."
+            ) from None
+
+        if not (
+            0
+            <= selected_index
+            < len(variants)
+        ):
+            raise ValueError(
+                "Archive variant selector returned "
+                "an invalid member index."
+            )
 
         return variants[
             selected_index
