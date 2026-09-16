@@ -317,3 +317,39 @@ def test_runtime_config_rejects_duplicate_runtime_key(
         match="Duplicate overlay runtime setting",
     ):
         runtime.create(str(overlay))
+
+
+def test_runtime_descriptor_accepts_production_viewport_controls(
+    tmp_path,
+):
+    overlay = tmp_path / "RetroVault_SNES_Classic.cfg"
+    overlay.write_text(
+        'overlays = "1"\n',
+        encoding="utf-8",
+    )
+
+    runtime = overlay.with_suffix(".runtime.cfg")
+    runtime.write_text(
+        'aspect_ratio_index = "23"\n'
+        'video_force_aspect = "true"\n'
+        'video_scale_integer = "false"\n'
+        'custom_viewport_width = "1044"\n'
+        'custom_viewport_height = "783"\n'
+        'video_viewport_bias_x = "0.500000"\n'
+        'video_viewport_bias_y = "0.239057239"\n',
+        encoding="utf-8",
+    )
+
+    payload = OverlayRuntimeConfig._runtime_descriptor_payload(
+        overlay
+    )
+
+    assert payload == (
+        'aspect_ratio_index = "23"\n'
+        'video_force_aspect = "true"\n'
+        'video_scale_integer = "false"\n'
+        'video_viewport_bias_x = "0.500000"\n'
+        'video_viewport_bias_y = "0.239057239"\n'
+        'custom_viewport_width = "1044"\n'
+        'custom_viewport_height = "783"\n'
+    )

@@ -42,6 +42,9 @@ class OverlayRuntimeConfig:
     RUNTIME_KEYS = (
         "aspect_ratio_index",
         "video_force_aspect",
+        "video_scale_integer",
+        "video_viewport_bias_x",
+        "video_viewport_bias_y",
         "custom_viewport_x",
         "custom_viewport_y",
         "custom_viewport_width",
