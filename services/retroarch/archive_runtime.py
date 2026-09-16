@@ -84,7 +84,8 @@ class ArchiveRuntime:
             member
             for member in members
             if (
-                Path(member)
+                self._member_is_safe(member)
+                and Path(member)
                 .suffix
                 .lower()
                 in self.PLAYABLE_EXTENSIONS
@@ -141,7 +142,8 @@ class ArchiveRuntime:
             member
             for member in members
             if (
-                Path(member)
+                self._member_is_safe(member)
+                and Path(member)
                 .suffix
                 .lower()
                 in self.PLAYABLE_EXTENSIONS
@@ -264,6 +266,47 @@ class ArchiveRuntime:
             for member in members
             if member != source_text
         ]
+
+    @staticmethod
+    def _member_is_safe(member):
+        """
+        Accept only relative archive-member paths that remain beneath
+        the extraction destination.
+
+        Archive listings are untrusted input. Reject parent traversal,
+        absolute POSIX paths, Windows drive paths, UNC paths, and their
+        backslash-separated equivalents before a member can participate
+        in selection or extraction.
+        """
+        if not isinstance(member, str):
+            return False
+
+        value = member.strip()
+
+        if not value:
+            return False
+
+        normalized = value.replace("\\", "/")
+
+        if normalized.startswith("/"):
+            return False
+
+        if normalized.startswith("//"):
+            return False
+
+        if (
+            len(normalized) >= 2
+            and normalized[0].isalpha()
+            and normalized[1] == ":"
+        ):
+            return False
+
+        parts = normalized.split("/")
+
+        if any(part == ".." for part in parts):
+            return False
+
+        return True
 
     def _select_member(
         self,

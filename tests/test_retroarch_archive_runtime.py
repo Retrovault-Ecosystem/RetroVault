@@ -3,6 +3,7 @@ from pathlib import Path
 
 import pytest
 
+from unittest.mock import patch
 from services.retroarch.archive_runtime import ArchiveRuntime
 
 
@@ -469,4 +470,133 @@ def test_preferred_member_exposes_default_variant(
             archive
         )
         == "Variant Game (U) [!].nes"
+    )
+
+
+def test_playable_members_rejects_unsafe_archive_paths(
+    tmp_path,
+):
+    archive = tmp_path / "Unsafe Members.7z"
+    archive.write_bytes(b"archive")
+
+    runtime = ArchiveRuntime(
+        cache_root=tmp_path / "cache",
+        executable="7z",
+    )
+
+    members = [
+        "Safe Game (U) [!].nes",
+        "nested/Safe Game (J).nes",
+        "../escape.nes",
+        "nested/../../escape.nes",
+        "/tmp/absolute.nes",
+        r"C:\temp\drive.nes",
+        r"\\server\share\unc.nes",
+        r"..\backslash-escape.nes",
+    ]
+
+    with patch.object(
+        runtime,
+        "_list_members",
+        return_value=members,
+    ):
+        assert runtime.playable_members(
+            archive
+        ) == [
+            "Safe Game (U) [!].nes",
+            "nested/Safe Game (J).nes",
+        ]
+
+
+def test_preferred_member_cannot_select_unsafe_variant(
+    tmp_path,
+):
+    archive = tmp_path / "Ranked Game.7z"
+    archive.write_bytes(b"archive")
+
+    runtime = ArchiveRuntime(
+        cache_root=tmp_path / "cache",
+        executable="7z",
+    )
+
+    members = [
+        "../Ranked Game (U) [!].nes",
+        "Ranked Game (U) [b1].nes",
+    ]
+
+    with patch.object(
+        runtime,
+        "_list_members",
+        return_value=members,
+    ):
+        assert runtime.preferred_member(
+            archive
+        ) == "Ranked Game (U) [b1].nes"
+
+
+def test_resolve_refuses_archive_with_only_unsafe_rom_members(
+    tmp_path,
+):
+    archive = tmp_path / "Unsafe Only.7z"
+    archive.write_bytes(b"archive")
+
+    runtime = ArchiveRuntime(
+        cache_root=tmp_path / "cache",
+        executable="7z",
+    )
+
+    members = [
+        "../escape.nes",
+        r"..\escape-too.nes",
+        "/tmp/absolute.nes",
+        r"C:\temp\drive.nes",
+        r"\\server\share\unc.nes",
+    ]
+
+    with patch.object(
+        runtime,
+        "_list_members",
+        return_value=members,
+    ):
+        with pytest.raises(
+            ValueError,
+            match="contains no supported ROM content",
+        ):
+            runtime.resolve(archive)
+
+
+@pytest.mark.parametrize(
+    "member",
+    [
+        "../escape.nes",
+        "nested/../../escape.nes",
+        "/tmp/absolute.nes",
+        r"C:\temp\drive.nes",
+        r"\\server\share\unc.nes",
+        r"..\backslash-escape.nes",
+    ],
+)
+def test_archive_member_path_safety_rejects_escape_forms(
+    member,
+):
+    assert (
+        ArchiveRuntime._member_is_safe(member)
+        is False
+    )
+
+
+@pytest.mark.parametrize(
+    "member",
+    [
+        "Game.nes",
+        "nested/Game.nes",
+        "nested/deeper/Game.sfc",
+    ],
+)
+def test_archive_member_path_safety_accepts_relative_members(
+    member,
+):
+    assert (
+        ArchiveRuntime._member_is_safe(member)
+        is True
     )
