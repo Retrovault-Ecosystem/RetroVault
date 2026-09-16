@@ -26,6 +26,9 @@ class ProcessSession(Protocol):
     def clear_exited_process(self):
         ...
 
+    def stop(self) -> bool:
+        ...
+
 
 class ProcessLifecycleAdapter:
     """
@@ -66,6 +69,7 @@ class ProcessLifecycleAdapter:
             "active_process",
             "process_running",
             "clear_exited_process",
+            "stop",
         ):
             if not hasattr(session, attribute):
                 raise TypeError(
@@ -155,6 +159,41 @@ class ProcessLifecycleAdapter:
             return self._runtime.launch_failed()
 
         return self._runtime.running()
+
+    def stop_requested(
+        self,
+    ) -> HardwareIndicatorSnapshot:
+        """
+        Request termination of the currently owned emulator process.
+
+        RVV enters STOP_REQUESTED immediately. Process exit remains
+        authoritative: poll() observes the terminated process and
+        advances the lifecycle to EXITED.
+        """
+
+        if (
+            self._runtime.state
+            is not HardwareRuntimeState.RUNNING
+        ):
+            raise RuntimeError(
+                "Stop requires a running launch lifecycle."
+            )
+
+        if (
+            self._session.active_process is None
+            or not self._session.process_running()
+        ):
+            raise RuntimeError(
+                "Stop requires a running owned process."
+            )
+
+        if not self._session.stop():
+            raise RuntimeError(
+                "Unable to request emulator process stop."
+            )
+
+        return self._runtime.stop_requested()
+
 
     def poll(self) -> HardwareIndicatorSnapshot:
         """

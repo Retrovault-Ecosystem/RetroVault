@@ -473,3 +473,98 @@ def test_switching_after_completed_session_returns_ready(
         "Ready when you are."
     )
     assert details._launch_session_active is False
+
+
+def test_stop_button_starts_disabled(
+    app,
+):
+    details = GameDetails()
+
+    assert details.stop_button.isEnabled() is False
+
+
+def test_successful_launch_enables_stop_and_disables_launch(
+    app,
+    monkeypatch,
+):
+    details, _lifecycle = make_details(app)
+
+    details.core_resolver.find = (
+        lambda _core: "/cores/fceumm_libretro.so"
+    )
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        ReadyValidator,
+    )
+
+    details.launcher.launch = Mock(
+        return_value={
+            "success": True,
+            "command": ["retroarch"],
+        }
+    )
+
+    details.launch_game()
+
+    assert details.launch_button.isEnabled() is False
+    assert details.stop_button.isEnabled() is True
+
+
+def test_stop_game_requests_lifecycle_stop(
+    app,
+):
+    details, lifecycle = make_details(app)
+
+    details._launch_session_active = True
+    details._refresh_launch_button()
+
+    details.stop_game()
+
+    lifecycle.stop_requested.assert_called_once_with()
+
+    assert details.launch_status.text() == (
+        "Stopping game..."
+    )
+    assert details.launch_button.isEnabled() is False
+    assert details.stop_button.isEnabled() is True
+
+
+def test_process_exit_restores_launch_control(
+    app,
+):
+    details = GameDetails()
+    details.show_game(
+        make_game()
+    )
+
+    details._launch_session_active = True
+    details._refresh_launch_button()
+
+    details.process_exited()
+
+    assert details._launch_session_active is False
+    assert details.launch_button.isEnabled() is True
+    assert details.stop_button.isEnabled() is False
+    assert details.launch_status.text() == (
+        "Game session ended."
+    )
+
+
+def test_stop_failure_remains_user_visible(
+    app,
+):
+    details, lifecycle = make_details(app)
+
+    details._launch_session_active = True
+    details._refresh_launch_button()
+
+    lifecycle.stop_requested.side_effect = (
+        RuntimeError("stop failed")
+    )
+
+    details.stop_game()
+
+    assert details.launch_status.text() == (
+        "Unable to stop game: stop failed"
+    )

@@ -39,6 +39,16 @@ class FakeSession:
 
         return process
 
+    def stop(self):
+        if self.active_process is None:
+            return False
+
+        if self.active_process.poll() is not None:
+            return False
+
+        self.active_process.terminate()
+        return True
+
 
 def make_adapter():
     runtime = HardwareRuntimeOrchestrator(
@@ -319,6 +329,9 @@ def test_launch_request_selects_nes_policy_before_launch():
         def clear_exited_process(self):
             return None
 
+        def stop(self):
+            return False
+
     runtime = HardwareRuntimeOrchestrator(
         HardwareIndicatorPolicy()
     )
@@ -360,6 +373,9 @@ def test_launch_request_unknown_platform_remains_all_off():
         def clear_exited_process(self):
             return None
 
+        def stop(self):
+            return False
+
     runtime = HardwareRuntimeOrchestrator(
         HardwareIndicatorPolicy()
     )
@@ -398,6 +414,9 @@ def test_launch_request_without_platform_remains_backward_compatible():
         def clear_exited_process(self):
             return None
 
+        def stop(self):
+            return False
+
     runtime = HardwareRuntimeOrchestrator(
         HardwareIndicatorPolicy()
     )
@@ -411,3 +430,64 @@ def test_launch_request_without_platform_remains_backward_compatible():
 
     assert snapshot.power is IndicatorState.OFF
     assert snapshot.reset is IndicatorState.OFF
+
+
+def test_stop_request_terminates_owned_process_and_enters_stop_state():
+    adapter, session = make_adapter()
+
+    process = Mock()
+    process.poll.return_value = None
+    session.active_process = process
+
+    adapter.launch_requested(
+        "platform.nintendo.nes"
+    )
+    adapter.launch_result(
+        {"success": True}
+    )
+
+    snapshot = adapter.stop_requested()
+
+    assert (
+        adapter.state
+        is HardwareRuntimeState.STOP_REQUESTED
+    )
+    assert snapshot.power is IndicatorState.OFF
+    process.terminate.assert_called_once_with()
+    assert session.active_process is process
+
+
+def test_poll_completes_requested_stop_after_process_exit():
+    adapter, session = make_adapter()
+
+    process = Mock()
+    process.poll.return_value = None
+    session.active_process = process
+
+    adapter.launch_requested(
+        "platform.nintendo.nes"
+    )
+    adapter.launch_result(
+        {"success": True}
+    )
+    adapter.stop_requested()
+
+    process.poll.return_value = 0
+
+    adapter.poll()
+
+    assert (
+        adapter.state
+        is HardwareRuntimeState.EXITED
+    )
+    assert session.active_process is None
+
+
+def test_stop_request_requires_running_lifecycle():
+    adapter, _session = make_adapter()
+
+    with pytest.raises(
+        RuntimeError,
+        match="running launch lifecycle",
+    ):
+        adapter.stop_requested()

@@ -72,6 +72,25 @@ class RetroArchLauncher:
 
         return process
 
+    def stop(self) -> bool:
+        """
+        Request termination of the currently owned RetroArch process.
+
+        Process ownership is retained until poll() confirms that the
+        process has actually exited. This keeps lifecycle completion
+        authoritative and prevents premature session release.
+        """
+
+        if self._active_process is None:
+            return False
+
+        if self._active_process.poll() is not None:
+            return False
+
+        self._active_process.terminate()
+        return True
+
+
     def launch(
         self,
         profile: LaunchProfile,

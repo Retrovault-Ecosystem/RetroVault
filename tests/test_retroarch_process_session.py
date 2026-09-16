@@ -204,3 +204,48 @@ def test_rejected_second_launch_preserves_original_handle():
 
     assert result["success"] is False
     assert launcher.active_process is process
+
+
+def test_stop_requests_termination_without_releasing_process():
+    launcher = RetroArchLauncher()
+    profile = make_profile()
+
+    process = Mock()
+    process.poll.return_value = None
+
+    with patch(
+        "services.retroarch.launcher.subprocess.Popen",
+        return_value=process,
+    ):
+        launcher.launch(profile)
+
+    assert launcher.stop() is True
+
+    process.terminate.assert_called_once_with()
+    assert launcher.active_process is process
+
+
+def test_stop_without_owned_process_is_safe():
+    launcher = RetroArchLauncher()
+
+    assert launcher.stop() is False
+
+
+def test_stop_does_not_terminate_already_exited_process():
+    launcher = RetroArchLauncher()
+    profile = make_profile()
+
+    process = Mock()
+    process.poll.return_value = None
+
+    with patch(
+        "services.retroarch.launcher.subprocess.Popen",
+        return_value=process,
+    ):
+        launcher.launch(profile)
+
+    process.poll.return_value = 0
+
+    assert launcher.stop() is False
+    process.terminate.assert_not_called()
+    assert launcher.active_process is process

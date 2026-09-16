@@ -246,6 +246,23 @@ class GameDetails(QWidget):
         )
 
 
+        self.stop_button = QPushButton(
+            "■ Stop Game"
+        )
+
+        self.stop_button.setEnabled(
+            False
+        )
+
+        self.stop_button.clicked.connect(
+            self.stop_game
+        )
+
+        main.addWidget(
+            self.stop_button
+        )
+
+
         self._launch_session_active = False
 
         self.launch_status = QLabel(
@@ -770,10 +787,34 @@ class GameDetails(QWidget):
             return
 
         self._launch_session_active = False
+        self._refresh_launch_button()
 
         self._set_launch_status(
             "Game session ended."
         )
+
+
+    def stop_game(
+        self,
+    ) -> None:
+        if not self._launch_session_active:
+            return
+
+        if self.process_lifecycle is None:
+            return
+
+        try:
+            self.process_lifecycle.stop_requested()
+        except RuntimeError as exc:
+            self._set_launch_status(
+                f"Unable to stop game: {exc}"
+            )
+            return
+
+        self._set_launch_status(
+            "Stopping game..."
+        )
+        self._refresh_launch_button()
 
 
     def launch_game(self):
@@ -971,6 +1012,7 @@ class GameDetails(QWidget):
             False,
         ):
             self._launch_session_active = True
+            self._refresh_launch_button()
 
             self._set_launch_status(
                 f'Running "{self.current_game.name}".'
@@ -1106,7 +1148,7 @@ class GameDetails(QWidget):
     def _refresh_launch_button(
         self,
     ):
-        enabled = (
+        launch_enabled = (
             self.current_game is not None
             and bool(
                 getattr(
@@ -1115,10 +1157,15 @@ class GameDetails(QWidget):
                     "",
                 )
             )
+            and not self._launch_session_active
         )
 
         self.launch_button.setEnabled(
-            enabled
+            launch_enabled
+        )
+
+        self.stop_button.setEnabled(
+            self._launch_session_active
         )
 
 
