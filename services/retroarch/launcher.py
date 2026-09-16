@@ -2,6 +2,7 @@ import subprocess
 
 from models.launch_profile import LaunchProfile
 
+from .archive_runtime import ArchiveRuntime
 from .overlay_runtime import OverlayRuntimeConfig
 from .shader_runtime import ShaderRuntimeConfig
 
@@ -12,6 +13,7 @@ class RetroArchLauncher:
         self,
         overlay_runtime=None,
         shader_runtime=None,
+        archive_runtime=None,
     ):
         self.command = "retroarch"
 
@@ -23,6 +25,11 @@ class RetroArchLauncher:
         self.shader_runtime = (
             shader_runtime
             or ShaderRuntimeConfig()
+        )
+
+        self.archive_runtime = (
+            archive_runtime
+            or ArchiveRuntime()
         )
 
         self._active_process = None
@@ -80,11 +87,27 @@ class RetroArchLauncher:
 
             self._active_process = None
 
+        try:
+            runtime_rom = (
+                self.archive_runtime
+                .resolve(
+                    profile.rom
+                )
+            )
+        except (
+            OSError,
+            ValueError,
+        ) as error:
+            return {
+                "success": False,
+                "error": str(error),
+            }
+
         command = [
             self.command,
             "-L",
             profile.core,
-            profile.rom,
+            runtime_rom,
         ]
 
         if profile.config:
