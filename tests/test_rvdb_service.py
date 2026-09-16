@@ -612,3 +612,45 @@ def test_retroarch_view_real_bundle():
     assert genesis.frontends == (
         "RetroArch",
     )
+
+
+def test_game_lookup_returns_typed_canonical_summary():
+    service = RVDBService.from_bundle(
+        "data/rvdb/rvdb.bundle.json"
+    )
+
+    game = service.game(
+        "game.super_mario_world"
+    )
+
+    assert game is not None
+    assert game.id == (
+        "game.super_mario_world"
+    )
+    assert game.name == (
+        "Super Mario World"
+    )
+    assert (
+        "platform.nintendo.snes"
+        in game.platforms
+    )
+
+
+def test_game_lookup_missing_identity_returns_none():
+    service = RVDBService.from_bundle(
+        "data/rvdb/rvdb.bundle.json"
+    )
+
+    assert service.game(
+        "game.missing"
+    ) is None
+
+
+def test_game_lookup_rejects_non_game_entity():
+    service = RVDBService.from_bundle(
+        "data/rvdb/rvdb.bundle.json"
+    )
+
+    assert service.game(
+        "platform.nintendo.nes"
+    ) is None

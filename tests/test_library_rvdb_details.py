@@ -482,3 +482,82 @@ def test_legacy_game_profile_without_rvdb_game_id_is_safe(
     assert "Legacy Game" in text
     assert "RetroVault Game Profile" in text
     assert "RVDB Game:" not in text
+
+
+def test_identified_profile_displays_canonical_rvdb_game_name(
+    app,
+):
+    consumer = RVDBConsumer(
+        "data/rvdb/rvdb.bundle.json"
+    )
+
+    details = GameDetails(
+        rvdb_service=RVDBService(
+            consumer
+        )
+    )
+
+    game = SimpleNamespace(
+        name="SMW",
+        platform="Super Nintendo",
+        rom="/library/SMW.sfc",
+        core="snes9x",
+        artwork="",
+        favorite=False,
+        year=0,
+        genre="",
+        developer="",
+        publisher="",
+        description="",
+        rvdb_game_id=(
+            "game.super_mario_world"
+        ),
+    )
+
+    details.show_game(game)
+
+    text = details.description.toPlainText()
+
+    assert "RVDB Game:" in text
+    assert "Super Mario World" in text
+    assert (
+        "RVDB ID: game.super_mario_world"
+        in text
+    )
+
+
+def test_missing_canonical_game_preserves_local_profile(
+    app,
+):
+    consumer = RVDBConsumer(
+        "data/rvdb/rvdb.bundle.json"
+    )
+
+    details = GameDetails(
+        rvdb_service=RVDBService(
+            consumer
+        )
+    )
+
+    game = SimpleNamespace(
+        name="Local Game",
+        platform="Nintendo Entertainment System",
+        rom="/library/Local Game.nes",
+        core="fceumm",
+        artwork="",
+        favorite=False,
+        year=0,
+        genre="",
+        developer="",
+        publisher="",
+        description="",
+        rvdb_game_id="game.missing",
+    )
+
+    details.show_game(game)
+
+    text = details.description.toPlainText()
+
+    assert "Local Game" in text
+    assert "RVDB Game:" in text
+    assert "RVDB ID: game.missing" in text

@@ -213,6 +213,58 @@ class RVDBService:
             games
         )
 
+    def game(
+        self,
+        game_id: str,
+    ) -> RVDBGameSummary | None:
+        """
+        Return one canonical RVDB Game summary by stable identity.
+
+        Missing entities and non-Game entities intentionally return
+        None. Raw RVDB bundle dictionaries remain behind RVDBService.
+        """
+
+        entity = self._consumer.get_entity(
+            game_id
+        )
+
+        if (
+            entity is None
+            or entity.get("type") != "game"
+        ):
+            return None
+
+        canonical_id = str(
+            entity["id"]
+        )
+
+        platforms = tuple(
+            sorted(
+                set(
+                    self._consumer.relationship_targets(
+                        canonical_id,
+                        "platform",
+                    )
+                )
+            )
+        )
+
+        return RVDBGameSummary(
+            id=canonical_id,
+            name=str(
+                entity.get(
+                    "name",
+                    canonical_id,
+                )
+            ),
+            aliases=self._values(
+                entity.get(
+                    "aliases"
+                )
+            ),
+            platforms=platforms,
+        )
+
     def platforms(
         self,
     ) -> tuple[RVDBPlatformSummary, ...]:

@@ -362,12 +362,32 @@ class GameDetails(QWidget):
             )
             and rvdb_game_id.strip()
         ):
+            canonical_game = None
+
+            if self.rvdb_service is not None:
+                try:
+                    canonical_game = (
+                        self.rvdb_service.game(
+                            rvdb_game_id.strip()
+                        )
+                    )
+                except RVDBError:
+                    canonical_game = None
+
             profile_lines.extend(
                 [
                     "",
                     "RVDB Game:",
-                    f"RVDB ID: {rvdb_game_id.strip()}",
                 ]
+            )
+
+            if canonical_game is not None:
+                profile_lines.append(
+                    canonical_game.name
+                )
+
+            profile_lines.append(
+                f"RVDB ID: {rvdb_game_id.strip()}"
             )
 
         profile_metadata = []
