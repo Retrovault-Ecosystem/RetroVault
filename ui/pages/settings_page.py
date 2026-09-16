@@ -19,6 +19,8 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QLineEdit,
+    QListWidget,
+    QListWidgetItem,
     QPushButton,
     QSizePolicy,
     QVBoxLayout,
@@ -28,6 +30,10 @@ from PyQt6.QtWidgets import (
 from config import (
     ConfigLoader,
     ConfigWriter,
+)
+
+from services.library.import_sources import (
+    ImportSourceStore,
 )
 
 
@@ -242,6 +248,17 @@ class SettingsPage(QWidget):
 
         self.config = (
             self.config_loader.load()
+        )
+
+        self.library_source_store = (
+            ImportSourceStore(
+                config_loader=(
+                    self.config_loader
+                ),
+                config_writer=(
+                    self.config_writer
+                ),
+            )
         )
 
         self._build_ui()
@@ -459,6 +476,71 @@ class SettingsPage(QWidget):
         self.library_sources_value = QLabel()
         self.library_sources_value.setWordWrap(
             True
+        )
+
+        self.library_source_list = QListWidget()
+
+        self.library_source_list.currentItemChanged.connect(
+            self._library_source_selection_changed
+        )
+
+        self.library_source_name_edit = QLineEdit()
+        self.library_source_name_edit.setPlaceholderText(
+            "Source name"
+        )
+
+        self.library_source_rename_button = QPushButton(
+            "Rename"
+        )
+
+        self.library_source_rename_button.clicked.connect(
+            self._rename_library_source
+        )
+
+        self.library_source_toggle_button = QPushButton(
+            "Disable"
+        )
+
+        self.library_source_toggle_button.clicked.connect(
+            self._toggle_library_source
+        )
+
+        self.library_source_remove_button = QPushButton(
+            "Remove"
+        )
+
+        self.library_source_remove_button.clicked.connect(
+            self._remove_library_source
+        )
+
+        source_name_row = QHBoxLayout()
+        source_name_row.addWidget(
+            self.library_source_name_edit,
+            1,
+        )
+        source_name_row.addWidget(
+            self.library_source_rename_button
+        )
+
+        source_action_row = QHBoxLayout()
+        source_action_row.addWidget(
+            self.library_source_toggle_button
+        )
+        source_action_row.addWidget(
+            self.library_source_remove_button
+        )
+        source_action_row.addStretch(
+            1
+        )
+
+        library_layout.addWidget(
+            self.library_source_list
+        )
+        library_layout.addLayout(
+            source_name_row
+        )
+        library_layout.addLayout(
+            source_action_row
         )
 
         self.library_sources_status = ReadyCheckButton(
@@ -1102,7 +1184,355 @@ class SettingsPage(QWidget):
             "Overlay directory",
         )
 
-    def _populate(self):
+    def _selected_library_source(self):
+        item = (
+            self.library_source_list
+            .currentItem()
+        )
+
+        if item is None:
+            return None
+
+        source_id = item.data(
+            Qt.ItemDataRole.UserRole
+        )
+
+        for source in (
+            self.config
+            .get(
+                "library",
+                {},
+            )
+            .get(
+                "sources",
+                [],
+            )
+        ):
+            if str(
+                source.get(
+                    "id",
+                    "",
+                )
+            ) == str(
+                source_id
+            ):
+                return source
+
+        return None
+
+    def _library_source_selection_changed(
+        self,
+        current,
+        _previous,
+    ):
+        source = (
+            self._selected_library_source()
+        )
+
+        selected = (
+            source is not None
+        )
+
+        self.library_source_name_edit.setEnabled(
+            selected
+        )
+        self.library_source_rename_button.setEnabled(
+            selected
+        )
+        self.library_source_toggle_button.setEnabled(
+            selected
+        )
+        self.library_source_remove_button.setEnabled(
+            selected
+        )
+
+        if source is None:
+            self.library_source_name_edit.clear()
+            self.library_source_toggle_button.setText(
+                "Disable"
+            )
+            return
+
+        self.library_source_name_edit.setText(
+            str(
+                source.get(
+                    "name",
+                    source.get(
+                        "id",
+                        "",
+                    ),
+                )
+            )
+        )
+
+        self.library_source_toggle_button.setText(
+            (
+                "Disable"
+                if source.get(
+                    "enabled",
+                    False,
+                )
+                else "Enable"
+            )
+        )
+
+    def _refresh_library_source_management(
+        self,
+        selected_source_id=None,
+    ):
+        self.library_source_list.blockSignals(
+            True
+        )
+
+        self.library_source_list.clear()
+
+        selected_row = -1
+
+        sources = (
+            self.config
+            .get(
+                "library",
+                {},
+            )
+            .get(
+                "sources",
+                [],
+            )
+        )
+
+        for row, source in enumerate(
+            sources
+        ):
+            source_id = str(
+                source.get(
+                    "id",
+                    "",
+                )
+            )
+
+            name = str(
+                source.get(
+                    "name",
+                    source_id or "Library",
+                )
+            )
+
+            state = (
+                "Enabled"
+                if source.get(
+                    "enabled",
+                    False,
+                )
+                else "Disabled"
+            )
+
+            path_value = str(
+                source.get(
+                    "path",
+                    "",
+                )
+            )
+
+            label = (
+                f"{name} — {state}"
+            )
+
+            if path_value:
+                label += (
+                    f" — {path_value}"
+                )
+
+            item = QListWidgetItem(
+                label
+            )
+
+            item.setData(
+                Qt.ItemDataRole.UserRole,
+                source_id,
+            )
+
+            self.library_source_list.addItem(
+                item
+            )
+
+            if (
+                selected_source_id is not None
+                and source_id
+                == str(
+                    selected_source_id
+                )
+            ):
+                selected_row = row
+
+        self.library_source_list.blockSignals(
+            False
+        )
+
+        if (
+            selected_row < 0
+            and sources
+        ):
+            selected_row = 0
+
+        if selected_row >= 0:
+            self.library_source_list.setCurrentRow(
+                selected_row
+            )
+        else:
+            self._library_source_selection_changed(
+                None,
+                None,
+            )
+
+    def _reload_library_sources(
+        self,
+        selected_source_id=None,
+    ):
+        self.config = (
+            self.config_loader.load()
+        )
+
+        self._populate(
+            selected_source_id=(
+                selected_source_id
+            )
+        )
+
+    def _rename_library_source(self):
+        source = (
+            self._selected_library_source()
+        )
+
+        if source is None:
+            self.save_status.setText(
+                "Select a library source"
+            )
+            return
+
+        source_id = str(
+            source.get(
+                "id",
+                "",
+            )
+        )
+
+        try:
+            self.library_source_store.rename_source(
+                source_id,
+                (
+                    self.library_source_name_edit
+                    .text()
+                ),
+            )
+        except (
+            OSError,
+            ValueError,
+        ) as exc:
+            self.save_status.setText(
+                str(exc)
+            )
+            return
+
+        self._reload_library_sources(
+            source_id
+        )
+
+        self.save_status.setText(
+            "Library source renamed"
+        )
+
+    def _toggle_library_source(self):
+        source = (
+            self._selected_library_source()
+        )
+
+        if source is None:
+            self.save_status.setText(
+                "Select a library source"
+            )
+            return
+
+        source_id = str(
+            source.get(
+                "id",
+                "",
+            )
+        )
+
+        enabled = not bool(
+            source.get(
+                "enabled",
+                False,
+            )
+        )
+
+        try:
+            self.library_source_store.set_source_enabled(
+                source_id,
+                enabled,
+            )
+        except (
+            OSError,
+            ValueError,
+        ) as exc:
+            self.save_status.setText(
+                str(exc)
+            )
+            return
+
+        self._reload_library_sources(
+            source_id
+        )
+
+        self.save_status.setText(
+            (
+                "Library source enabled"
+                if enabled
+                else "Library source disabled"
+            )
+        )
+
+    def _remove_library_source(self):
+        source = (
+            self._selected_library_source()
+        )
+
+        if source is None:
+            self.save_status.setText(
+                "Select a library source"
+            )
+            return
+
+        source_id = str(
+            source.get(
+                "id",
+                "",
+            )
+        )
+
+        try:
+            self.library_source_store.remove_source(
+                source_id
+            )
+        except (
+            OSError,
+            ValueError,
+        ) as exc:
+            self.save_status.setText(
+                str(exc)
+            )
+            return
+
+        self._reload_library_sources()
+
+        self.save_status.setText(
+            "Library source removed"
+        )
+
+    def _populate(
+        self,
+        selected_source_id=None,
+    ):
         retroarch = (
             self.config
             .get(
@@ -1210,6 +1640,10 @@ class SettingsPage(QWidget):
 
         self.library_sources_value.setText(
             source_text
+        )
+
+        self._refresh_library_source_management(
+            selected_source_id
         )
 
         if enabled_sources:

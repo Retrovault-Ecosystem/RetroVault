@@ -4969,3 +4969,299 @@ def test_settings_save_preserves_additional_library_sources(
             f"{bulk_library}"
         )
     )
+
+
+def test_settings_page_manages_multiple_library_sources(
+    tmp_path,
+):
+    _app()
+
+    retroarch = _make_valid_retroarch(
+        tmp_path / "retroarch"
+    )
+
+    cores = _make_valid_core_directory(
+        tmp_path / "cores"
+    )
+
+    primary = tmp_path / "primary"
+    secondary = tmp_path / "secondary"
+    overlays = tmp_path / "overlays"
+    shaders = tmp_path / "shaders"
+
+    for directory in (
+        primary,
+        secondary,
+        overlays,
+        shaders,
+    ):
+        directory.mkdir()
+
+    defaults = _write_defaults(
+        tmp_path,
+        retroarch=retroarch,
+        cores=cores,
+        library=primary,
+        overlays=overlays,
+        shaders=shaders,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    runtime.write_text(
+        json.dumps(
+            {
+                "library": {
+                    "sources": [
+                        {
+                            "id": "test",
+                            "name": "Primary",
+                            "enabled": True,
+                            "type": "local",
+                            "path": str(
+                                primary
+                            ),
+                        },
+                        {
+                            "id": "bulk-import",
+                            "name": "Bulk Import",
+                            "enabled": True,
+                            "type": "local",
+                            "path": str(
+                                secondary
+                            ),
+                        },
+                    ],
+                }
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    from config import ConfigWriter
+
+    page = SettingsPage(
+        config_loader=ConfigLoader(
+            default_file=defaults,
+            runtime_file=runtime,
+        ),
+        config_writer=ConfigWriter(
+            runtime_file=runtime
+        ),
+    )
+
+    assert (
+        page.library_source_list.count()
+        == 2
+    )
+
+    page.library_source_list.setCurrentRow(
+        1
+    )
+
+    assert (
+        page.library_source_name_edit.text()
+        == "Bulk Import"
+    )
+
+    assert (
+        page.library_source_toggle_button.text()
+        == "Disable"
+    )
+
+    page.library_source_name_edit.setText(
+        "Imported Games"
+    )
+
+    page._rename_library_source()
+
+    saved = json.loads(
+        runtime.read_text(
+            encoding="utf-8"
+        )
+    )["library"]["sources"]
+
+    assert saved[0]["name"] == "Primary"
+    assert saved[1]["name"] == "Imported Games"
+
+    page._toggle_library_source()
+
+    saved = json.loads(
+        runtime.read_text(
+            encoding="utf-8"
+        )
+    )["library"]["sources"]
+
+    assert saved[0]["enabled"] is True
+    assert saved[1]["enabled"] is False
+
+    assert (
+        page.library_source_toggle_button.text()
+        == "Enable"
+    )
+
+    page._remove_library_source()
+
+    saved = json.loads(
+        runtime.read_text(
+            encoding="utf-8"
+        )
+    )["library"]["sources"]
+
+    assert [
+        source["id"]
+        for source in saved
+    ] == [
+        "test"
+    ]
+
+    assert (
+        page.library_source_list.count()
+        == 1
+    )
+
+
+def test_settings_page_source_management_reports_guard_inline(
+    tmp_path,
+):
+    _app()
+
+    retroarch = _make_valid_retroarch(
+        tmp_path / "retroarch"
+    )
+
+    cores = _make_valid_core_directory(
+        tmp_path / "cores"
+    )
+
+    library = tmp_path / "library"
+    overlays = tmp_path / "overlays"
+    shaders = tmp_path / "shaders"
+
+    for directory in (
+        library,
+        overlays,
+        shaders,
+    ):
+        directory.mkdir()
+
+    defaults = _write_defaults(
+        tmp_path,
+        retroarch=retroarch,
+        cores=cores,
+        library=library,
+        overlays=overlays,
+        shaders=shaders,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    from config import ConfigWriter
+
+    page = SettingsPage(
+        config_loader=ConfigLoader(
+            default_file=defaults,
+            runtime_file=runtime,
+        ),
+        config_writer=ConfigWriter(
+            runtime_file=runtime
+        ),
+    )
+
+    assert (
+        page.library_source_list.count()
+        == 1
+    )
+
+    page.library_source_list.setCurrentRow(
+        0
+    )
+
+    page._toggle_library_source()
+
+    assert (
+        page.save_status.text()
+        == (
+            "At least one library source "
+            "must remain enabled."
+        )
+    )
+
+    assert not runtime.exists()
+
+    page._remove_library_source()
+
+    assert (
+        page.save_status.text()
+        == (
+            "At least one library source "
+            "must remain enabled."
+        )
+    )
+
+    assert not runtime.exists()
+
+
+def test_settings_page_source_management_rejects_blank_name_inline(
+    tmp_path,
+):
+    _app()
+
+    retroarch = _make_valid_retroarch(
+        tmp_path / "retroarch"
+    )
+
+    cores = _make_valid_core_directory(
+        tmp_path / "cores"
+    )
+
+    library = tmp_path / "library"
+    overlays = tmp_path / "overlays"
+    shaders = tmp_path / "shaders"
+
+    for directory in (
+        library,
+        overlays,
+        shaders,
+    ):
+        directory.mkdir()
+
+    defaults = _write_defaults(
+        tmp_path,
+        retroarch=retroarch,
+        cores=cores,
+        library=library,
+        overlays=overlays,
+        shaders=shaders,
+    )
+
+    runtime = tmp_path / "runtime.json"
+
+    from config import ConfigWriter
+
+    page = SettingsPage(
+        config_loader=ConfigLoader(
+            default_file=defaults,
+            runtime_file=runtime,
+        ),
+        config_writer=ConfigWriter(
+            runtime_file=runtime
+        ),
+    )
+
+    page.library_source_list.setCurrentRow(
+        0
+    )
+
+    page.library_source_name_edit.setText(
+        "   "
+    )
+
+    page._rename_library_source()
+
+    assert (
+        page.save_status.text()
+        == "Library source name is required."
+    )
+
+    assert not runtime.exists()
