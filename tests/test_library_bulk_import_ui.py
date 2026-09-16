@@ -546,3 +546,248 @@ def test_library_page_propagates_bulk_import_completed_handler():
         page.bulk_import_completed_handler
         is handler
     )
+
+
+def test_bulk_import_starts_idle():
+    QApplication.instance() or QApplication([])
+
+    view = GalleryView(
+        [],
+    )
+
+    assert (
+        view._bulk_import_in_progress
+        is False
+    )
+
+
+def test_bulk_import_disables_refresh_while_handler_runs(
+    monkeypatch,
+):
+    QApplication.instance() or QApplication([])
+
+    observed = []
+
+    view = None
+
+    def handler(_directory):
+        observed.append(
+            view._bulk_import_in_progress
+        )
+        observed.append(
+            view.toolbar.bulk_import_button.isEnabled()
+        )
+        observed.append(
+            view.toolbar.refresh_button.isEnabled()
+        )
+
+        class Discovered:
+            discovered_count = 0
+            duplicate_count = 0
+
+        return {
+            "games": [],
+            "discovered": Discovered(),
+            "added_count": 0,
+            "skipped_count": 0,
+            "persisted": {
+                "added": False,
+            },
+        }
+
+    view = GalleryView(
+        [],
+        bulk_import_handler=handler,
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *_args, **_kwargs: "/roms",
+    )
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *_args, **_kwargs: None,
+    )
+
+    view.bulk_import()
+
+    assert observed == [
+        True,
+        False,
+        False,
+    ]
+
+    assert (
+        view._bulk_import_in_progress
+        is False
+    )
+
+    assert (
+        view.toolbar.bulk_import_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+
+def test_bulk_import_reentrant_call_is_ignored(
+    monkeypatch,
+):
+    QApplication.instance() or QApplication([])
+
+    calls = []
+
+    view = None
+
+    def handler(_directory):
+        calls.append("import")
+        view.bulk_import()
+
+        class Discovered:
+            discovered_count = 0
+            duplicate_count = 0
+
+        return {
+            "games": [],
+            "discovered": Discovered(),
+            "added_count": 0,
+            "skipped_count": 0,
+            "persisted": {
+                "added": False,
+            },
+        }
+
+    view = GalleryView(
+        [],
+        bulk_import_handler=handler,
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *_args, **_kwargs: "/roms",
+    )
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *_args, **_kwargs: None,
+    )
+
+    view.bulk_import()
+
+    assert calls == [
+        "import",
+    ]
+
+
+def test_bulk_import_ignores_request_during_refresh(
+    monkeypatch,
+):
+    QApplication.instance() or QApplication([])
+
+    calls = []
+
+    view = GalleryView(
+        [],
+        bulk_import_handler=lambda directory: (
+            calls.append(directory)
+        ),
+    )
+
+    view._library_refresh_in_progress = True
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *_args, **_kwargs: "/roms",
+    )
+
+    view.bulk_import()
+
+    assert calls == []
+
+
+def test_bulk_import_failure_clears_busy_state(
+    monkeypatch,
+):
+    QApplication.instance() or QApplication([])
+
+    def fail(_directory):
+        raise OSError(
+            "simulated import failure"
+        )
+
+    view = GalleryView(
+        [],
+        bulk_import_handler=fail,
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *_args, **_kwargs: "/roms",
+    )
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "critical",
+        lambda *_args, **_kwargs: None,
+    )
+
+    view.bulk_import()
+
+    assert (
+        view._bulk_import_in_progress
+        is False
+    )
+
+    assert (
+        view.toolbar.bulk_import_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+
+def test_bulk_import_cancel_does_not_enter_busy_state(
+    monkeypatch,
+):
+    QApplication.instance() or QApplication([])
+
+    view = GalleryView(
+        [],
+        bulk_import_handler=lambda directory: None,
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *_args, **_kwargs: "",
+    )
+
+    view.bulk_import()
+
+    assert (
+        view._bulk_import_in_progress
+        is False
+    )
+
+    assert (
+        view.toolbar.bulk_import_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )

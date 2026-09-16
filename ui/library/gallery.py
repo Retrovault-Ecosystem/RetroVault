@@ -72,6 +72,7 @@ class GalleryView(QWidget):
         )
 
         self._library_refresh_in_progress = False
+        self._bulk_import_in_progress = False
 
         self.bulk_import_handler = (
             bulk_import_handler
@@ -282,12 +283,19 @@ class GalleryView(QWidget):
         if self.refresh_handler is None:
             return
 
-        if self._library_refresh_in_progress:
+        if (
+            self._library_refresh_in_progress
+            or self._bulk_import_in_progress
+        ):
             return
 
         self._library_refresh_in_progress = True
 
         self.toolbar.refresh_button.setEnabled(
+            False
+        )
+
+        self.toolbar.bulk_import_button.setEnabled(
             False
         )
 
@@ -354,6 +362,10 @@ class GalleryView(QWidget):
             self._library_refresh_in_progress = False
 
             self.toolbar.refresh_button.setEnabled(
+                True
+            )
+
+            self.toolbar.bulk_import_button.setEnabled(
                 True
             )
 
@@ -443,6 +455,10 @@ class GalleryView(QWidget):
                     True
                 )
 
+                self.toolbar.bulk_import_button.setEnabled(
+                    True
+                )
+
                 return
 
         self.toolbar.refresh_status.setText(
@@ -463,10 +479,20 @@ class GalleryView(QWidget):
             True
         )
 
+        self.toolbar.bulk_import_button.setEnabled(
+            True
+        )
+
 
     def bulk_import(self):
 
         if self.bulk_import_handler is None:
+            return
+
+        if (
+            self._bulk_import_in_progress
+            or self._library_refresh_in_progress
+        ):
             return
 
         directory = QFileDialog.getExistingDirectory(
@@ -477,11 +503,31 @@ class GalleryView(QWidget):
         if not directory:
             return
 
+        self._bulk_import_in_progress = True
+
+        self.toolbar.bulk_import_button.setEnabled(
+            False
+        )
+
+        self.toolbar.refresh_button.setEnabled(
+            False
+        )
+
         try:
             result = self.bulk_import_handler(
                 directory
             )
         except (OSError, ValueError) as exc:
+            self._bulk_import_in_progress = False
+
+            self.toolbar.bulk_import_button.setEnabled(
+                True
+            )
+
+            self.toolbar.refresh_button.setEnabled(
+                True
+            )
+
             QMessageBox.critical(
                 self,
                 "Bulk Import Failed",
@@ -527,6 +573,16 @@ class GalleryView(QWidget):
             "Saved as a library source"
             if source_saved
             else "Already registered as a library source"
+        )
+
+        self._bulk_import_in_progress = False
+
+        self.toolbar.bulk_import_button.setEnabled(
+            True
+        )
+
+        self.toolbar.refresh_button.setEnabled(
+            True
         )
 
         QMessageBox.information(

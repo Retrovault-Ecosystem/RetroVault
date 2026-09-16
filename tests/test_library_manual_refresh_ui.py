@@ -1110,10 +1110,135 @@ def test_manual_refresh_reentrancy_guard_is_non_modal():
     method = text[start:end]
 
     assert (
-        "if self._library_refresh_in_progress:"
+        "self._library_refresh_in_progress"
+        in method
+    )
+
+    assert (
+        "self._bulk_import_in_progress"
         in method
     )
 
     assert "QMessageBox" not in method
     assert ".warning(" not in method
     assert ".critical(" not in method
+
+
+def test_manual_refresh_disables_bulk_import_while_running():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes"
+    )
+
+    observed = []
+
+    view = None
+
+    def refresh():
+        observed.append(
+            view.toolbar.bulk_import_button.isEnabled()
+        )
+        observed.append(
+            view._library_refresh_in_progress
+        )
+        return [game]
+
+    view = GalleryView(
+        [game],
+        refresh_handler=refresh,
+    )
+
+    view.reload_library()
+
+    assert observed == [
+        False,
+        True,
+    ]
+
+    assert (
+        view.toolbar.bulk_import_button.isEnabled()
+        is True
+    )
+
+
+def test_manual_refresh_ignores_request_during_bulk_import():
+    _app()
+
+    calls = []
+
+    view = GalleryView(
+        [],
+        refresh_handler=lambda: (
+            calls.append("refresh")
+            or []
+        ),
+    )
+
+    view._bulk_import_in_progress = True
+
+    view.reload_library()
+
+    assert calls == []
+
+    assert (
+        view._library_refresh_in_progress
+        is False
+    )
+
+
+def test_manual_refresh_failure_reenables_bulk_import():
+    _app()
+
+    def fail():
+        raise RuntimeError(
+            "refresh failed"
+        )
+
+    view = GalleryView(
+        [],
+        refresh_handler=fail,
+    )
+
+    view.reload_library()
+
+    assert (
+        view.toolbar.bulk_import_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view._library_refresh_in_progress
+        is False
+    )
+
+
+def test_manual_refresh_completion_failure_reenables_bulk_import():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes"
+    )
+
+    def completed(_games):
+        raise RuntimeError(
+            "completion failed"
+        )
+
+    view = GalleryView(
+        [game],
+        refresh_handler=lambda: [game],
+        refresh_completed_handler=completed,
+    )
+
+    view.reload_library()
+
+    assert (
+        view.toolbar.bulk_import_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view._library_refresh_in_progress
+        is False
+    )
