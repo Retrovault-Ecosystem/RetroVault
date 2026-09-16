@@ -879,24 +879,33 @@ def test_systems_page_recent_action_emits_selected_platform(
 ):
     from types import SimpleNamespace
 
-    games = [
-        SimpleNamespace(
-            rvdb_platform_id=(
-                "platform.test.alpha"
-            ),
-            favorite=False,
+    game = SimpleNamespace(
+        rvdb_platform_id=(
+            "platform.test.alpha"
         ),
-    ]
+        favorite=False,
+        rom="/roms/alpha-recent.rom",
+    )
 
     page = SystemsPage(
         service,
-        games_provider=lambda: games,
+        games_provider=lambda: [
+            game
+        ],
+        recent_provider=lambda: [
+            game.rom
+        ],
     )
 
     requested = []
 
     page.library_recent_requested.connect(
         requested.append
+    )
+
+    assert (
+        page.library_recent_value.text()
+        == "1"
     )
 
     assert (
@@ -934,3 +943,156 @@ def test_systems_page_recent_action_disabled_without_local_games(
     page.view_recent_button.click()
 
     assert requested == []
+
+
+def test_systems_page_shows_live_recent_count_for_selected_platform(
+    app,
+    service,
+):
+    from types import SimpleNamespace
+
+    alpha_recent = SimpleNamespace(
+        rvdb_platform_id="platform.test.alpha",
+        favorite=False,
+        rom="/roms/alpha-recent.rom",
+    )
+    alpha_other = SimpleNamespace(
+        rvdb_platform_id="platform.test.alpha",
+        favorite=False,
+        rom="/roms/alpha-other.rom",
+    )
+    beta_recent = SimpleNamespace(
+        rvdb_platform_id="platform.test.beta",
+        favorite=False,
+        rom="/roms/beta-recent.rom",
+    )
+
+    games = [
+        alpha_recent,
+        alpha_other,
+        beta_recent,
+    ]
+
+    page = SystemsPage(
+        service,
+        games_provider=lambda: games,
+        recent_provider=lambda: [
+            beta_recent.rom,
+            alpha_recent.rom,
+        ],
+    )
+
+    assert page.library_recent_value.text() == "1"
+    assert page.view_recent_button.isEnabled() is True
+
+
+def test_systems_page_recent_count_uses_rom_identity_not_game_name(
+    app,
+    service,
+):
+    from types import SimpleNamespace
+
+    game = SimpleNamespace(
+        name="Recent Game",
+        rvdb_platform_id="platform.test.alpha",
+        favorite=False,
+        rom="/roms/recent-game.rom",
+    )
+
+    page = SystemsPage(
+        service,
+        games_provider=lambda: [game],
+        recent_provider=lambda: [
+            "Recent Game"
+        ],
+    )
+
+    assert page.library_recent_value.text() == "0"
+    assert page.view_recent_button.isEnabled() is False
+
+
+def test_systems_page_recent_count_without_provider_is_safe(
+    app,
+    service,
+):
+    from types import SimpleNamespace
+
+    game = SimpleNamespace(
+        rvdb_platform_id="platform.test.alpha",
+        favorite=False,
+        rom="/roms/alpha.rom",
+    )
+
+    page = SystemsPage(
+        service,
+        games_provider=lambda: [game],
+    )
+
+    assert (
+        page.library_recent_value.text()
+        == page.EMPTY
+    )
+    assert page.view_recent_button.isEnabled() is False
+
+
+def test_systems_page_recent_provider_failure_is_safe(
+    app,
+    service,
+):
+    from types import SimpleNamespace
+
+    game = SimpleNamespace(
+        rvdb_platform_id="platform.test.alpha",
+        favorite=False,
+        rom="/roms/alpha.rom",
+    )
+
+    def failing_recent_provider():
+        raise RuntimeError(
+            "recent state unavailable"
+        )
+
+    page = SystemsPage(
+        service,
+        games_provider=lambda: [game],
+        recent_provider=failing_recent_provider,
+    )
+
+    assert (
+        page.library_recent_value.text()
+        == page.EMPTY
+    )
+    assert page.view_recent_button.isEnabled() is False
+
+
+def test_systems_page_refresh_updates_recent_count_live(
+    app,
+    service,
+):
+    from types import SimpleNamespace
+
+    game = SimpleNamespace(
+        rvdb_platform_id="platform.test.alpha",
+        favorite=False,
+        rom="/roms/alpha.rom",
+    )
+
+    recent = []
+
+    page = SystemsPage(
+        service,
+        games_provider=lambda: [game],
+        recent_provider=lambda: list(recent),
+    )
+
+    assert page.library_recent_value.text() == "0"
+    assert page.view_recent_button.isEnabled() is False
+
+    recent.append(
+        game.rom
+    )
+
+    page.refresh_page()
+
+    assert page.library_recent_value.text() == "1"
+    assert page.view_recent_button.isEnabled() is True

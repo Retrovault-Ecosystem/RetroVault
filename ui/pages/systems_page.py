@@ -33,11 +33,13 @@ class SystemsPage(QWidget):
         self,
         service: RVDBService | None = None,
         games_provider=None,
+        recent_provider=None,
     ):
         super().__init__()
 
         self.service = service
         self.games_provider = games_provider
+        self.recent_provider = recent_provider
 
         self.title_label = QLabel("Systems")
         self.subtitle_label = QLabel(
@@ -79,6 +81,7 @@ class SystemsPage(QWidget):
 
         self.library_games_value = QLabel("—")
         self.library_favorites_value = QLabel("—")
+        self.library_recent_value = QLabel("—")
 
         self.view_library_button = QPushButton(
             "View Games in Library"
@@ -365,6 +368,10 @@ class SystemsPage(QWidget):
                 (
                     "Favorites",
                     self.library_favorites_value,
+                ),
+                (
+                    "Recently Played",
+                    self.library_recent_value,
                 ),
             )
         ):
@@ -870,6 +877,9 @@ class SystemsPage(QWidget):
             self.library_favorites_value.setText(
                 self.EMPTY
             )
+            self.library_recent_value.setText(
+                self.EMPTY
+            )
             self.view_library_button.setEnabled(
                 False
             )
@@ -890,6 +900,9 @@ class SystemsPage(QWidget):
                 self.EMPTY
             )
             self.library_favorites_value.setText(
+                self.EMPTY
+            )
+            self.library_recent_value.setText(
                 self.EMPTY
             )
             self.view_library_button.setEnabled(
@@ -926,9 +939,6 @@ class SystemsPage(QWidget):
         self.view_library_button.setEnabled(
             bool(matching)
         )
-        self.view_recent_button.setEnabled(
-            bool(matching)
-        )
 
         favorite_count = sum(
             bool(
@@ -947,6 +957,49 @@ class SystemsPage(QWidget):
 
         self.view_favorites_button.setEnabled(
             favorite_count > 0
+        )
+
+        if self.recent_provider is None:
+            self.library_recent_value.setText(
+                self.EMPTY
+            )
+            self.view_recent_button.setEnabled(
+                False
+            )
+            return
+
+        try:
+            recent_identities = {
+                str(identity)
+                for identity in self.recent_provider()
+            }
+        except Exception:
+            self.library_recent_value.setText(
+                self.EMPTY
+            )
+            self.view_recent_button.setEnabled(
+                False
+            )
+            return
+
+        recent_count = sum(
+            str(
+                getattr(
+                    game,
+                    "rom",
+                    "",
+                )
+                or ""
+            )
+            in recent_identities
+            for game in matching
+        )
+
+        self.library_recent_value.setText(
+            str(recent_count)
+        )
+        self.view_recent_button.setEnabled(
+            recent_count > 0
         )
 
     @classmethod
@@ -1064,6 +1117,7 @@ class SystemsPage(QWidget):
             self.frontends_value,
             self.library_games_value,
             self.library_favorites_value,
+            self.library_recent_value,
         ):
             label.setText("—")
 

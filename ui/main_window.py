@@ -205,6 +205,9 @@ class MainWindow(QMainWindow):
             games_provider=(
                 controller.get_games
             ),
+            recent_provider=(
+                controller.recent
+            ),
         )
 
         self.pages.add_page(
