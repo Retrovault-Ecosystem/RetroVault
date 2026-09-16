@@ -185,6 +185,9 @@ class MainWindow(QMainWindow):
             collection_add_handler=(
                 controller.add_to_collection
             ),
+            bulk_import_handler=(
+                controller.bulk_import
+            ),
             presentation_resolver_provider=(
                 presentation_composition_factory.build
             ),

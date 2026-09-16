@@ -4,6 +4,8 @@ from PyQt6.QtWidgets import (
     QHBoxLayout,
     QLabel,
     QStackedWidget,
+    QFileDialog,
+    QMessageBox,
 )
 
 from ui.library.widgets.game_grid import GameGrid
@@ -29,6 +31,7 @@ class GalleryView(QWidget):
         recent_provider=None,
         collection_names_provider=None,
         collection_add_handler=None,
+        bulk_import_handler=None,
         presentation_resolver_provider=None,
         launcher=None,
         process_lifecycle=None,
@@ -53,6 +56,10 @@ class GalleryView(QWidget):
 
         self.recent_provider = (
             recent_provider
+        )
+
+        self.bulk_import_handler = (
+            bulk_import_handler
         )
 
 
@@ -208,6 +215,11 @@ class GalleryView(QWidget):
         )
 
 
+        self.toolbar.bulk_import_requested.connect(
+            self.bulk_import
+        )
+
+
         (
             self.toolbar.view_selector
             .gallery_selected.connect(
@@ -236,6 +248,74 @@ class GalleryView(QWidget):
             main_layout
         )
 
+
+
+    def bulk_import(self):
+
+        if self.bulk_import_handler is None:
+            return
+
+        directory = QFileDialog.getExistingDirectory(
+            self,
+            "Bulk Import ROMs",
+        )
+
+        if not directory:
+            return
+
+        try:
+            result = self.bulk_import_handler(
+                directory
+            )
+        except (OSError, ValueError) as exc:
+            QMessageBox.critical(
+                self,
+                "Bulk Import",
+                str(exc),
+            )
+            return
+
+        self.set_games(
+            self._bulk_import_games()
+        )
+
+        discovered = result["discovered"]
+
+        QMessageBox.information(
+            self,
+            "Bulk Import Complete",
+            (
+                f"Discovered: "
+                f"{discovered.discovered_count}\n"
+                f"Added: "
+                f"{result['added_count']}\n"
+                f"Skipped: "
+                f"{result['skipped_count']}\n"
+                f"Duplicates in source: "
+                f"{discovered.duplicate_count}"
+            ),
+        )
+
+
+    def _bulk_import_games(self):
+
+        owner = getattr(
+            self.bulk_import_handler,
+            "__self__",
+            None,
+        )
+
+        if owner is not None:
+            getter = getattr(
+                owner,
+                "get_games",
+                None,
+            )
+
+            if callable(getter):
+                return getter()
+
+        return self.all_games
 
 
     def set_games(
