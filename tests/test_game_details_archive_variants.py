@@ -81,7 +81,7 @@ def test_multi_member_archive_preselects_preferred_variant(
     )
     dialog = Mock(
         return_value=(
-            "Variant Game (J).nes",
+            "Variant Game (J) — Japan",
             True,
         )
     )
@@ -102,7 +102,17 @@ def test_multi_member_archive_preselects_preferred_variant(
 
     assert args[1] == "Select Game Version"
     assert args[2] == "Choose the version to launch:"
-    assert args[3] == members
+    assert args[3] == [
+        "Variant Game (J) — Japan",
+        (
+            "Variant Game (U) [!] — "
+            "Recommended • USA • Verified"
+        ),
+        (
+            "Variant Game (U) [b1] — "
+            "USA • Bad Dump"
+        ),
+    ]
     assert args[4] == 1
     assert args[5] is False
 
@@ -250,7 +260,7 @@ def test_selected_archive_variant_reaches_launch_profile(
         "getItem",
         Mock(
             return_value=(
-                "Variant Game (J).nes",
+                "Variant Game (J) — Japan",
                 True,
             )
         ),

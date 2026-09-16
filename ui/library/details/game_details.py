@@ -27,6 +27,7 @@ from services.retroarch import (
 
 from services.retroarch.launcher import RetroArchLauncher
 from services.retroarch.archive_runtime import ArchiveRuntime
+from services.retroarch.archive_variant import ArchiveVariantFormatter
 
 from services.rvdb import RVDBError
 
@@ -517,12 +518,27 @@ Future:
                 preferred
             )
 
+        variants = [
+            ArchiveVariantFormatter.describe(
+                member,
+                preferred=(
+                    member == preferred
+                ),
+            )
+            for member in members
+        ]
+
+        labels = [
+            variant.display_name
+            for variant in variants
+        ]
+
         selected, accepted = (
             QInputDialog.getItem(
                 self,
                 "Select Game Version",
                 "Choose the version to launch:",
-                members,
+                labels,
                 default_index,
                 False,
             )
@@ -531,7 +547,13 @@ Future:
         if not accepted:
             return None
 
-        return selected
+        selected_index = labels.index(
+            selected
+        )
+
+        return variants[
+            selected_index
+        ].member
 
 
     def launch_game(self):
