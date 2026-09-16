@@ -87,6 +87,17 @@ class MainWindow(QMainWindow):
             ):
                 details.process_exited()
 
+            snapshot = (
+                self.process_lifecycle
+                .return_to_idle()
+            )
+
+            self.hardware_indicator_render_frame = (
+                self.hardware_indicator_render_bridge.frame_for(
+                    snapshot
+                )
+            )
+
 
     def __init__(self):
 
