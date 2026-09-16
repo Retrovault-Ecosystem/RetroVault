@@ -203,3 +203,149 @@ def test_successful_launch_reports_running_game(
     )
 
     lifecycle.launch_result.assert_called_once()
+
+
+def test_successful_launch_marks_session_active(
+    app,
+    monkeypatch,
+):
+    details, _lifecycle = make_details(app)
+
+    details.core_resolver.find = (
+        lambda _core: "/cores/fceumm_libretro.so"
+    )
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        ReadyValidator,
+    )
+
+    details.launcher.launch = Mock(
+        return_value={
+            "success": True,
+            "command": ["retroarch"],
+        }
+    )
+
+    details.launch_game()
+
+    assert details._launch_session_active is True
+
+
+def test_process_exit_reports_session_ended(
+    app,
+    monkeypatch,
+):
+    details, _lifecycle = make_details(app)
+
+    details.core_resolver.find = (
+        lambda _core: "/cores/fceumm_libretro.so"
+    )
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        ReadyValidator,
+    )
+
+    details.launcher.launch = Mock(
+        return_value={
+            "success": True,
+            "command": ["retroarch"],
+        }
+    )
+
+    details.launch_game()
+    details.process_exited()
+
+    assert details.launch_status.text() == (
+        "Game session ended."
+    )
+    assert details._launch_session_active is False
+
+
+def test_process_exit_does_not_change_inactive_details(
+    app,
+):
+    details = GameDetails()
+
+    details.process_exited()
+
+    assert details.launch_status.text() == (
+        "Ready when you are."
+    )
+
+
+def test_process_exit_notification_is_idempotent(
+    app,
+    monkeypatch,
+):
+    details, _lifecycle = make_details(app)
+
+    details.core_resolver.find = (
+        lambda _core: "/cores/fceumm_libretro.so"
+    )
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        ReadyValidator,
+    )
+
+    details.launcher.launch = Mock(
+        return_value={
+            "success": True,
+            "command": ["retroarch"],
+        }
+    )
+
+    details.launch_game()
+    details.process_exited()
+    details.process_exited()
+
+    assert details.launch_status.text() == (
+        "Game session ended."
+    )
+
+
+def test_failed_launch_does_not_mark_session_active(
+    app,
+    monkeypatch,
+):
+    details, _lifecycle = make_details(app)
+
+    details.core_resolver.find = (
+        lambda _core: "/cores/fceumm_libretro.so"
+    )
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        ReadyValidator,
+    )
+
+    details.launcher.launch = Mock(
+        return_value={
+            "success": False,
+            "error": "spawn failed",
+        }
+    )
+
+    details.launch_game()
+
+    assert details._launch_session_active is False
+
+
+def test_clear_game_cancels_local_session_tracking(
+    app,
+):
+    details = GameDetails()
+    details.show_game(
+        make_game()
+    )
+
+    details._launch_session_active = True
+    details.clear_game()
+    details.process_exited()
+
+    assert details._launch_session_active is False
+    assert details.launch_status.text() == (
+        "Ready when you are."
+    )

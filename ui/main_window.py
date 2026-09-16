@@ -76,6 +76,17 @@ class MainWindow(QMainWindow):
             )
         )
 
+        if (
+            self.process_lifecycle.state.name
+            == "EXITED"
+        ):
+            for details in getattr(
+                self,
+                "_launch_status_details",
+                (),
+            ):
+                details.process_exited()
+
 
     def __init__(self):
 
@@ -288,6 +299,11 @@ class MainWindow(QMainWindow):
         self.pages.add_page(
             "Playlists",
             playlists_page
+        )
+
+        self._launch_status_details = (
+            library_page.details,
+            playlists_page.details,
         )
 
         def show_system_collections(

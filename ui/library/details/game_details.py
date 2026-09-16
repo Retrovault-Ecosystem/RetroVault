@@ -246,6 +246,8 @@ class GameDetails(QWidget):
         )
 
 
+        self._launch_session_active = False
+
         self.launch_status = QLabel(
             "Ready when you are."
         )
@@ -751,6 +753,19 @@ class GameDetails(QWidget):
         )
 
 
+    def process_exited(
+        self,
+    ) -> None:
+        if not self._launch_session_active:
+            return
+
+        self._launch_session_active = False
+
+        self._set_launch_status(
+            "Game session ended."
+        )
+
+
     def launch_game(self):
 
 
@@ -945,10 +960,13 @@ class GameDetails(QWidget):
             "success",
             False,
         ):
+            self._launch_session_active = True
+
             self._set_launch_status(
                 f'Running "{self.current_game.name}".'
             )
         else:
+            self._launch_session_active = False
             error = str(
                 launch_result.get(
                     "error",
@@ -1098,6 +1116,7 @@ class GameDetails(QWidget):
         self,
     ):
         self.current_game = None
+        self._launch_session_active = False
 
         self.title.setText(
             "Select a game"
