@@ -530,3 +530,141 @@ def test_manual_refresh_reports_success_non_modally():
         view.toolbar.toolTip()
         == "Library refreshed."
     )
+
+
+def test_toolbar_exposes_non_modal_refresh_status():
+    _app()
+
+    toolbar = LibraryToolbar()
+
+    assert toolbar.refresh_status.text() == ""
+    assert (
+        toolbar.refresh_status.objectName()
+        == "libraryRefreshStatus"
+    )
+
+
+def test_manual_refresh_disables_control_while_handler_runs():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes"
+    )
+
+    observed = []
+
+    view = None
+
+    def refresh():
+        observed.append(
+            view.toolbar.refresh_button.isEnabled()
+        )
+
+        observed.append(
+            view.toolbar.refresh_status.text()
+        )
+
+        return [game]
+
+    view = GalleryView(
+        [game],
+        refresh_handler=refresh,
+    )
+
+    view.reload_library()
+
+    assert observed == [
+        False,
+        "Refreshing...",
+    ]
+
+
+def test_manual_refresh_reenables_control_after_success():
+    _app()
+
+    game = RefreshGame(
+        "/roms/game.nes"
+    )
+
+    view = GalleryView(
+        [game],
+        refresh_handler=lambda: [game],
+    )
+
+    view.reload_library()
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view.toolbar.refresh_status.text()
+        == "Library refreshed."
+    )
+
+    assert (
+        view.toolbar.refresh_status.toolTip()
+        == "Library refreshed."
+    )
+
+
+def test_manual_refresh_reenables_control_after_failure():
+    _app()
+
+    def fail():
+        raise RuntimeError(
+            "simulated refresh failure"
+        )
+
+    view = GalleryView(
+        [],
+        refresh_handler=fail,
+    )
+
+    view.reload_library()
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view.toolbar.refresh_status.text()
+        == "Refresh failed."
+    )
+
+    assert (
+        "simulated refresh failure"
+        in view.toolbar.refresh_status.toolTip()
+    )
+
+
+def test_manual_refresh_failure_feedback_is_non_modal():
+    text = Path(
+        "ui/library/gallery.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    start = text.index(
+        "    def reload_library(self):"
+    )
+
+    end = text.index(
+        "    def bulk_import(self):",
+        start,
+    )
+
+    method = text[start:end]
+
+    assert (
+        'self.toolbar.refresh_status.setText('
+        in method
+    )
+
+    assert '"Refresh failed."' in method
+
+    assert "QMessageBox" not in method
+    assert ".warning(" not in method
+    assert ".critical(" not in method

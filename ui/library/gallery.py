@@ -280,6 +280,18 @@ class GalleryView(QWidget):
         if self.refresh_handler is None:
             return
 
+        self.toolbar.refresh_button.setEnabled(
+            False
+        )
+
+        self.toolbar.refresh_status.setText(
+            "Refreshing..."
+        )
+
+        self.toolbar.setToolTip(
+            "Refreshing library..."
+        )
+
         selected_game = (
             self.details.current_game
         )
@@ -315,10 +327,27 @@ class GalleryView(QWidget):
             RuntimeError,
             ValueError,
         ) as exc:
-            self.toolbar.setToolTip(
+            message = (
                 "Library refresh failed: "
                 f"{exc}"
             )
+
+            self.toolbar.refresh_status.setText(
+                "Refresh failed."
+            )
+
+            self.toolbar.refresh_status.setToolTip(
+                message
+            )
+
+            self.toolbar.setToolTip(
+                message
+            )
+
+            self.toolbar.refresh_button.setEnabled(
+                True
+            )
+
             return
 
         self.set_games(
@@ -368,8 +397,20 @@ class GalleryView(QWidget):
         elif selected_game is not None:
             self.details.clear_game()
 
+        self.toolbar.refresh_status.setText(
+            "Library refreshed."
+        )
+
+        self.toolbar.refresh_status.setToolTip(
+            "Library refreshed."
+        )
+
         self.toolbar.setToolTip(
             "Library refreshed."
+        )
+
+        self.toolbar.refresh_button.setEnabled(
+            True
         )
 
         if (

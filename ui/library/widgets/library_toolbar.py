@@ -4,6 +4,7 @@ from PyQt6.QtWidgets import (
     QLineEdit,
     QPushButton,
     QComboBox,
+    QLabel,
 )
 
 from PyQt6.QtCore import pyqtSignal
@@ -135,6 +136,17 @@ class LibraryToolbar(QWidget):
         )
 
 
+        self.refresh_status = QLabel()
+
+        self.refresh_status.setObjectName(
+            "libraryRefreshStatus"
+        )
+
+        self.refresh_status.setMinimumWidth(
+            120
+        )
+
+
         self.bulk_import_button = QPushButton(
             "Bulk Import"
         )
@@ -182,6 +194,11 @@ class LibraryToolbar(QWidget):
 
         layout.addWidget(
             self.refresh_button
+        )
+
+
+        layout.addWidget(
+            self.refresh_status
         )
 
 
