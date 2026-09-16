@@ -806,3 +806,87 @@ def test_duplicate_label_suffix_maps_to_exact_raw_member(
     ]
 
     assert len(labels) == len(set(labels))
+
+
+def test_archive_inspection_failure_is_reported_to_user(
+    monkeypatch,
+):
+    from unittest.mock import Mock
+
+    from PyQt6.QtWidgets import QMessageBox
+
+    from services.library.models import Game
+    from ui.library.details.game_details import (
+        GameDetails,
+    )
+
+    runtime = Mock()
+    runtime.playable_members.side_effect = OSError(
+        "archive inspection failed"
+    )
+
+    lifecycle = Mock()
+    launcher = Mock()
+
+    warnings = []
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda parent, title, message: (
+            warnings.append(
+                (
+                    parent,
+                    title,
+                    message,
+                )
+            )
+        ),
+    )
+
+    details = GameDetails(
+        archive_runtime=runtime,
+        process_lifecycle=lifecycle,
+        launcher=launcher,
+    )
+
+    details.current_game = Game(
+        name="Archive Failure",
+        platform="NES",
+        year="",
+        genre="",
+        core="fceumm",
+        rom="/library/Archive Failure.7z",
+        source="",
+        artwork="",
+    )
+
+    details.launch_game()
+
+    assert len(warnings) == 1
+
+    parent, title, message = warnings[0]
+
+    assert parent is details
+    assert title == "Archive Inspection Failed"
+
+    assert (
+        "RetroVault could not inspect "
+        "the archive variants."
+        in message
+    )
+
+    assert (
+        "archive inspection failed"
+        in message
+    )
+
+    assert details.launch_status.text() == (
+        "Unable to inspect archive variants: "
+        "archive inspection failed"
+    )
+
+    lifecycle.launch_requested.assert_not_called()
+    lifecycle.launch_failed.assert_not_called()
+    lifecycle.launch_result.assert_not_called()
+    launcher.launch.assert_not_called()

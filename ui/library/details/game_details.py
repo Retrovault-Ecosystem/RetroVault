@@ -912,8 +912,14 @@ class GameDetails(QWidget):
                     "Unable to inspect archive variants: "
                     f"{exc}"
                 )
-                print(
-                    message
+                QMessageBox.warning(
+                    self,
+                    "Archive Inspection Failed",
+                    (
+                        "RetroVault could not inspect "
+                        "the archive variants.\n\n"
+                        f"{exc}"
+                    ),
                 )
                 self._set_launch_status(
                     message
