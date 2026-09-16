@@ -31,6 +31,8 @@ class GalleryView(QWidget):
         recent_provider=None,
         collection_names_provider=None,
         collection_add_handler=None,
+        refresh_handler=None,
+        refresh_completed_handler=None,
         bulk_import_handler=None,
         bulk_import_completed_handler=None,
         presentation_resolver_provider=None,
@@ -59,6 +61,14 @@ class GalleryView(QWidget):
 
         self.recent_provider = (
             recent_provider
+        )
+
+        self.refresh_handler = (
+            refresh_handler
+        )
+
+        self.refresh_completed_handler = (
+            refresh_completed_handler
         )
 
         self.bulk_import_handler = (
@@ -226,6 +236,10 @@ class GalleryView(QWidget):
         )
 
 
+        self.toolbar.refresh_requested.connect(
+            self.reload_library
+        )
+
         self.toolbar.bulk_import_requested.connect(
             self.bulk_import
         )
@@ -259,6 +273,37 @@ class GalleryView(QWidget):
             main_layout
         )
 
+
+
+    def reload_library(self):
+
+        if self.refresh_handler is None:
+            return
+
+        try:
+            games = self.refresh_handler()
+        except (
+            OSError,
+            RuntimeError,
+            ValueError,
+        ) as exc:
+            self.toolbar.setToolTip(
+                "Library refresh failed: "
+                f"{exc}"
+            )
+            return
+
+        self.set_games(
+            games
+        )
+
+        if (
+            self.refresh_completed_handler
+            is not None
+        ):
+            self.refresh_completed_handler(
+                games
+            )
 
 
     def bulk_import(self):

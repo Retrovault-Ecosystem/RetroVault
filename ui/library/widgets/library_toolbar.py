@@ -23,6 +23,8 @@ class LibraryToolbar(QWidget):
 
     random_requested = pyqtSignal()
 
+    refresh_requested = pyqtSignal()
+
     bulk_import_requested = pyqtSignal()
 
     favorites_changed = pyqtSignal(bool)
@@ -123,6 +125,16 @@ class LibraryToolbar(QWidget):
         )
 
 
+        self.refresh_button = QPushButton(
+            "Refresh Library"
+        )
+
+
+        self.refresh_button.clicked.connect(
+            self.refresh_requested.emit
+        )
+
+
         self.bulk_import_button = QPushButton(
             "Bulk Import"
         )
@@ -165,6 +177,11 @@ class LibraryToolbar(QWidget):
 
         layout.addWidget(
             self.random_button
+        )
+
+
+        layout.addWidget(
+            self.refresh_button
         )
 
 

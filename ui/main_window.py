@@ -207,6 +207,17 @@ class MainWindow(QMainWindow):
                 )
             )
 
+        def library_refresh_completed(
+            _games,
+        ) -> None:
+            systems_page.refresh_page()
+            playlists_page.refresh_collections(
+                select_name=(
+                    playlists_page
+                    .selected_collection()
+                )
+            )
+
         library_page = LibraryPage(
             controller.get_games(),
             rvdb_service=rvdb_service,
@@ -224,6 +235,12 @@ class MainWindow(QMainWindow):
             ),
             collection_add_handler=(
                 controller.add_to_collection
+            ),
+            refresh_handler=(
+                controller.reload_sources
+            ),
+            refresh_completed_handler=(
+                library_refresh_completed
             ),
             bulk_import_handler=(
                 controller.bulk_import
