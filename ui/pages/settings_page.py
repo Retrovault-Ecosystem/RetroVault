@@ -661,9 +661,8 @@ class SettingsPage(QWidget):
         )
 
         note = QLabel(
-            "Settings are currently read-only. "
-            "RetroVault does not create or modify "
-            "runtime.json from this page."
+            "Runtime overrides are written only when "
+            "Save Runtime Settings is selected."
         )
 
         note.setWordWrap(

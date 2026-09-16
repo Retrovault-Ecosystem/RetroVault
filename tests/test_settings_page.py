@@ -5,6 +5,7 @@ import yaml
 from PyQt6.QtTest import QTest
 from PyQt6.QtWidgets import (
     QApplication,
+    QLabel,
 )
 
 from config.loader import ConfigLoader
@@ -4666,3 +4667,80 @@ def test_successful_save_emits_effective_artwork_directory(
     assert emitted == [
         str(artwork)
     ]
+
+
+def test_settings_page_does_not_claim_to_be_read_only(
+    tmp_path,
+):
+    _app()
+
+    retroarch = (
+        tmp_path
+        / "retroarch"
+    )
+
+    cores = (
+        tmp_path
+        / "cores"
+    )
+
+    library = (
+        tmp_path
+        / "roms"
+    )
+
+    overlays = (
+        tmp_path
+        / "overlays"
+    )
+
+    shaders = (
+        tmp_path
+        / "shaders"
+    )
+
+    defaults = _write_defaults(
+        tmp_path,
+        retroarch=retroarch,
+        cores=cores,
+        library=library,
+        overlays=overlays,
+        shaders=shaders,
+    )
+
+    runtime = (
+        tmp_path
+        / "runtime.json"
+    )
+
+    page = SettingsPage(
+        config_loader=ConfigLoader(
+            default_file=defaults,
+            runtime_file=runtime,
+        )
+    )
+
+    visible_text = " ".join(
+        label.text()
+        for label in page.findChildren(
+            QLabel
+        )
+    )
+
+    assert (
+        "Settings are currently read-only"
+        not in visible_text
+    )
+
+    assert (
+        "RetroVault does not create or modify"
+        not in visible_text
+    )
+
+    assert (
+        "Runtime overrides are written only when "
+        "Save Runtime Settings is selected."
+        in visible_text
+    )
+
+    assert not runtime.exists()
