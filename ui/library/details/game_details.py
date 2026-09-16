@@ -13,6 +13,8 @@ from PyQt6.QtGui import QPixmap
 
 from PyQt6.QtCore import Qt
 
+from pathlib import Path
+
 from models.launch_profile import LaunchProfile
 
 from config import ConfigLoader
@@ -24,6 +26,7 @@ from services.retroarch import (
 )
 
 from services.retroarch.launcher import RetroArchLauncher
+from services.retroarch.archive_runtime import ArchiveRuntime
 
 from services.rvdb import RVDBError
 
@@ -42,6 +45,7 @@ class GameDetails(QWidget):
         presentation_resolver_provider=None,
         launcher=None,
         process_lifecycle=None,
+        archive_runtime=None,
     ):
 
         super().__init__()
@@ -90,6 +94,12 @@ class GameDetails(QWidget):
 
         self.process_lifecycle = (
             process_lifecycle
+        )
+
+        self.archive_runtime = (
+            archive_runtime
+            if archive_runtime is not None
+            else ArchiveRuntime()
         )
 
 
@@ -468,12 +478,95 @@ Future:
         self._refresh_favorite_button()
 
 
+    def _select_archive_member(
+        self,
+        rom,
+    ):
+        """
+        Return the archive member selected for this launch.
+
+        A single playable member launches directly. Multi-member
+        archives expose every playable variant, with RetroVault's
+        preferred member preselected. Cancelling the selector aborts
+        the launch without changing durable Library identity.
+        """
+        members = (
+            self.archive_runtime
+            .playable_members(
+                rom
+            )
+        )
+
+        if not members:
+            return ""
+
+        if len(members) == 1:
+            return members[0]
+
+        preferred = (
+            self.archive_runtime
+            .preferred_member(
+                rom
+            )
+        )
+
+        default_index = 0
+
+        if preferred in members:
+            default_index = members.index(
+                preferred
+            )
+
+        selected, accepted = (
+            QInputDialog.getItem(
+                self,
+                "Select Game Version",
+                "Choose the version to launch:",
+                members,
+                default_index,
+                False,
+            )
+        )
+
+        if not accepted:
+            return None
+
+        return selected
+
+
     def launch_game(self):
 
 
         if not self.current_game:
 
             return
+
+        archive_member = ""
+
+        if (
+            Path(
+                self.current_game.rom
+            ).suffix.lower()
+            == ".7z"
+        ):
+            try:
+                archive_member = (
+                    self._select_archive_member(
+                        self.current_game.rom
+                    )
+                )
+            except (
+                OSError,
+                ValueError,
+            ) as exc:
+                print(
+                    "Unable to inspect archive variants: "
+                    f"{exc}"
+                )
+                return
+
+            if archive_member is None:
+                return
 
         if self.process_lifecycle is not None:
             self.process_lifecycle.launch_requested(
@@ -547,7 +640,9 @@ Future:
 
             overlay=overlay,
 
-            shader=shader
+            shader=shader,
+
+            archive_member=archive_member
 
         )
 
