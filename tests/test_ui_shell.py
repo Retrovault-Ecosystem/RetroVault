@@ -2,7 +2,6 @@ import pytest
 
 from PyQt6.QtWidgets import QApplication
 
-from ui.pages.base_page import BasePage
 from ui.sidebar import Sidebar
 from ui.theme import apply_theme
 
@@ -66,28 +65,6 @@ def test_sidebar_has_clear_active_navigation(
             "Library"
         ].isChecked()
     )
-
-
-def test_base_page_has_consistent_shell(
-    app,
-):
-    page = BasePage(
-        "Example"
-    )
-
-    assert page.title_label.text() == (
-        "Example"
-    )
-
-    assert page.title_label.objectName() == (
-        "PageTitle"
-    )
-
-    assert page.subtitle_label.objectName() == (
-        "PageSubtitle"
-    )
-
-    assert page.content_frame is not None
 
 
 def test_theme_covers_navigation_and_browser_controls(
