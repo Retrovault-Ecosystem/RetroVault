@@ -377,3 +377,173 @@ def test_multi_member_selector_does_not_reinspect_archive(
     )
 
     runtime.preferred_member.assert_not_called()
+
+
+def test_archive_inspection_failure_does_not_start_launch(
+    monkeypatch,
+):
+    runtime = Mock()
+    runtime.playable_members.side_effect = OSError(
+        "archive inspection failed"
+    )
+
+    lifecycle = Mock()
+    launcher = Mock()
+
+    details = GameDetails(
+        archive_runtime=runtime,
+        process_lifecycle=lifecycle,
+        launcher=launcher,
+    )
+
+    details.current_game = Mock(
+        rom="/library/Broken Archive.7z",
+        rvdb_platform_id="platform.nintendo.nes",
+    )
+
+    details.launch_game()
+
+    lifecycle.launch_requested.assert_not_called()
+    launcher.launch.assert_not_called()
+
+
+def test_archive_selector_value_error_does_not_start_launch(
+    monkeypatch,
+):
+    runtime = Mock()
+    runtime.playable_members.side_effect = ValueError(
+        "invalid archive member"
+    )
+
+    lifecycle = Mock()
+    launcher = Mock()
+
+    details = GameDetails(
+        archive_runtime=runtime,
+        process_lifecycle=lifecycle,
+        launcher=launcher,
+    )
+
+    details.current_game = Mock(
+        rom="/library/Unsafe Archive.7z",
+        rvdb_platform_id="platform.nintendo.nes",
+    )
+
+    details.launch_game()
+
+    lifecycle.launch_requested.assert_not_called()
+    launcher.launch.assert_not_called()
+
+
+def test_cancelled_variant_selector_does_not_start_launch(
+    monkeypatch,
+):
+    members = [
+        "Variant Game (J).nes",
+        "Variant Game (U) [!].nes",
+    ]
+
+    runtime = Mock()
+    runtime.playable_members.return_value = members
+    runtime.preferred_from_members.return_value = (
+        "Variant Game (U) [!].nes"
+    )
+
+    lifecycle = Mock()
+    launcher = Mock()
+
+    details = GameDetails(
+        archive_runtime=runtime,
+        process_lifecycle=lifecycle,
+        launcher=launcher,
+    )
+
+    details.current_game = Mock(
+        rom="/library/Variant Game.7z",
+        rvdb_platform_id="platform.nintendo.nes",
+    )
+
+    monkeypatch.setattr(
+        QInputDialog,
+        "getItem",
+        Mock(
+            return_value=(
+                "",
+                False,
+            )
+        ),
+    )
+
+    details.launch_game()
+
+    lifecycle.launch_requested.assert_not_called()
+    launcher.launch.assert_not_called()
+
+
+def test_zero_playable_members_preserves_runtime_launch_path(
+    monkeypatch,
+):
+    runtime = Mock()
+    runtime.playable_members.return_value = []
+
+    lifecycle = Mock()
+    launcher = Mock()
+    launcher.launch.return_value = {
+        "success": False,
+        "command": [],
+    }
+
+    details = GameDetails(
+        archive_runtime=runtime,
+        process_lifecycle=lifecycle,
+        launcher=launcher,
+    )
+
+    details.current_game = Mock(
+        name="Empty Archive",
+        rom="/library/Empty Archive.7z",
+        core="fceumm",
+        rvdb_platform_id="platform.nintendo.nes",
+    )
+
+    monkeypatch.setattr(
+        details.core_resolver,
+        "find",
+        Mock(
+            return_value="/cores/fceumm_libretro.so"
+        ),
+    )
+
+    class ReadyValidator:
+        def __init__(self, *_args, **_kwargs):
+            pass
+
+        def validate(self, _rom):
+            return {
+                "retroarch": True,
+                "core": True,
+                "rom": True,
+                "ready": True,
+            }
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        ReadyValidator,
+    )
+
+    details.launch_game()
+
+    runtime.playable_members.assert_called_once_with(
+        "/library/Empty Archive.7z"
+    )
+
+    lifecycle.launch_requested.assert_called_once_with(
+        "platform.nintendo.nes"
+    )
+
+    launcher.launch.assert_called_once()
+
+    profile = launcher.launch.call_args.args[0]
+
+    assert profile.archive_member == ""
+    assert profile.rom == "/library/Empty Archive.7z"
