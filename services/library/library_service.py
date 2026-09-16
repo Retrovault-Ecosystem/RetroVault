@@ -111,10 +111,83 @@ class LibraryService:
         previous_sources = self.sources
         previous_games = self.games
 
+        previous_by_identity = {}
+
+        for game in previous_games:
+            try:
+                identity = game_identity(
+                    game
+                )
+            except ValueError:
+                continue
+
+            previous_by_identity[
+                identity
+            ] = game
+
         self.sources = refreshed_sources
 
         try:
-            return self.load()
+            reloaded_games = self.load()
+
+            preserved_games = []
+
+            for game in reloaded_games:
+                try:
+                    identity = game_identity(
+                        game
+                    )
+                except ValueError:
+                    preserved_games.append(
+                        game
+                    )
+                    continue
+
+                previous_game = (
+                    previous_by_identity.get(
+                        identity
+                    )
+                )
+
+                if previous_game is None:
+                    preserved_games.append(
+                        game
+                    )
+                    continue
+
+                previous_game.name = game.name
+                previous_game.platform = game.platform
+                previous_game.year = game.year
+                previous_game.genre = game.genre
+                previous_game.core = game.core
+                previous_game.rom = game.rom
+                previous_game.source = game.source
+                previous_game.artwork = game.artwork
+                previous_game.favorite = game.favorite
+                previous_game.rvdb_platform_id = (
+                    game.rvdb_platform_id
+                )
+                previous_game.rvdb_game_id = (
+                    game.rvdb_game_id
+                )
+                previous_game.description = (
+                    game.description
+                )
+                previous_game.developer = (
+                    game.developer
+                )
+                previous_game.publisher = (
+                    game.publisher
+                )
+
+                preserved_games.append(
+                    previous_game
+                )
+
+            self.games = preserved_games
+
+            return self.games
+
         except Exception:
             self.sources = previous_sources
             self.games = previous_games

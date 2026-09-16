@@ -289,3 +289,203 @@ def test_reload_failure_restores_sources_and_games_as_one_live_snapshot():
 
     assert service.sources is original_sources
     assert service.games is original_games
+
+
+class ReloadGame:
+
+    def __init__(
+        self,
+        rom,
+        *,
+        name="Game",
+        platform="NES",
+    ):
+        self.name = name
+        self.platform = platform
+        self.year = ""
+        self.genre = ""
+        self.core = ""
+        self.rom = rom
+        self.source = ""
+        self.artwork = ""
+        self.favorite = False
+        self.rvdb_platform_id = ""
+        self.rvdb_game_id = ""
+        self.description = ""
+        self.developer = ""
+        self.publisher = ""
+
+
+def test_reload_sources_preserves_existing_game_object_identity():
+    service = make_service()
+
+    existing = ReloadGame(
+        "/roms/existing.nes",
+        name="Old Name",
+    )
+
+    service.games = [
+        existing
+    ]
+
+    class Builder:
+        def build(self, sources):
+            list(sources)
+
+            game = ReloadGame(
+                "/roms/existing.nes",
+                name="Updated Name",
+            )
+
+            game.description = (
+                "Updated metadata"
+            )
+
+            return [
+                game
+            ]
+
+    service.builder = Builder()
+
+    result = service.reload_sources()
+
+    assert len(result) == 1
+    assert result[0] is existing
+    assert service.games[0] is existing
+    assert existing.name == "Updated Name"
+    assert existing.description == (
+        "Updated metadata"
+    )
+
+
+def test_reload_sources_keeps_newly_discovered_game_object():
+    service = make_service()
+
+    existing = ReloadGame(
+        "/roms/existing.nes"
+    )
+
+    service.games = [
+        existing
+    ]
+
+    discovered = ReloadGame(
+        "/roms/new.nes",
+        name="New Game",
+    )
+
+    class Builder:
+        def build(self, sources):
+            list(sources)
+
+            return [
+                ReloadGame(
+                    "/roms/existing.nes"
+                ),
+                discovered,
+            ]
+
+    service.builder = Builder()
+
+    result = service.reload_sources()
+
+    assert len(result) == 2
+    assert result[0] is existing
+    assert result[1] is discovered
+
+
+def test_reload_sources_prunes_games_removed_from_enabled_sources():
+    service = make_service()
+
+    retained = ReloadGame(
+        "/roms/retained.nes"
+    )
+
+    removed = ReloadGame(
+        "/roms/removed.nes"
+    )
+
+    service.games = [
+        retained,
+        removed,
+    ]
+
+    class Builder:
+        def build(self, sources):
+            list(sources)
+
+            return [
+                ReloadGame(
+                    "/roms/retained.nes"
+                )
+            ]
+
+    service.builder = Builder()
+
+    result = service.reload_sources()
+
+    assert len(result) == 1
+    assert result[0] is retained
+    assert removed not in result
+
+
+def test_reload_sources_preserves_reloaded_metadata_on_existing_identity():
+    service = make_service()
+
+    existing = ReloadGame(
+        "/roms/game.nes",
+        name="Before",
+    )
+
+    existing.favorite = False
+    existing.artwork = "old.png"
+
+    service.games = [
+        existing
+    ]
+
+    refreshed = ReloadGame(
+        "/roms/game.nes",
+        name="After",
+    )
+
+    refreshed.favorite = True
+    refreshed.artwork = "builder-artwork.png"
+    refreshed.year = "1990"
+    refreshed.genre = "Platform"
+    refreshed.core = "fceumm"
+    refreshed.source = "source-1"
+    refreshed.rvdb_platform_id = "nes"
+    refreshed.rvdb_game_id = "game-id"
+    refreshed.description = "Description"
+    refreshed.developer = "Developer"
+    refreshed.publisher = "Publisher"
+
+    class Builder:
+        def build(self, sources):
+            list(sources)
+            return [
+                refreshed
+            ]
+
+    service.builder = Builder()
+
+    result = service.reload_sources()
+
+    assert result[0] is existing
+    assert existing.name == "After"
+    assert existing.favorite is True
+    # LibraryService.load() owns final artwork enrichment.
+    # The default test artwork service returns an empty result,
+    # so identity preservation must copy that final live value
+    # rather than the builder's intermediate artwork value.
+    assert existing.artwork == ""
+    assert existing.year == "1990"
+    assert existing.genre == "Platform"
+    assert existing.core == "fceumm"
+    assert existing.source == "source-1"
+    assert existing.rvdb_platform_id == "nes"
+    assert existing.rvdb_game_id == "game-id"
+    assert existing.description == "Description"
+    assert existing.developer == "Developer"
+    assert existing.publisher == "Publisher"
