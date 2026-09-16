@@ -2059,3 +2059,100 @@ def test_show_platform_rejects_platform_without_local_games():
         view.toolbar.system_filter.currentText()
         == original
     )
+
+
+def test_show_platform_can_open_only_platform_favorites():
+    favorite = FakeGame(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+        favorite=True,
+    )
+    favorite.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    ordinary = FakeGame(
+        name="Mega Man 2",
+        platform="Nintendo Entertainment System",
+        favorite=False,
+    )
+    ordinary.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    other_system = FakeGame(
+        name="Chrono Trigger",
+        platform="Super Nintendo",
+        favorite=True,
+    )
+    other_system.rvdb_platform_id = (
+        "platform.nintendo.snes"
+    )
+
+    view = GalleryView(
+        [
+            favorite,
+            ordinary,
+            other_system,
+        ]
+    )
+
+    assert (
+        view.show_platform(
+            "platform.nintendo.nes",
+            favorites_only=True,
+        )
+        is True
+    )
+
+    assert (
+        view.toolbar.system_filter.currentText()
+        == "Nintendo Entertainment System"
+    )
+
+    assert (
+        view.toolbar.favorites_only.isChecked()
+        is True
+    )
+
+    assert (
+        view.toolbar.recent_only.isChecked()
+        is False
+    )
+
+    assert _visible_game_names(
+        view
+    ) == [
+        "Adventure Island"
+    ]
+
+
+def test_show_platform_normal_access_clears_existing_favorites_filter():
+    game = FakeGame(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+        favorite=True,
+    )
+    game.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    view = GalleryView(
+        [game]
+    )
+
+    view.toolbar.favorites_only.setChecked(
+        True
+    )
+
+    assert (
+        view.show_platform(
+            "platform.nintendo.nes"
+        )
+        is True
+    )
+
+    assert (
+        view.toolbar.favorites_only.isChecked()
+        is False
+    )

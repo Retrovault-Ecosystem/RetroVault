@@ -321,6 +321,8 @@ class GalleryView(QWidget):
     def show_platform(
         self,
         platform_id: str,
+        *,
+        favorites_only: bool = False,
     ) -> bool:
         platform_names = sorted(
             {
@@ -361,11 +363,11 @@ class GalleryView(QWidget):
             return False
 
         self.toolbar.search.clear()
-        self.toolbar.favorites_only.setChecked(
-            False
-        )
         self.toolbar.recent_only.setChecked(
             False
+        )
+        self.toolbar.favorites_only.setChecked(
+            favorites_only
         )
 
         self.toolbar.system_filter.setCurrentIndex(
