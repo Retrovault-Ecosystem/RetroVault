@@ -308,6 +308,56 @@ class PlaylistsPage(QWidget):
             enabled
         )
 
+    def show_platform_collections(
+        self,
+        platform_id: str,
+    ) -> bool:
+        names = list(
+            self.controller.collection_names()
+        )
+
+        matching_names = []
+
+        for name in names:
+            try:
+                games = list(
+                    self.controller.collection_games(
+                        name
+                    )
+                )
+            except (KeyError, ValueError, OSError):
+                continue
+
+            if any(
+                str(
+                    getattr(
+                        game,
+                        "rvdb_platform_id",
+                        "",
+                    )
+                    or ""
+                )
+                == platform_id
+                for game in games
+            ):
+                matching_names.append(
+                    name
+                )
+
+        if not matching_names:
+            return False
+
+        target = matching_names[0]
+
+        self.refresh_collections(
+            select_name=target
+        )
+
+        return (
+            self.selected_collection()
+            == target
+        )
+
     def show_collection(
         self,
         name,

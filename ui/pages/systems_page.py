@@ -26,6 +26,7 @@ class SystemsPage(QWidget):
     library_requested = pyqtSignal(str)
     library_favorites_requested = pyqtSignal(str)
     library_recent_requested = pyqtSignal(str)
+    library_collections_requested = pyqtSignal(str)
 
     EMPTY = "Not currently recorded"
 
@@ -82,6 +83,7 @@ class SystemsPage(QWidget):
         self.library_games_value = QLabel("—")
         self.library_favorites_value = QLabel("—")
         self.library_recent_value = QLabel("—")
+        self.library_collections_value = QLabel("—")
 
         self.view_library_button = QPushButton(
             "View Games in Library"
@@ -101,6 +103,13 @@ class SystemsPage(QWidget):
             "View Recently Played in Library"
         )
         self.view_recent_button.setEnabled(
+            False
+        )
+
+        self.view_collections_button = QPushButton(
+            "View Collections with Games"
+        )
+        self.view_collections_button.setEnabled(
             False
         )
 
@@ -373,6 +382,10 @@ class SystemsPage(QWidget):
                     "Recently Played",
                     self.library_recent_value,
                 ),
+                (
+                    "Collections",
+                    self.library_collections_value,
+                ),
             )
         ):
             label = QLabel(label_text)
@@ -416,6 +429,10 @@ class SystemsPage(QWidget):
         )
         details_layout.addWidget(
             self.view_recent_button
+        )
+
+        details_layout.addWidget(
+            self.view_collections_button
         )
 
         details_layout.addStretch()
@@ -496,6 +513,10 @@ class SystemsPage(QWidget):
 
         self.view_recent_button.clicked.connect(
             self._request_library_recent
+        )
+
+        self.view_collections_button.clicked.connect(
+            self._request_library_collections
         )
 
     def _load_systems(self) -> None:
@@ -847,6 +868,23 @@ class SystemsPage(QWidget):
             str(platform_id)
         )
 
+    def _request_library_collections(self) -> None:
+        current = self.system_list.currentItem()
+
+        if current is None:
+            return
+
+        platform_id = current.data(
+            Qt.ItemDataRole.UserRole
+        )
+
+        if not platform_id:
+            return
+
+        self.library_collections_requested.emit(
+            str(platform_id)
+        )
+
     def refresh_page(self) -> None:
         current = (
             self.system_list.currentItem()
@@ -880,6 +918,9 @@ class SystemsPage(QWidget):
             self.library_recent_value.setText(
                 self.EMPTY
             )
+            self.library_collections_value.setText(
+                self.EMPTY
+            )
             self.view_library_button.setEnabled(
                 False
             )
@@ -887,6 +928,9 @@ class SystemsPage(QWidget):
                 False
             )
             self.view_recent_button.setEnabled(
+                False
+            )
+            self.view_collections_button.setEnabled(
                 False
             )
             return
@@ -905,6 +949,9 @@ class SystemsPage(QWidget):
             self.library_recent_value.setText(
                 self.EMPTY
             )
+            self.library_collections_value.setText(
+                self.EMPTY
+            )
             self.view_library_button.setEnabled(
                 False
             )
@@ -912,6 +959,9 @@ class SystemsPage(QWidget):
                 False
             )
             self.view_recent_button.setEnabled(
+                False
+            )
+            self.view_collections_button.setEnabled(
                 False
             )
             return
@@ -938,6 +988,56 @@ class SystemsPage(QWidget):
 
         self.view_library_button.setEnabled(
             bool(matching)
+        )
+
+        collection_names_provider = getattr(
+            self,
+            "collection_names_provider",
+            None,
+        )
+        collection_games_provider = getattr(
+            self,
+            "collection_games_provider",
+            None,
+        )
+
+        collection_count = 0
+
+        if (
+            collection_names_provider is not None
+            and collection_games_provider is not None
+        ):
+            try:
+                for collection_name in (
+                    collection_names_provider()
+                ):
+                    collection_games = list(
+                        collection_games_provider(
+                            collection_name
+                        )
+                    )
+
+                    if any(
+                        str(
+                            getattr(
+                                game,
+                                "rvdb_platform_id",
+                                "",
+                            )
+                            or ""
+                        )
+                        == platform_id
+                        for game in collection_games
+                    ):
+                        collection_count += 1
+            except Exception:
+                collection_count = 0
+
+        self.library_collections_value.setText(
+            str(collection_count)
+        )
+        self.view_collections_button.setEnabled(
+            collection_count > 0
         )
 
         favorite_count = sum(
@@ -1128,5 +1228,8 @@ class SystemsPage(QWidget):
             False
         )
         self.view_recent_button.setEnabled(
+            False
+        )
+        self.view_collections_button.setEnabled(
             False
         )

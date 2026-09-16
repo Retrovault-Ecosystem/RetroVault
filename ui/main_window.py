@@ -215,6 +215,13 @@ class MainWindow(QMainWindow):
             systems_page
         )
 
+        systems_page.collection_names_provider = (
+            controller.collection_names
+        )
+        systems_page.collection_games_provider = (
+            controller.collection_games
+        )
+
         def show_system_library(
             platform_id: str,
         ) -> None:
@@ -271,14 +278,30 @@ class MainWindow(QMainWindow):
             show_system_recent
         )
 
+        playlists_page = PlaylistsPage(
+            controller,
+            rvdb_service=rvdb_service,
+            launcher=self.retroarch_launcher,
+            process_lifecycle=self.process_lifecycle,
+        )
+
         self.pages.add_page(
             "Playlists",
-            PlaylistsPage(
-                controller,
-                rvdb_service=rvdb_service,
-                launcher=self.retroarch_launcher,
-                process_lifecycle=self.process_lifecycle,
-            )
+            playlists_page
+        )
+
+        def show_system_collections(
+            platform_id: str,
+        ) -> None:
+            if playlists_page.show_platform_collections(
+                platform_id
+            ):
+                self.pages.show_page(
+                    "Playlists"
+                )
+
+        systems_page.library_collections_requested.connect(
+            show_system_collections
         )
 
         overlays_page = OverlaysPage(

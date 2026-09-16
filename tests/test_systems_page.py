@@ -1096,3 +1096,113 @@ def test_systems_page_refresh_updates_recent_count_live(
 
     assert page.library_recent_value.text() == "1"
     assert page.view_recent_button.isEnabled() is True
+
+
+def test_systems_page_collection_action_emits_selected_platform(
+    app,
+    service,
+):
+    from types import SimpleNamespace
+
+    page = SystemsPage(
+        service,
+        games_provider=lambda: [
+            SimpleNamespace(
+                rvdb_platform_id="platform.test.alpha",
+                favorite=False,
+                rom="/roms/alpha.rom",
+            )
+        ],
+    )
+
+    current = page.system_list.currentItem()
+
+    assert current is not None
+
+    platform_id = str(
+        current.data(
+            Qt.ItemDataRole.UserRole
+        )
+    )
+
+    page.collection_names_provider = (
+        lambda: ["Classics"]
+    )
+    page.collection_games_provider = (
+        lambda name: [
+            SimpleNamespace(
+                rvdb_platform_id=platform_id,
+                rom="/roms/alpha.rom",
+            )
+        ]
+    )
+
+    page.refresh_page()
+
+    assert page.library_collections_value.text() == "1"
+    assert page.view_collections_button.isEnabled()
+
+    emitted = []
+
+    page.library_collections_requested.connect(
+        emitted.append
+    )
+
+    page.view_collections_button.click()
+
+    assert emitted == [platform_id]
+
+
+def test_systems_page_collection_action_disabled_without_matching_collection(
+    app,
+    service,
+):
+    from types import SimpleNamespace
+
+    page = SystemsPage(
+        service,
+        games_provider=lambda: [
+            SimpleNamespace(
+                rvdb_platform_id="platform.test.alpha",
+                favorite=False,
+                rom="/roms/alpha.rom",
+            )
+        ],
+    )
+
+    current = page.system_list.currentItem()
+
+    assert current is not None
+
+    platform_id = str(
+        current.data(
+            Qt.ItemDataRole.UserRole
+        )
+    )
+
+    page.collection_names_provider = (
+        lambda: ["Other"]
+    )
+    page.collection_games_provider = (
+        lambda name: [
+            SimpleNamespace(
+                rvdb_platform_id="platform.other",
+                rom="/roms/other.rom",
+            )
+        ]
+    )
+
+    page.refresh_page()
+
+    assert page.library_collections_value.text() == "0"
+    assert not page.view_collections_button.isEnabled()
+
+    emitted = []
+
+    page.library_collections_requested.connect(
+        emitted.append
+    )
+
+    page.view_collections_button.click()
+
+    assert emitted == []

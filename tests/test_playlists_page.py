@@ -535,3 +535,65 @@ def test_playlists_reuses_game_details_launch_path(
         page.details,
         GameDetails,
     )
+
+
+def test_show_platform_collections_selects_first_matching_collection(
+    app,
+):
+    controller = FakeController()
+
+    nes = make_game("Duck Tales 2")
+    nes.rvdb_platform_id = "platform.nintendo.nes"
+
+    snes = make_game("Super Mario World")
+    snes.platform = "SNES"
+    snes.rvdb_platform_id = "platform.nintendo.snes"
+
+    controller.collections = {
+        "SNES": [snes],
+        "NES Favorites": [nes],
+        "NES Weekend": [nes],
+    }
+
+    page = PlaylistsPage(
+        controller
+    )
+
+    assert page.show_platform_collections(
+        "platform.nintendo.nes"
+    )
+
+    assert page.selected_collection() == (
+        "NES Favorites"
+    )
+    assert page.game_list.count() == 1
+    assert page.game_list.item(0).text() == (
+        "Duck Tales 2 — NES"
+    )
+
+
+def test_show_platform_collections_rejects_platform_without_collection(
+    app,
+):
+    controller = FakeController()
+
+    game = make_game()
+    game.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    controller.collections = {
+        "NES": [game],
+    }
+
+    page = PlaylistsPage(
+        controller
+    )
+
+    original = page.selected_collection()
+
+    assert not page.show_platform_collections(
+        "platform.nintendo.snes"
+    )
+
+    assert page.selected_collection() == original
