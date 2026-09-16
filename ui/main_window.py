@@ -418,7 +418,18 @@ class MainWindow(QMainWindow):
         settings_page = SettingsPage()
 
         def library_sources_changed() -> None:
-            games = controller.reload_sources()
+            try:
+                games = controller.reload_sources()
+            except (
+                OSError,
+                RuntimeError,
+                ValueError,
+            ) as exc:
+                settings_page.save_status.setText(
+                    "Library source saved, but live "
+                    f"reload failed: {exc}"
+                )
+                return
 
             library_page.set_games(
                 games

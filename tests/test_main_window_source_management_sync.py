@@ -178,3 +178,130 @@ def test_source_reload_happens_before_surface_refresh():
     assert reload_position < callback.index(
         "playlists_page.refresh_collections("
     )
+
+
+def test_source_reload_failure_is_reported_inline_without_popup():
+    text = _main_window_text()
+
+    start = text.index(
+        "        def library_sources_changed() -> None:"
+    )
+
+    end = text.index(
+        "        settings_page.library_sources_changed.connect(",
+        start,
+    )
+
+    callback = text[
+        start:end
+    ]
+
+    assert "try:" in callback
+    assert "controller.reload_sources()" in callback
+
+    assert (
+        "except (\n"
+        "                OSError,\n"
+        "                RuntimeError,\n"
+        "                ValueError,\n"
+        "            ) as exc:"
+        in callback
+    )
+
+    assert (
+        "settings_page.save_status.setText("
+        in callback
+    )
+
+    assert (
+        '"Library source saved, but live "'
+        in callback
+    )
+
+    assert (
+        'f"reload failed: {exc}"'
+        in callback
+    )
+
+    assert "QMessageBox" not in callback
+    assert ".warning(" not in callback
+    assert ".critical(" not in callback
+
+
+def test_source_reload_failure_returns_before_surface_mutation():
+    text = _main_window_text()
+
+    start = text.index(
+        "        def library_sources_changed() -> None:"
+    )
+
+    end = text.index(
+        "        settings_page.library_sources_changed.connect(",
+        start,
+    )
+
+    callback = text[
+        start:end
+    ]
+
+    failure_message = callback.index(
+        "settings_page.save_status.setText("
+    )
+
+    return_position = callback.index(
+        "return",
+        failure_message,
+    )
+
+    library_refresh = callback.index(
+        "library_page.set_games("
+    )
+
+    systems_refresh = callback.index(
+        "systems_page.refresh_page()"
+    )
+
+    playlists_refresh = callback.index(
+        "playlists_page.refresh_collections("
+    )
+
+    assert return_position < library_refresh
+    assert return_position < systems_refresh
+    assert return_position < playlists_refresh
+
+
+def test_source_reload_success_still_refreshes_all_surfaces():
+    text = _main_window_text()
+
+    start = text.index(
+        "        def library_sources_changed() -> None:"
+    )
+
+    end = text.index(
+        "        settings_page.library_sources_changed.connect(",
+        start,
+    )
+
+    callback = text[
+        start:end
+    ]
+
+    reload_position = callback.index(
+        "controller.reload_sources()"
+    )
+
+    library_position = callback.index(
+        "library_page.set_games("
+    )
+
+    systems_position = callback.index(
+        "systems_page.refresh_page()"
+    )
+
+    playlists_position = callback.index(
+        "playlists_page.refresh_collections("
+    )
+
+    assert reload_position < library_position
+    assert reload_position < systems_position
+    assert reload_position < playlists_position
