@@ -168,3 +168,187 @@ def test_duplicate_persist_does_not_duplicate_restart_source(
     assert Path(
         sources[0].path
     ) == roms.resolve()
+
+
+def test_application_startup_loads_all_enabled_library_sources(
+    tmp_path,
+):
+    import json
+
+    from config import ConfigLoader
+    from services.library.library_service import (
+        LibraryService,
+    )
+    from services.library.source_manager import (
+        SourceManager,
+    )
+
+    primary = (
+        tmp_path
+        / "primary-roms"
+    )
+    bulk = (
+        tmp_path
+        / "bulk-roms"
+    )
+
+    primary.mkdir()
+    bulk.mkdir()
+
+    defaults = (
+        tmp_path
+        / "defaults.yaml"
+    )
+
+    defaults.write_text(
+        """
+library:
+  sources: []
+paths:
+  artwork:
+    directory: ""
+""".lstrip(),
+        encoding="utf-8",
+    )
+
+    runtime = (
+        tmp_path
+        / "runtime.json"
+    )
+
+    runtime.write_text(
+        json.dumps(
+            {
+                "library": {
+                    "sources": [
+                        {
+                            "id": "primary",
+                            "name": "Primary Library",
+                            "enabled": True,
+                            "type": "local",
+                            "path": str(
+                                primary
+                            ),
+                        },
+                        {
+                            "id": "bulk-import",
+                            "name": "Bulk Import",
+                            "enabled": True,
+                            "type": "local",
+                            "path": str(
+                                bulk
+                            ),
+                        },
+                    ],
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+
+    loader = ConfigLoader(
+        default_file=defaults,
+        runtime_file=runtime,
+    )
+
+    restarted_sources = SourceManager.__new__(
+        SourceManager
+    )
+    restarted_sources.config = (
+        loader.load()
+    )
+
+    sources = (
+        restarted_sources.sources()
+    )
+
+    assert [
+        source.id
+        for source in sources
+    ] == [
+        "primary",
+        "bulk-import",
+    ]
+
+    assert [
+        source.name
+        for source in sources
+    ] == [
+        "Primary Library",
+        "Bulk Import",
+    ]
+
+    assert [
+        source.path
+        for source in sources
+    ] == [
+        str(primary),
+        str(bulk),
+    ]
+
+    assert all(
+        source.enabled
+        for source in sources
+    )
+
+    class RecordingBuilder:
+        def __init__(self):
+            self.received_sources = None
+
+        def build(
+            self,
+            received_sources,
+        ):
+            self.received_sources = list(
+                received_sources
+            )
+            return []
+
+    class State:
+        def apply(
+            self,
+            games,
+        ):
+            return list(games)
+
+    class Artwork:
+        def get_artwork(
+            self,
+            _game,
+        ):
+            return None
+
+    builder = RecordingBuilder()
+
+    service = LibraryService.__new__(
+        LibraryService
+    )
+    service.sources = (
+        restarted_sources
+    )
+    service.builder = builder
+    service.state = State()
+    service.artwork = Artwork()
+    service.games = []
+
+    loaded = service.load()
+
+    assert loaded == []
+
+    assert builder.received_sources is not None
+
+    assert [
+        source.id
+        for source in builder.received_sources
+    ] == [
+        "primary",
+        "bulk-import",
+    ]
+
+    assert [
+        source.path
+        for source in builder.received_sources
+    ] == [
+        str(primary),
+        str(bulk),
+    ]
