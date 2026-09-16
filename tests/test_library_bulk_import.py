@@ -282,3 +282,24 @@ def test_bulk_import_does_not_create_runtime_state(
         / "retrovault"
         / "library-state.json"
     ).exists()
+
+
+def test_bulk_import_empty_directory_returns_empty_result(
+    tmp_path,
+):
+    source = tmp_path / "Empty ROM Library"
+    source.mkdir()
+
+    result = BulkImporter().import_directory(
+        source
+    )
+
+    assert result.source.enabled is True
+    assert result.source.type == "local"
+    assert Path(
+        result.source.path
+    ) == source.resolve()
+
+    assert result.games == ()
+    assert result.discovered_count == 0
+    assert result.duplicate_count == 0
