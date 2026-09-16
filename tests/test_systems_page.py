@@ -1206,3 +1206,23 @@ def test_systems_page_collection_action_disabled_without_matching_collection(
     page.view_collections_button.click()
 
     assert emitted == []
+
+
+def test_systems_page_does_not_expose_development_bundle_language():
+    from pathlib import Path
+
+    source = Path(
+        "ui/pages/systems_page.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "local RVDB development bundle."
+        not in source
+    )
+
+    assert (
+        "local RVDB data bundle."
+        in source
+    )

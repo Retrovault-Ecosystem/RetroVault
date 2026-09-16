@@ -814,7 +814,7 @@ class SystemsPage(QWidget):
 
         self.status_label.setText(
             "Showing live data from the "
-            "local RVDB development bundle."
+            "local RVDB data bundle."
         )
 
     def _request_library(self) -> None:
