@@ -57,6 +57,59 @@ class ArchiveRuntime:
             )
         )
 
+    def playable_members(self, rom):
+        source = (
+            Path(rom)
+            .expanduser()
+            .resolve()
+        )
+
+        if (
+            source.suffix.lower()
+            not in self.ARCHIVE_EXTENSIONS
+        ):
+            return []
+
+        if not source.is_file():
+            return []
+
+        if self.executable is None:
+            return []
+
+        members = self._list_members(
+            source
+        )
+
+        return [
+            member
+            for member in members
+            if (
+                Path(member)
+                .suffix
+                .lower()
+                in self.PLAYABLE_EXTENSIONS
+            )
+        ]
+
+    def preferred_member(self, rom):
+        source = (
+            Path(rom)
+            .expanduser()
+            .resolve()
+        )
+
+        playable = self.playable_members(
+            source
+        )
+
+        if not playable:
+            return None
+
+        return self._select_member(
+            source,
+            playable,
+        )
+
     def resolve(self, rom):
         source = (
             Path(rom)

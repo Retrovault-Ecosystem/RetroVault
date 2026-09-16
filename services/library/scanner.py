@@ -1,5 +1,7 @@
 import os
 
+from services.retroarch.archive_runtime import ArchiveRuntime
+
 from services.library.core_mapper import CoreMapper
 from services.library.models import Game
 from services.library.rvdb_resolver import (
@@ -50,6 +52,8 @@ class RomScanner:
         self.core_mapper = CoreMapper()
 
         self.rvdb_resolver = rvdb_resolver
+
+        self.archive_runtime = ArchiveRuntime()
 
     def _resolve_platform(
         self,
@@ -109,11 +113,49 @@ class RomScanner:
                     ]
                 )
 
+                platform_extension = ext
+
+                if ext == ".7z":
+                    archive_path = os.path.join(
+                        directory,
+                        filename,
+                    )
+
+                    preferred_member = (
+                        self.archive_runtime
+                        .preferred_member(
+                            archive_path
+                        )
+                    )
+
+                    if preferred_member:
+                        member_extension = (
+                            os.path.splitext(
+                                preferred_member
+                            )[1]
+                            .lower()
+                        )
+
+                        if (
+                            member_extension
+                            in SUPPORTED_EXTENSIONS
+                            and member_extension
+                            != ".7z"
+                        ):
+                            platform_extension = (
+                                member_extension
+                            )
+                            legacy_platform = (
+                                SUPPORTED_EXTENSIONS[
+                                    member_extension
+                                ]
+                            )
+
                 (
                     platform,
                     rvdb_platform_id,
                 ) = self._resolve_platform(
-                    ext,
+                    platform_extension,
                     legacy_platform,
                 )
 

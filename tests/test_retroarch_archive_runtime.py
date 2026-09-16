@@ -387,3 +387,86 @@ def test_extraction_is_cached(
     )
 
     assert first == second
+
+
+def test_playable_members_exposes_archive_variants(
+    tmp_path,
+):
+    archive = _make_7z(
+        tmp_path,
+        "Variant Game.7z",
+        [
+            (
+                "Variant Game (U) [!].nes",
+                b"GOOD",
+            ),
+            (
+                "Variant Game (J).nes",
+                b"JAPAN",
+            ),
+            (
+                "Variant Game (U) [h1].nes",
+                b"HACK",
+            ),
+        ],
+    )
+
+    runtime = ArchiveRuntime(
+        cache_root=(
+            tmp_path
+            / "cache"
+        )
+    )
+
+    members = runtime.playable_members(
+        archive
+    )
+
+    assert members == [
+        "Variant Game (J).nes",
+        "Variant Game (U) [!].nes",
+        "Variant Game (U) [h1].nes",
+    ] or sorted(members) == sorted(
+        [
+            "Variant Game (J).nes",
+            "Variant Game (U) [!].nes",
+            "Variant Game (U) [h1].nes",
+        ]
+    )
+
+
+def test_preferred_member_exposes_default_variant(
+    tmp_path,
+):
+    archive = _make_7z(
+        tmp_path,
+        "Variant Game.7z",
+        [
+            (
+                "Variant Game (J).nes",
+                b"JAPAN",
+            ),
+            (
+                "Variant Game (U) [!].nes",
+                b"GOOD",
+            ),
+            (
+                "Variant Game (U) [h1].nes",
+                b"HACK",
+            ),
+        ],
+    )
+
+    runtime = ArchiveRuntime(
+        cache_root=(
+            tmp_path
+            / "cache"
+        )
+    )
+
+    assert (
+        runtime.preferred_member(
+            archive
+        )
+        == "Variant Game (U) [!].nes"
+    )
