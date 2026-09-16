@@ -200,14 +200,34 @@ class MainWindow(QMainWindow):
             library_page
         )
 
+        systems_page = SystemsPage(
+            rvdb_service,
+            games_provider=(
+                controller.get_games
+            ),
+        )
+
         self.pages.add_page(
             "Systems",
-            SystemsPage(
-                rvdb_service,
-                games_provider=(
-                    controller.get_games
-                ),
+            systems_page
+        )
+
+        def show_system_library(
+            platform_id: str,
+        ) -> None:
+            library_page.set_games(
+                controller.get_games()
             )
+
+            if library_page.show_platform(
+                platform_id
+            ):
+                self.pages.show_page(
+                    "Library"
+                )
+
+        systems_page.library_requested.connect(
+            show_system_library
         )
 
         self.pages.add_page(

@@ -1986,3 +1986,76 @@ def test_set_games_replaces_library_and_preserves_active_filters():
     assert view.randomizer.games == [
         replacement
     ]
+
+
+def test_show_platform_filters_library_by_rvdb_platform_id():
+    first = FakeGame(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+    )
+    first.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    second = FakeGame(
+        name="Chrono Trigger",
+        platform="Super Nintendo",
+    )
+    second.rvdb_platform_id = (
+        "platform.nintendo.snes"
+    )
+
+    view = GalleryView(
+        [
+            first,
+            second,
+        ]
+    )
+
+    assert (
+        view.show_platform(
+            "platform.nintendo.nes"
+        )
+        is True
+    )
+
+    assert (
+        view.toolbar.system_filter.currentText()
+        == "Nintendo Entertainment System"
+    )
+
+    assert _visible_game_names(
+        view
+    ) == [
+        "Adventure Island"
+    ]
+
+
+def test_show_platform_rejects_platform_without_local_games():
+    game = FakeGame(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+    )
+    game.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    view = GalleryView(
+        [game]
+    )
+
+    original = (
+        view.toolbar.system_filter.currentText()
+    )
+
+    assert (
+        view.show_platform(
+            "platform.nintendo.snes"
+        )
+        is False
+    )
+
+    assert (
+        view.toolbar.system_filter.currentText()
+        == original
+    )

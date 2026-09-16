@@ -729,3 +729,66 @@ def test_systems_page_refresh_page_without_selection_is_safe(
     )
 
     page.refresh_page()
+
+
+def test_systems_page_library_action_emits_selected_platform(
+    app,
+    service,
+):
+    from types import SimpleNamespace
+
+    games = [
+        SimpleNamespace(
+            rvdb_platform_id=(
+                "platform.test.alpha"
+            ),
+            favorite=False,
+        ),
+    ]
+
+    page = SystemsPage(
+        service,
+        games_provider=lambda: games,
+    )
+
+    requested = []
+
+    page.library_requested.connect(
+        requested.append
+    )
+
+    assert (
+        page.view_library_button.isEnabled()
+        is True
+    )
+
+    page.view_library_button.click()
+
+    assert requested == [
+        "platform.test.alpha"
+    ]
+
+
+def test_systems_page_library_action_disabled_without_games(
+    app,
+    service,
+):
+    page = SystemsPage(
+        service,
+        games_provider=lambda: [],
+    )
+
+    requested = []
+
+    page.library_requested.connect(
+        requested.append
+    )
+
+    assert (
+        page.view_library_button.isEnabled()
+        is False
+    )
+
+    page.view_library_button.click()
+
+    assert requested == []

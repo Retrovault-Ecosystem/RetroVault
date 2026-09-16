@@ -1,4 +1,4 @@
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QFrame,
     QGridLayout,
@@ -9,6 +9,7 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QScrollArea,
+    QPushButton,
     QVBoxLayout,
     QWidget,
 )
@@ -21,6 +22,8 @@ from services.rvdb import (
 
 class SystemsPage(QWidget):
     """Browse platform metadata and relationships supplied by RVDB."""
+
+    library_requested = pyqtSignal(str)
 
     EMPTY = "Not currently recorded"
 
@@ -74,6 +77,13 @@ class SystemsPage(QWidget):
 
         self.library_games_value = QLabel("—")
         self.library_favorites_value = QLabel("—")
+
+        self.view_library_button = QPushButton(
+            "View Games in Library"
+        )
+        self.view_library_button.setEnabled(
+            False
+        )
 
         self.status_label = QLabel()
 
@@ -375,6 +385,10 @@ class SystemsPage(QWidget):
             library_grid
         )
 
+        details_layout.addWidget(
+            self.view_library_button
+        )
+
         details_layout.addStretch()
 
         scroll = QScrollArea()
@@ -441,6 +455,10 @@ class SystemsPage(QWidget):
 
         self.category_filter.currentTextChanged.connect(
             self._apply_filters
+        )
+
+        self.view_library_button.clicked.connect(
+            self._request_library
         )
 
     def _load_systems(self) -> None:
@@ -741,6 +759,23 @@ class SystemsPage(QWidget):
             "local RVDB development bundle."
         )
 
+    def _request_library(self) -> None:
+        current = self.system_list.currentItem()
+
+        if current is None:
+            return
+
+        platform_id = current.data(
+            Qt.ItemDataRole.UserRole
+        )
+
+        if not platform_id:
+            return
+
+        self.library_requested.emit(
+            str(platform_id)
+        )
+
     def refresh_page(self) -> None:
         current = (
             self.system_list.currentItem()
@@ -771,6 +806,9 @@ class SystemsPage(QWidget):
             self.library_favorites_value.setText(
                 self.EMPTY
             )
+            self.view_library_button.setEnabled(
+                False
+            )
             return
 
         try:
@@ -783,6 +821,9 @@ class SystemsPage(QWidget):
             )
             self.library_favorites_value.setText(
                 self.EMPTY
+            )
+            self.view_library_button.setEnabled(
+                False
             )
             return
 
@@ -804,6 +845,10 @@ class SystemsPage(QWidget):
             str(
                 len(matching)
             )
+        )
+
+        self.view_library_button.setEnabled(
+            bool(matching)
         )
 
         self.library_favorites_value.setText(
@@ -938,3 +983,7 @@ class SystemsPage(QWidget):
             self.library_favorites_value,
         ):
             label.setText("—")
+
+        self.view_library_button.setEnabled(
+            False
+        )

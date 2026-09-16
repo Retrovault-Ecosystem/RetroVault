@@ -318,6 +318,64 @@ class GalleryView(QWidget):
         return self.all_games
 
 
+    def show_platform(
+        self,
+        platform_id: str,
+    ) -> bool:
+        platform_names = sorted(
+            {
+                str(game.platform)
+                for game in self.all_games
+                if (
+                    str(
+                        getattr(
+                            game,
+                            "rvdb_platform_id",
+                            "",
+                        )
+                        or ""
+                    )
+                    == platform_id
+                    and getattr(
+                        game,
+                        "platform",
+                        "",
+                    )
+                )
+            },
+            key=str.casefold,
+        )
+
+        if not platform_names:
+            return False
+
+        platform_name = platform_names[0]
+
+        index = (
+            self.toolbar.system_filter.findText(
+                platform_name
+            )
+        )
+
+        if index < 0:
+            return False
+
+        self.toolbar.search.clear()
+        self.toolbar.favorites_only.setChecked(
+            False
+        )
+        self.toolbar.recent_only.setChecked(
+            False
+        )
+
+        self.toolbar.system_filter.setCurrentIndex(
+            index
+        )
+
+        self.refresh()
+
+        return True
+
     def set_games(
         self,
         games,
