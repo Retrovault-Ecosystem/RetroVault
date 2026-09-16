@@ -401,16 +401,12 @@ def test_native_nes_shader_runtime_descriptor_is_production_owned():
 
     assert shader_descriptor.is_file()
 
-    assert shader_descriptor.read_text(
+    text = shader_descriptor.read_text(
         encoding="utf-8"
-    ) == (
-        'HSM_ASPECT_RATIO_MODE = "1.000000"\n'
-        'HSM_ASPECT_RATIO_EXPLICIT = "1.333333333"\n'
-        'HSM_INT_SCALE_MODE = "0.000000"\n'
-        'HSM_NON_INTEGER_SCALE = "70.555555556"\n'
-        'HSM_CROP_PERCENT_TOP = "0.000000"\n'
-        'HSM_CROP_PERCENT_BOTTOM = "0.000000"\n'
-        'HSM_VIEWPORT_ZOOM = "100.000000"\n'
-        'HSM_SCREEN_POSITION_X = "-2.314814815"\n'
-        'HSM_SCREEN_POSITION_Y = "55.092592593"\n'
+    )
+
+    assert "HSM_" not in text
+    assert (
+        "No additional RetroVault shader geometry"
+        in text
     )
