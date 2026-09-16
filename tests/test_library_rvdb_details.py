@@ -313,3 +313,88 @@ def test_game_profile_ignores_blank_description(
         "Adventure Island\n\n"
         "RetroVault Game Profile"
     )
+
+
+def test_game_profile_displays_available_library_metadata(
+    app,
+):
+    details = GameDetails()
+
+    game = SimpleNamespace(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+        rom="/library/Adventure Island.nes",
+        core="fceumm",
+        artwork="",
+        favorite=False,
+        year=1986,
+        genre="Platformer",
+        developer="Hudson Soft",
+        publisher="Hudson Soft",
+        description=(
+            "A tropical platform adventure."
+        ),
+    )
+
+    details.show_game(game)
+
+    text = details.description.toPlainText()
+
+    assert "RetroVault Game Profile" in text
+    assert "Release Year: 1986" in text
+    assert "Genre: Platformer" in text
+    assert "Developer: Hudson Soft" in text
+    assert "Publisher: Hudson Soft" in text
+    assert (
+        "A tropical platform adventure."
+        in text
+    )
+
+
+def test_game_profile_omits_unavailable_library_metadata(
+    app,
+):
+    details = GameDetails()
+
+    game = SimpleNamespace(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+        rom="/library/Adventure Island.nes",
+        core="fceumm",
+        artwork="",
+        favorite=False,
+        year=0,
+        genre="",
+        developer="",
+        publisher="",
+        description="",
+    )
+
+    details.show_game(game)
+
+    text = details.description.toPlainText()
+
+    assert text == (
+        "Adventure Island\n\n"
+        "RetroVault Game Profile"
+    )
+    assert "Release Year:" not in text
+    assert "Genre:" not in text
+    assert "Developer:" not in text
+    assert "Publisher:" not in text
+
+
+def test_game_model_exposes_profile_metadata_defaults():
+    from services.library.models import Game
+
+    game = Game(
+        name="Test Game",
+        platform="Test Platform",
+        year=0,
+        genre="",
+        core="test_core",
+    )
+
+    assert game.description == ""
+    assert game.developer == ""
+    assert game.publisher == ""

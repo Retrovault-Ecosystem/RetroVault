@@ -26,3 +26,9 @@ class Game:
     rvdb_platform_id: str = ""
 
     rvdb_game_id: str = ""
+
+    description: str = ""
+
+    developer: str = ""
+
+    publisher: str = ""

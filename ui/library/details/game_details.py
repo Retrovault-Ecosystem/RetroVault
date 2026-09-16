@@ -349,6 +349,84 @@ class GameDetails(QWidget):
             "RetroVault Game Profile",
         ]
 
+        profile_metadata = []
+
+        year = getattr(
+            game,
+            "year",
+            None,
+        )
+
+        if year not in (
+            None,
+            "",
+            0,
+        ):
+            profile_metadata.append(
+                f"Release Year: {year}"
+            )
+
+        genre = getattr(
+            game,
+            "genre",
+            "",
+        )
+
+        if (
+            isinstance(
+                genre,
+                str,
+            )
+            and genre.strip()
+        ):
+            profile_metadata.append(
+                f"Genre: {genre.strip()}"
+            )
+
+        developer = getattr(
+            game,
+            "developer",
+            "",
+        )
+
+        if (
+            isinstance(
+                developer,
+                str,
+            )
+            and developer.strip()
+        ):
+            profile_metadata.append(
+                "Developer: "
+                f"{developer.strip()}"
+            )
+
+        publisher = getattr(
+            game,
+            "publisher",
+            "",
+        )
+
+        if (
+            isinstance(
+                publisher,
+                str,
+            )
+            and publisher.strip()
+        ):
+            profile_metadata.append(
+                "Publisher: "
+                f"{publisher.strip()}"
+            )
+
+        if profile_metadata:
+            profile_lines.extend(
+                [
+                    "",
+                    *profile_metadata,
+                ]
+            )
+
         description = getattr(
             game,
             "description",
