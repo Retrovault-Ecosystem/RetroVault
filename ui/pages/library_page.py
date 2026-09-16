@@ -12,6 +12,7 @@ class LibraryPage(GalleryView):
         collection_names_provider=None,
         collection_add_handler=None,
         bulk_import_handler=None,
+        bulk_import_completed_handler=None,
         presentation_resolver_provider=None,
         launcher=None,
         process_lifecycle=None,
@@ -30,6 +31,9 @@ class LibraryPage(GalleryView):
             ),
             bulk_import_handler=(
                 bulk_import_handler
+            ),
+            bulk_import_completed_handler=(
+                bulk_import_completed_handler
             ),
             presentation_resolver_provider=(
                 presentation_resolver_provider

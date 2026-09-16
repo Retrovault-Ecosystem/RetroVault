@@ -32,6 +32,7 @@ class GalleryView(QWidget):
         collection_names_provider=None,
         collection_add_handler=None,
         bulk_import_handler=None,
+        bulk_import_completed_handler=None,
         presentation_resolver_provider=None,
         launcher=None,
         process_lifecycle=None,
@@ -62,6 +63,10 @@ class GalleryView(QWidget):
 
         self.bulk_import_handler = (
             bulk_import_handler
+        )
+
+        self.bulk_import_completed_handler = (
+            bulk_import_completed_handler
         )
 
 
@@ -292,6 +297,14 @@ class GalleryView(QWidget):
         if imported_games is not None:
             self.set_games(
                 imported_games
+            )
+
+        if (
+            self.bulk_import_completed_handler
+            is not None
+        ):
+            self.bulk_import_completed_handler(
+                result
             )
 
         discovered = result["discovered"]

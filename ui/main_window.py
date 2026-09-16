@@ -196,6 +196,17 @@ class MainWindow(QMainWindow):
         self.pages = PageManager()
 
 
+        def bulk_import_completed(
+            _result,
+        ) -> None:
+            systems_page.refresh_page()
+            playlists_page.refresh_collections(
+                select_name=(
+                    playlists_page
+                    .selected_collection()
+                )
+            )
+
         library_page = LibraryPage(
             controller.get_games(),
             rvdb_service=rvdb_service,
@@ -216,6 +227,9 @@ class MainWindow(QMainWindow):
             ),
             bulk_import_handler=(
                 controller.bulk_import
+            ),
+            bulk_import_completed_handler=(
+                bulk_import_completed
             ),
             presentation_resolver_provider=(
                 presentation_composition_factory.build

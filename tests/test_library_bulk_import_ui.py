@@ -442,3 +442,107 @@ def test_gallery_bulk_import_preserves_view_without_snapshot(
     assert view.all_games == [
         existing
     ]
+
+
+def test_gallery_bulk_import_notifies_application_after_refresh(
+    monkeypatch,
+):
+    controller = FakeController()
+    events = []
+
+    def completed(result):
+        events.append(
+            (
+                tuple(
+                    game.name
+                    for game in result["games"]
+                ),
+                tuple(
+                    game.name
+                    for game in view.all_games
+                ),
+            )
+        )
+
+    view = GalleryView(
+        controller.get_games(),
+        bulk_import_handler=controller.bulk_import,
+        bulk_import_completed_handler=completed,
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: "/roms",
+    )
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *args: None,
+    )
+
+    view.bulk_import()
+
+    assert events == [
+        (
+            (
+                "Existing",
+                "Imported",
+            ),
+            (
+                "Existing",
+                "Imported",
+            ),
+        )
+    ]
+
+
+def test_gallery_bulk_import_does_not_notify_on_failure(
+    monkeypatch,
+):
+    events = []
+
+    def fail(directory):
+        raise OSError(
+            "import failed"
+        )
+
+    view = GalleryView(
+        [],
+        bulk_import_handler=fail,
+        bulk_import_completed_handler=(
+            lambda result: events.append(result)
+        ),
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: "/roms",
+    )
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "critical",
+        lambda *args: None,
+    )
+
+    view.bulk_import()
+
+    assert events == []
+
+
+def test_library_page_propagates_bulk_import_completed_handler():
+    def handler(result):
+        return None
+
+    page = LibraryPage(
+        [],
+        bulk_import_completed_handler=handler,
+    )
+
+    assert (
+        page.bulk_import_completed_handler
+        is handler
+    )
