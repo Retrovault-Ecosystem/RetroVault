@@ -405,8 +405,25 @@ def test_native_nes_shader_runtime_descriptor_is_production_owned():
         encoding="utf-8"
     )
 
-    assert "HSM_" not in text
     assert (
-        "No additional RetroVault shader geometry"
+        'HSM_NON_INTEGER_SCALE = "88.000000"'
         in text
     )
+    assert (
+        'HSM_SCREEN_POSITION_Y = "-3.000000"'
+        in text
+    )
+
+    hsm_parameters = {
+        line.split("=", 1)[0].strip()
+        for line in text.splitlines()
+        if line.strip().startswith("HSM_")
+    }
+
+    assert hsm_parameters == {
+        "HSM_NON_INTEGER_SCALE",
+        "HSM_SCREEN_POSITION_Y",
+    }
+
+    assert "minimal" in text.lower()
+    assert "no unwanted thick black inset" in text.lower()
