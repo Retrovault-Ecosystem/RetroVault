@@ -1,5 +1,6 @@
 from services.library import LibraryService
 from services.library.bulk_import import BulkImporter
+from services.library.import_sources import ImportSourceStore
 
 
 class LibraryController:
@@ -9,6 +10,7 @@ class LibraryController:
         self,
         rvdb_resolver=None,
         bulk_importer=None,
+        import_source_store=None,
     ):
 
         self.library = LibraryService(
@@ -21,6 +23,12 @@ class LibraryController:
             else BulkImporter(
                 rvdb_resolver=rvdb_resolver
             )
+        )
+
+        self.import_source_store = (
+            import_source_store
+            if import_source_store is not None
+            else ImportSourceStore()
         )
 
         self.library.load()
@@ -52,11 +60,21 @@ class LibraryController:
             discovered
         )
 
+        persisted = (
+            self.import_source_store
+            .persist_directory(
+                discovered.source.path,
+                source_id=source_id,
+                source_name=source_name,
+            )
+        )
+
         return {
             "discovered": discovered,
             "added": merged["added"],
             "added_count": merged["added_count"],
             "skipped_count": merged["skipped_count"],
+            "persisted": persisted,
         }
 
 

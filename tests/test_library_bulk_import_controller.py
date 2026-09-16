@@ -116,6 +116,22 @@ def make_controller_without_init(
     controller.bulk_importer = importer
     controller.library = library
 
+    class NoOpImportSourceStore:
+        def persist_directory(
+            self,
+            directory,
+            *,
+            source_id,
+            source_name,
+        ):
+            return {
+                "added": False,
+            }
+
+    controller.import_source_store = (
+        NoOpImportSourceStore()
+    )
+
     return controller
 
 
