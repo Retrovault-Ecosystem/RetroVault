@@ -81,6 +81,11 @@ class LibraryController:
         }
 
 
+    def reload_sources(self):
+
+        return self.library.reload_sources()
+
+
     def refresh_artwork(
         self,
         directory,

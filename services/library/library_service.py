@@ -93,6 +93,32 @@ class LibraryService:
         return self.games
 
 
+    def reload_sources(self):
+
+        source_manager_type = type(
+            self.sources
+        )
+
+        try:
+            refreshed_sources = (
+                source_manager_type()
+            )
+        except TypeError:
+            refreshed_sources = (
+                SourceManager()
+            )
+
+        previous_sources = self.sources
+
+        self.sources = refreshed_sources
+
+        try:
+            return self.load()
+        except Exception:
+            self.sources = previous_sources
+            raise
+
+
     def refresh_artwork(
         self,
         directory,
