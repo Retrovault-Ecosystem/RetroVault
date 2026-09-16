@@ -62,6 +62,9 @@ class FakeController:
             "added": (added,),
             "added_count": 1,
             "skipped_count": 1,
+            "games": tuple(
+                self.games
+            ),
         }
 
     def get_games(self):
@@ -348,3 +351,94 @@ def test_gallery_bulk_import_error_has_production_context(
     )
 
     assert "permission denied" in errors[0][2]
+
+
+def test_gallery_bulk_import_refreshes_from_explicit_result_snapshot(
+    monkeypatch,
+):
+    controller = FakeController()
+
+    def wrapped_import(directory):
+        return controller.bulk_import(
+            directory
+        )
+
+    view = GalleryView(
+        controller.get_games(),
+        bulk_import_handler=wrapped_import,
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: "/roms",
+    )
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *args: None,
+    )
+
+    assert getattr(
+        wrapped_import,
+        "__self__",
+        None,
+    ) is None
+
+    view.bulk_import()
+
+    assert controller.calls == [
+        "/roms"
+    ]
+
+    assert [
+        game.name
+        for game in view.all_games
+    ] == [
+        "Existing",
+        "Imported",
+    ]
+
+
+def test_gallery_bulk_import_preserves_view_without_snapshot(
+    monkeypatch,
+):
+    existing = FakeGame(
+        "Existing",
+        "/roms/existing.nes",
+    )
+
+    def legacy_handler(directory):
+        return {
+            "discovered": SimpleNamespace(
+                discovered_count=0,
+                duplicate_count=0,
+            ),
+            "added": tuple(),
+            "added_count": 0,
+            "skipped_count": 0,
+        }
+
+    view = GalleryView(
+        [existing],
+        bulk_import_handler=legacy_handler,
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: "/roms",
+    )
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *args: None,
+    )
+
+    view.bulk_import()
+
+    assert view.all_games == [
+        existing
+    ]

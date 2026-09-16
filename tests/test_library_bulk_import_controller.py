@@ -365,3 +365,64 @@ def test_controller_bulk_import_propagates_discovery_error(
         )
 
     assert library.calls == []
+
+
+def test_controller_bulk_import_returns_current_library_snapshot(
+    tmp_path,
+):
+    mario = make_game(
+        tmp_path,
+        name="Mario",
+        filename="Mario.nes",
+    )
+
+    zelda = make_game(
+        tmp_path,
+        name="Zelda",
+        filename="Zelda.nes",
+    )
+
+    discovered = make_result(
+        tmp_path,
+        [zelda],
+    )
+
+    importer = FakeImporter(
+        discovered
+    )
+
+    class SnapshotLibrary(FakeLibrary):
+        def __init__(self):
+            super().__init__(
+                {
+                    "added": (zelda,),
+                    "added_count": 1,
+                    "skipped_count": 0,
+                }
+            )
+            self.games = [
+                mario,
+                zelda,
+            ]
+
+        def get_games(self):
+            return self.games
+
+    library = SnapshotLibrary()
+
+    controller = make_controller_without_init(
+        importer,
+        library,
+    )
+
+    result = controller.bulk_import(
+        tmp_path
+    )
+
+    assert result["games"] == (
+        mario,
+        zelda,
+    )
+
+    assert result["games"][0] is mario
+    assert result["games"][1] is zelda

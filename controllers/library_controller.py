@@ -75,6 +75,9 @@ class LibraryController:
             "added_count": merged["added_count"],
             "skipped_count": merged["skipped_count"],
             "persisted": persisted,
+            "games": tuple(
+                self.library.get_games()
+            ),
         }
 
 

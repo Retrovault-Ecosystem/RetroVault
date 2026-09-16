@@ -272,6 +272,9 @@ class FakeLibrary:
             "skipped_count": 0,
         }
 
+    def get_games(self):
+        return []
+
 
 class FakeStore:
     def __init__(self):

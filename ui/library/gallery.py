@@ -285,9 +285,14 @@ class GalleryView(QWidget):
             )
             return
 
-        self.set_games(
-            self._bulk_import_games()
+        imported_games = result.get(
+            "games"
         )
+
+        if imported_games is not None:
+            self.set_games(
+                imported_games
+            )
 
         discovered = result["discovered"]
         persisted = result.get(
@@ -325,27 +330,6 @@ class GalleryView(QWidget):
                 f"Source: {source_status}"
             ),
         )
-
-
-    def _bulk_import_games(self):
-
-        owner = getattr(
-            self.bulk_import_handler,
-            "__self__",
-            None,
-        )
-
-        if owner is not None:
-            getter = getattr(
-                owner,
-                "get_games",
-                None,
-            )
-
-            if callable(getter):
-                return getter()
-
-        return self.all_games
 
 
     def _manual_system_filter_changed(
