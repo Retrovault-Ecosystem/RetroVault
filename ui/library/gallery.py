@@ -276,8 +276,12 @@ class GalleryView(QWidget):
         except (OSError, ValueError) as exc:
             QMessageBox.critical(
                 self,
-                "Bulk Import",
-                str(exc),
+                "Bulk Import Failed",
+                (
+                    "RetroVault could not import "
+                    "ROMs from the selected folder.\n\n"
+                    f"{exc}"
+                ),
             )
             return
 
@@ -286,19 +290,39 @@ class GalleryView(QWidget):
         )
 
         discovered = result["discovered"]
+        persisted = result.get(
+            "persisted",
+            {},
+        )
+
+        source_saved = bool(
+            persisted.get(
+                "added",
+                False,
+            )
+        )
+
+        source_status = (
+            "Saved as a library source"
+            if source_saved
+            else "Already registered as a library source"
+        )
 
         QMessageBox.information(
             self,
             "Bulk Import Complete",
             (
-                f"Discovered: "
+                "RetroVault finished scanning "
+                "the selected folder.\n\n"
+                f"ROMs discovered: "
                 f"{discovered.discovered_count}\n"
-                f"Added: "
+                f"Games added: "
                 f"{result['added_count']}\n"
-                f"Skipped: "
+                f"Already in library / skipped: "
                 f"{result['skipped_count']}\n"
-                f"Duplicates in source: "
-                f"{discovered.duplicate_count}"
+                f"Duplicates inside source: "
+                f"{discovered.duplicate_count}\n"
+                f"Source: {source_status}"
             ),
         )
 

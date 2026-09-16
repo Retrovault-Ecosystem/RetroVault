@@ -143,10 +143,10 @@ def test_gallery_bulk_import_refreshes_library(
 
     message = messages[0][2]
 
-    assert "Discovered: 2" in message
-    assert "Added: 1" in message
-    assert "Skipped: 1" in message
-    assert "Duplicates in source: 1" in message
+    assert "ROMs discovered: 2" in message
+    assert "Games added: 1" in message
+    assert "Already in library / skipped: 1" in message
+    assert "Duplicates inside source: 1" in message
 
 
 def test_gallery_bulk_import_reports_error(
@@ -194,3 +194,157 @@ def test_library_page_propagates_bulk_import_handler():
     )
 
     assert page.bulk_import_handler is handler
+
+
+def test_gallery_bulk_import_reports_production_summary(
+    monkeypatch,
+):
+    controller = FakeController()
+
+    original_bulk_import = controller.bulk_import
+
+    def import_with_persistence(directory):
+        result = original_bulk_import(
+            directory
+        )
+        result["persisted"] = {
+            "added": True,
+        }
+        return result
+
+    view = GalleryView(
+        controller.get_games(),
+        bulk_import_handler=import_with_persistence,
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: "/roms",
+    )
+
+    messages = []
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *args: messages.append(args),
+    )
+
+    view.bulk_import()
+
+    assert len(messages) == 1
+    assert messages[0][1] == (
+        "Bulk Import Complete"
+    )
+
+    message = messages[0][2]
+
+    assert (
+        "RetroVault finished scanning "
+        "the selected folder."
+        in message
+    )
+    assert "ROMs discovered: 2" in message
+    assert "Games added: 1" in message
+    assert (
+        "Already in library / skipped: 1"
+        in message
+    )
+    assert (
+        "Duplicates inside source: 1"
+        in message
+    )
+    assert (
+        "Source: Saved as a library source"
+        in message
+    )
+
+
+def test_gallery_bulk_import_reports_existing_source(
+    monkeypatch,
+):
+    controller = FakeController()
+
+    original_bulk_import = controller.bulk_import
+
+    def import_existing_source(directory):
+        result = original_bulk_import(
+            directory
+        )
+        result["persisted"] = {
+            "added": False,
+        }
+        return result
+
+    view = GalleryView(
+        controller.get_games(),
+        bulk_import_handler=import_existing_source,
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: "/roms",
+    )
+
+    messages = []
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *args: messages.append(args),
+    )
+
+    view.bulk_import()
+
+    assert len(messages) == 1
+
+    assert (
+        "Source: Already registered "
+        "as a library source"
+        in messages[0][2]
+    )
+
+
+def test_gallery_bulk_import_error_has_production_context(
+    monkeypatch,
+):
+    def fail(directory):
+        raise OSError(
+            "permission denied"
+        )
+
+    view = GalleryView(
+        [],
+        bulk_import_handler=fail,
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: "/roms",
+    )
+
+    errors = []
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "critical",
+        lambda *args: errors.append(args),
+    )
+
+    view.bulk_import()
+
+    assert len(errors) == 1
+    assert errors[0][1] == (
+        "Bulk Import Failed"
+    )
+
+    assert (
+        "RetroVault could not import "
+        "ROMs from the selected folder."
+        in errors[0][2]
+    )
+
+    assert "permission denied" in errors[0][2]
