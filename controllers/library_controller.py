@@ -56,10 +56,6 @@ class LibraryController:
             )
         )
 
-        merged = self.library.merge_bulk_import(
-            discovered
-        )
-
         persisted = (
             self.import_source_store
             .persist_directory(
@@ -67,6 +63,10 @@ class LibraryController:
                 source_id=source_id,
                 source_name=source_name,
             )
+        )
+
+        merged = self.library.merge_bulk_import(
+            discovered
         )
 
         return {

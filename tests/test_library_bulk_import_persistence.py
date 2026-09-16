@@ -821,3 +821,75 @@ def test_source_management_rejects_unknown_source_without_mutation(
                 encoding="utf-8"
             )
         ) == payload
+
+
+def test_bulk_import_persistence_failure_does_not_mutate_live_library(
+    tmp_path,
+):
+    from controllers.library_controller import LibraryController
+
+    class FakeSource:
+        path = tmp_path
+
+    class FakeDiscovered:
+        source = FakeSource()
+
+    class FakeImporter:
+        def import_directory(
+            self,
+            directory,
+            *,
+            source_id=None,
+            source_name=None,
+        ):
+            return FakeDiscovered()
+
+    class FakeLibrary:
+        def __init__(self):
+            self.merge_calls = 0
+
+        def merge_bulk_import(self, discovered):
+            self.merge_calls += 1
+            raise AssertionError(
+                "Live library must not mutate before "
+                "source persistence succeeds."
+            )
+
+        def get_games(self):
+            return []
+
+    class FailingImportSourceStore:
+        def persist_directory(
+            self,
+            directory,
+            *,
+            source_id=None,
+            source_name=None,
+        ):
+            raise OSError(
+                "simulated persistence failure"
+            )
+
+    library = FakeLibrary()
+
+    controller = object.__new__(LibraryController)
+    controller.library = library
+    controller.bulk_importer = FakeImporter()
+    controller.import_source_store = (
+        FailingImportSourceStore()
+    )
+
+    try:
+        controller.bulk_import(
+            tmp_path,
+            source_id="atomic-source",
+            source_name="Atomic Source",
+        )
+    except OSError as exc:
+        assert str(exc) == "simulated persistence failure"
+    else:
+        raise AssertionError(
+            "Expected persistence failure to propagate."
+        )
+
+    assert library.merge_calls == 0
