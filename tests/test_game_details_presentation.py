@@ -429,3 +429,121 @@ def test_presentation_resolves_shader_and_overlay_together(
     assert calls[0].overlay == (
         "/overlays/duck.cfg"
     )
+
+
+def test_presentation_load_failure_is_reported_to_user(
+    app,
+    monkeypatch,
+):
+    from unittest.mock import Mock
+
+    from PyQt6.QtWidgets import QMessageBox
+
+    from services.library.models import Game
+    from ui.library.details.game_details import (
+        GameDetails,
+    )
+
+    def broken_provider():
+        raise ValueError(
+            "broken presentation state"
+        )
+
+    warnings = []
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda parent, title, message: (
+            warnings.append(
+                (
+                    parent,
+                    title,
+                    message,
+                )
+            )
+        ),
+    )
+
+    details = GameDetails(
+        presentation_resolver_provider=(
+            broken_provider
+        )
+    )
+
+    details.current_game = Game(
+        name="Presentation Failure",
+        platform="NES",
+        year="",
+        genre="",
+        core="fceumm",
+        rom="/library/Presentation Failure.nes",
+        source="",
+        artwork="",
+    )
+
+    details.core_resolver.find = Mock(
+        return_value="/cores/fceumm_libretro.so"
+    )
+
+    class ReadyValidator:
+        def __init__(
+            self,
+            *_args,
+            **_kwargs,
+        ):
+            pass
+
+        def validate(
+            self,
+            _rom,
+        ):
+            return {
+                "retroarch": True,
+                "core": True,
+                "rom": True,
+                "ready": True,
+            }
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        ReadyValidator,
+    )
+
+    details.launcher.launch = Mock(
+        return_value={
+            "success": False,
+            "error": "test launch stopped",
+        }
+    )
+
+    details.launch_game()
+
+    assert len(warnings) == 1
+
+    parent, title, message = warnings[0]
+
+    assert parent is details
+    assert title == "Visual Presentation Unavailable"
+
+    assert (
+        "RetroVault could not load "
+        "the selected visual presentation."
+        in message
+    )
+
+    assert (
+        "The game will continue without "
+        "the assigned shader or overlay."
+        in message
+    )
+
+    assert (
+        "broken presentation state"
+        in message
+    )
+
+    profile = details.launcher.launch.call_args.args[0]
+
+    assert profile.shader == ""
+    assert profile.overlay == ""

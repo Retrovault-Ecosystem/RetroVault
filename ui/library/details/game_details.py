@@ -994,9 +994,16 @@ class GameDetails(QWidget):
                 OSError,
                 ValueError,
             ) as exc:
-                print(
-                    "Unable to resolve presentation: "
-                    f"{exc}"
+                QMessageBox.warning(
+                    self,
+                    "Visual Presentation Unavailable",
+                    (
+                        "RetroVault could not load "
+                        "the selected visual presentation.\n\n"
+                        "The game will continue without "
+                        "the assigned shader or overlay.\n\n"
+                        f"{exc}"
+                    ),
                 )
 
         profile = LaunchProfile(
