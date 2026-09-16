@@ -1135,9 +1135,15 @@ class GameDetails(QWidget):
                 ValueError,
             ) as exc:
 
-                print(
-                    "Unable to record Recently Played: "
-                    f"{exc}"
+                QMessageBox.warning(
+                    self,
+                    "Recently Played Update Failed",
+                    (
+                        "RetroVault started the game, but "
+                        "could not update Recently Played."
+                        "\n\n"
+                        f"{exc}"
+                    ),
                 )
 
     def _refresh_collection_button(

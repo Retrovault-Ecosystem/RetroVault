@@ -762,3 +762,109 @@ def test_missing_core_failure_is_reported_to_user(
 
     lifecycle.launch_failed.assert_called_once_with()
     lifecycle.launch_result.assert_not_called()
+
+
+def test_recently_played_update_failure_is_reported_to_user(
+    app,
+    monkeypatch,
+):
+    from PyQt6.QtWidgets import QMessageBox
+
+    details, lifecycle = make_details(app)
+
+    details.core_resolver.find = (
+        lambda _core: "/cores/fceumm_libretro.so"
+    )
+
+    class ReadyValidator:
+        def __init__(
+            self,
+            *_args,
+            **_kwargs,
+        ):
+            pass
+
+        def validate(
+            self,
+            _rom,
+        ):
+            return {
+                "ready": True,
+                "issues": [],
+            }
+
+    monkeypatch.setattr(
+        "ui.library.details.game_details.LaunchValidator",
+        ReadyValidator,
+    )
+
+    details.diagnostics.explain = (
+        lambda _report: ["Launch validation ready."]
+    )
+
+    launch_result = {
+        "success": True,
+        "command": ["retroarch"],
+    }
+
+    monkeypatch.setattr(
+        details.launcher,
+        "launch",
+        lambda _profile: launch_result,
+    )
+
+    def fail_recent(
+        _game,
+    ):
+        raise OSError(
+            "recent persistence failed"
+        )
+
+    details.played_handler = fail_recent
+
+    warnings = []
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda parent, title, message: (
+            warnings.append(
+                (
+                    parent,
+                    title,
+                    message,
+                )
+            )
+        ),
+    )
+
+    details.launch_game()
+
+    assert len(warnings) == 1
+
+    parent, title, message = warnings[0]
+
+    assert parent is details
+    assert title == (
+        "Recently Played Update Failed"
+    )
+
+    assert (
+        "RetroVault started the game, but "
+        "could not update Recently Played."
+        in message
+    )
+
+    assert (
+        "recent persistence failed"
+        in message
+    )
+
+    assert details.launch_status.text() == (
+        f'Running "{details.current_game.name}".'
+    )
+
+    lifecycle.launch_result.assert_called_once_with(
+        launch_result
+    )
+    lifecycle.launch_failed.assert_not_called()
