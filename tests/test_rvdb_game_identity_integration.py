@@ -345,3 +345,104 @@ def test_scanner_without_rvdb_keeps_ids_empty(
 
     assert game.rvdb_platform_id == ""
     assert game.rvdb_game_id == ""
+
+
+def test_scanner_enriches_profile_metadata_from_rvdb(
+    tmp_path,
+):
+    bundle = (
+        tmp_path
+        / "rvdb.bundle.json"
+    )
+
+    data = {
+        "nodes": {
+            NES: {
+                "id": NES,
+                "type": "platform",
+                "name": "Nintendo Entertainment System",
+                "aliases": ["NES"],
+                "extensions": ["nes"],
+            },
+            "game.profile_test": {
+                "id": "game.profile_test",
+                "type": "game",
+                "name": "Profile Test",
+                "aliases": [],
+                "release_year": 1987,
+            },
+            "developer.test": {
+                "id": "developer.test",
+                "type": "developer",
+                "name": "Test Developer",
+            },
+            "publisher.test": {
+                "id": "publisher.test",
+                "type": "publisher",
+                "name": "Test Publisher",
+            },
+            "genre.platformer": {
+                "id": "genre.platformer",
+                "type": "genre",
+                "name": "Platformer",
+            },
+        },
+        "edges": {
+            NES: {},
+            "game.profile_test": {
+                "platform": [NES],
+                "developed_by": [
+                    "developer.test",
+                ],
+                "published_by": [
+                    "publisher.test",
+                ],
+                "genre": [
+                    "genre.platformer",
+                ],
+            },
+            "developer.test": {},
+            "publisher.test": {},
+            "genre.platformer": {},
+        },
+    }
+
+    bundle.write_text(
+        json.dumps(data),
+        encoding="utf-8",
+    )
+
+    root = tmp_path / "roms"
+    root.mkdir()
+
+    (
+        root
+        / "Profile Test.nes"
+    ).write_bytes(
+        b"test"
+    )
+
+    game = RomScanner(
+        rvdb_resolver=(
+            RVDBLibraryResolver.from_bundle(
+                bundle
+            )
+        )
+    ).scan(
+        Source(
+            name="Test Library",
+            path=str(root),
+        )
+    )[0]
+
+    assert game.rvdb_game_id == (
+        "game.profile_test"
+    )
+    assert game.year == 1987
+    assert game.genre == "Platformer"
+    assert game.developer == (
+        "Test Developer"
+    )
+    assert game.publisher == (
+        "Test Publisher"
+    )

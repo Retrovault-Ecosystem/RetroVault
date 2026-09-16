@@ -654,3 +654,36 @@ def test_game_lookup_rejects_non_game_entity():
     assert service.game(
         "platform.nintendo.nes"
     ) is None
+
+
+def test_game_lookup_exposes_relationship_metadata():
+    service = RVDBService.from_bundle(
+        "data/rvdb/rvdb.bundle.json"
+    )
+
+    game = service.game(
+        "game.super_mario_world"
+    )
+
+    assert game is not None
+
+    assert [
+        ref.id
+        for ref in game.developers
+    ] == [
+        "developer.nintendo.ead",
+    ]
+
+    assert [
+        ref.id
+        for ref in game.publishers
+    ] == [
+        "publisher.nintendo",
+    ]
+
+    assert [
+        ref.id
+        for ref in game.genres
+    ] == [
+        "genre.platformer",
+    ]

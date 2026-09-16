@@ -164,6 +164,10 @@ class RomScanner:
                 )[0]
 
                 rvdb_game_id = ""
+                year = 0
+                genre = ""
+                developer = ""
+                publisher = ""
 
                 if (
                     self.rvdb_resolver is not None
@@ -181,6 +185,30 @@ class RomScanner:
                             rvdb_game.id
                         )
 
+                        if (
+                            rvdb_game.release_year
+                            not in (
+                                None,
+                                "",
+                            )
+                        ):
+                            year = rvdb_game.release_year
+
+                        genre = ", ".join(
+                            ref.name
+                            for ref in rvdb_game.genres
+                        )
+
+                        developer = ", ".join(
+                            ref.name
+                            for ref in rvdb_game.developers
+                        )
+
+                        publisher = ", ".join(
+                            ref.name
+                            for ref in rvdb_game.publishers
+                        )
+
                 games.append(
 
                     Game(
@@ -189,9 +217,9 @@ class RomScanner:
 
                         platform=platform,
 
-                        year=0,
+                        year=year,
 
-                        genre="",
+                        genre=genre,
 
                         core=self.core_mapper.get_core(
                             platform
@@ -211,6 +239,10 @@ class RomScanner:
                         rvdb_game_id=(
                             rvdb_game_id
                         ),
+
+                        developer=developer,
+
+                        publisher=publisher,
 
                     )
 

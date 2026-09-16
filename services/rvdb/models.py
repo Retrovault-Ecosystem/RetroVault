@@ -52,6 +52,10 @@ class RVDBGameSummary:
     name: str
     aliases: tuple[str, ...]
     platforms: tuple[str, ...]
+    release_year: Any = None
+    developers: tuple[RVDBEntityRef, ...] = ()
+    publishers: tuple[RVDBEntityRef, ...] = ()
+    genres: tuple[RVDBEntityRef, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

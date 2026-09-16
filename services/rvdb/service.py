@@ -152,6 +152,50 @@ class RVDBService:
             refs
         )
 
+    def _refs_for_ids(
+        self,
+        entity_ids: Iterable[str],
+    ) -> tuple[RVDBEntityRef, ...]:
+        """
+        Resolve canonical relationship target IDs into entity refs.
+
+        Relationship targets expose stable IDs. Raw RVDB entity
+        dictionaries remain behind the RVDBService boundary.
+        """
+        refs = []
+
+        for entity_id in entity_ids:
+            entity = self._consumer.get_entity(
+                entity_id
+            )
+
+            if entity is None:
+                refs.append(
+                    RVDBEntityRef(
+                        id=str(entity_id),
+                        entity_type="unknown",
+                        name=str(entity_id),
+                    )
+                )
+                continue
+
+            refs.append(
+                RVDBEntityRef.from_entity(
+                    entity
+                )
+            )
+
+        refs.sort(
+            key=lambda ref: (
+                ref.name.casefold(),
+                ref.id,
+            )
+        )
+
+        return tuple(
+            refs
+        )
+
     def games(
         self,
     ) -> tuple[RVDBGameSummary, ...]:
@@ -199,6 +243,27 @@ class RVDBService:
                         )
                     ),
                     platforms=platforms,
+                    release_year=entity.get(
+                        "release_year"
+                    ),
+                    developers=self._refs_for_ids(
+                        self._consumer.relationship_targets(
+                            game_id,
+                            "developed_by",
+                        )
+                    ),
+                    publishers=self._refs_for_ids(
+                        self._consumer.relationship_targets(
+                            game_id,
+                            "published_by",
+                        )
+                    ),
+                    genres=self._refs_for_ids(
+                        self._consumer.relationship_targets(
+                            game_id,
+                            "genre",
+                        )
+                    ),
                 )
             )
 
@@ -263,6 +328,27 @@ class RVDBService:
                 )
             ),
             platforms=platforms,
+            release_year=entity.get(
+                "release_year"
+            ),
+            developers=self._refs_for_ids(
+                self._consumer.relationship_targets(
+                    canonical_id,
+                    "developed_by",
+                )
+            ),
+            publishers=self._refs_for_ids(
+                self._consumer.relationship_targets(
+                    canonical_id,
+                    "published_by",
+                )
+            ),
+            genres=self._refs_for_ids(
+                self._consumer.relationship_targets(
+                    canonical_id,
+                    "genre",
+                )
+            ),
         )
 
     def platforms(
