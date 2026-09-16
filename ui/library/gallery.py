@@ -42,6 +42,8 @@ class GalleryView(QWidget):
 
         self.all_games = games
 
+        self._direct_platform_id = None
+
         self.rvdb_service = (
             rvdb_service
         )
@@ -72,6 +74,10 @@ class GalleryView(QWidget):
 
 
         self.toolbar = LibraryToolbar()
+
+        self.toolbar.system_changed.connect(
+            self._manual_system_filter_changed
+        )
 
 
         systems = sorted(
@@ -318,6 +324,13 @@ class GalleryView(QWidget):
         return self.all_games
 
 
+    def _manual_system_filter_changed(
+        self,
+        _system: str,
+    ) -> None:
+        self._direct_platform_id = None
+
+
     def show_platform(
         self,
         platform_id: str,
@@ -371,9 +384,20 @@ class GalleryView(QWidget):
             recent_only
         )
 
-        self.toolbar.system_filter.setCurrentIndex(
-            index
+        self.toolbar.system_filter.blockSignals(
+            True
         )
+
+        try:
+            self.toolbar.system_filter.setCurrentIndex(
+                index
+            )
+        finally:
+            self.toolbar.system_filter.blockSignals(
+                False
+            )
+
+        self._direct_platform_id = platform_id
 
         self.refresh()
 
@@ -383,6 +407,8 @@ class GalleryView(QWidget):
         self,
         games,
     ):
+        self._direct_platform_id = None
+
         current_system = (
             self.toolbar.system_filter.currentText()
         )
@@ -487,7 +513,27 @@ class GalleryView(QWidget):
         )
 
 
-        if system != "All Systems":
+        if self._direct_platform_id is not None:
+
+            games = [
+
+                game
+
+                for game in games
+
+                if str(
+                    getattr(
+                        game,
+                        "rvdb_platform_id",
+                        "",
+                    )
+                    or ""
+                )
+                == self._direct_platform_id
+
+            ]
+
+        elif system != "All Systems":
 
             games = [
 

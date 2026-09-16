@@ -2260,3 +2260,224 @@ def test_show_platform_normal_access_clears_existing_recent_filter():
         view.toolbar.recent_only.isChecked()
         is False
     )
+
+
+def test_show_platform_includes_all_display_names_for_canonical_platform():
+    first = FakeGame(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+    )
+    first.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    second = FakeGame(
+        name="Mega Man 2",
+        platform="NES",
+    )
+    second.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    other = FakeGame(
+        name="Chrono Trigger",
+        platform="Super Nintendo",
+    )
+    other.rvdb_platform_id = (
+        "platform.nintendo.snes"
+    )
+
+    view = GalleryView(
+        [
+            first,
+            second,
+            other,
+        ]
+    )
+
+    assert view.show_platform(
+        "platform.nintendo.nes"
+    )
+
+    assert _visible_game_names(view) == [
+        "Adventure Island",
+        "Mega Man 2",
+    ]
+
+
+def test_show_platform_canonical_filter_composes_with_favorites_across_display_names():
+    first = FakeGame(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+        favorite=True,
+    )
+    first.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    second = FakeGame(
+        name="Mega Man 2",
+        platform="NES",
+        favorite=True,
+    )
+    second.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    ordinary = FakeGame(
+        name="Duck Tales 2",
+        platform="Nintendo Entertainment System",
+        favorite=False,
+    )
+    ordinary.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    view = GalleryView(
+        [
+            first,
+            second,
+            ordinary,
+        ]
+    )
+
+    assert view.show_platform(
+        "platform.nintendo.nes",
+        favorites_only=True,
+    )
+
+    assert _visible_game_names(view) == [
+        "Adventure Island",
+        "Mega Man 2",
+    ]
+
+
+def test_show_platform_canonical_filter_composes_with_recent_across_display_names():
+    first = FakeGame(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+        rom="/roms/adventure.nes",
+    )
+    first.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    second = FakeGame(
+        name="Mega Man 2",
+        platform="NES",
+        rom="/roms/mega-man-2.nes",
+    )
+    second.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    other = FakeGame(
+        name="Chrono Trigger",
+        platform="Super Nintendo",
+        rom="/roms/chrono.sfc",
+    )
+    other.rvdb_platform_id = (
+        "platform.nintendo.snes"
+    )
+
+    view = GalleryView(
+        [
+            first,
+            second,
+            other,
+        ],
+        recent_provider=lambda: [
+            other.rom,
+            second.rom,
+            first.rom,
+        ],
+    )
+
+    assert view.show_platform(
+        "platform.nintendo.nes",
+        recent_only=True,
+    )
+
+    assert _visible_game_names(view) == [
+        "Mega Man 2",
+        "Adventure Island",
+    ]
+
+
+def test_manual_system_filter_replaces_direct_canonical_filter():
+    first = FakeGame(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+    )
+    first.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    alias = FakeGame(
+        name="Mega Man 2",
+        platform="NES",
+    )
+    alias.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    snes = FakeGame(
+        name="Chrono Trigger",
+        platform="Super Nintendo",
+    )
+    snes.rvdb_platform_id = (
+        "platform.nintendo.snes"
+    )
+
+    view = GalleryView(
+        [
+            first,
+            alias,
+            snes,
+        ]
+    )
+
+    assert view.show_platform(
+        "platform.nintendo.nes"
+    )
+
+    view.toolbar.system_filter.setCurrentText(
+        "Super Nintendo"
+    )
+
+    assert _visible_game_names(view) == [
+        "Chrono Trigger"
+    ]
+
+
+def test_ordinary_toolbar_filter_remains_display_name_based():
+    first = FakeGame(
+        name="Adventure Island",
+        platform="Nintendo Entertainment System",
+    )
+    first.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    alias = FakeGame(
+        name="Mega Man 2",
+        platform="NES",
+    )
+    alias.rvdb_platform_id = (
+        "platform.nintendo.nes"
+    )
+
+    view = GalleryView(
+        [
+            first,
+            alias,
+        ]
+    )
+
+    view.toolbar.system_filter.setCurrentText(
+        "NES"
+    )
+
+    assert _visible_game_names(view) == [
+        "Mega Man 2"
+    ]
