@@ -126,6 +126,108 @@ class LibraryService:
         return self.games
 
 
+    def merge_bulk_import(
+        self,
+        result,
+    ):
+
+        existing_identities = set()
+
+        for game in self.games:
+
+            try:
+                identity = game_identity(
+                    game
+                )
+            except ValueError:
+                continue
+
+            existing_identities.add(
+                identity
+            )
+
+        added = []
+        skipped = 0
+
+        for game in result.games:
+
+            try:
+                identity = game_identity(
+                    game
+                )
+            except ValueError:
+                skipped += 1
+                continue
+
+            if identity in existing_identities:
+                skipped += 1
+                continue
+
+            existing_identities.add(
+                identity
+            )
+
+            applied = self.state.apply(
+                [game]
+            )
+
+            if not applied:
+                skipped += 1
+                continue
+
+            imported_game = applied[0]
+
+            artwork = self.artwork.get_artwork(
+                imported_game
+            )
+
+            imported_game.artwork = (
+                artwork
+                if artwork is not None
+                else ""
+            )
+
+            self.games.append(
+                imported_game
+            )
+
+            added.append(
+                imported_game
+            )
+
+        self.games.sort(
+            key=lambda game: (
+                str(
+                    getattr(
+                        game,
+                        "platform",
+                        "",
+                    )
+                ).casefold(),
+                str(
+                    getattr(
+                        game,
+                        "name",
+                        "",
+                    )
+                ).casefold(),
+                str(
+                    getattr(
+                        game,
+                        "rom",
+                        "",
+                    )
+                ).casefold(),
+            )
+        )
+
+        return {
+            "added": tuple(added),
+            "added_count": len(added),
+            "skipped_count": skipped,
+        }
+
+
     def recent(
         self,
         limit=20,
