@@ -703,3 +703,62 @@ def test_generic_launcher_mock_does_not_invent_running_session(
     )
     assert details.launch_button.isEnabled() is True
     assert details.stop_button.isEnabled() is False
+
+
+def test_missing_core_failure_is_reported_to_user(
+    app,
+    monkeypatch,
+):
+    from PyQt6.QtWidgets import QMessageBox
+
+    details, lifecycle = make_details(app)
+
+    details.core_resolver.find = (
+        lambda _core: None
+    )
+
+    warnings = []
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda parent, title, message: (
+            warnings.append(
+                (
+                    parent,
+                    title,
+                    message,
+                )
+            )
+        ),
+    )
+
+    details.launch_game()
+
+    assert len(warnings) == 1
+
+    parent, title, message = warnings[0]
+
+    assert parent is details
+    assert title == "Emulator Core Missing"
+
+    assert (
+        "RetroVault could not start this game "
+        "because its required emulator core "
+        "could not be found."
+        in message
+    )
+
+    assert (
+        f"Required core: "
+        f"{details.current_game.core}"
+        in message
+    )
+
+    assert details.launch_status.text() == (
+        "Unable to launch: required emulator core "
+        "is missing."
+    )
+
+    lifecycle.launch_failed.assert_called_once_with()
+    lifecycle.launch_result.assert_not_called()

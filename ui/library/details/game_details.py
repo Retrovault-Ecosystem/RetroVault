@@ -959,8 +959,16 @@ class GameDetails(QWidget):
                 "is missing."
             )
 
-            print(
-                message
+            QMessageBox.warning(
+                self,
+                "Emulator Core Missing",
+                (
+                    "RetroVault could not start this game "
+                    "because its required emulator core "
+                    "could not be found.\n\n"
+                    f"Required core: "
+                    f"{self.current_game.core}"
+                ),
             )
 
             self._set_launch_status(
