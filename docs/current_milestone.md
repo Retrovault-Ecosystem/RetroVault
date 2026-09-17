@@ -1,198 +1,194 @@
 # RetroVault Current Milestone
 
-## RVA1-C.12 — Bulk Import Production Workflow
+## RVA1-C.15 — Live Library Refresh + Bulk Import Hardening
 
-**Status:** COMPLETE / PROTECTED
+RVA1-C.15 establishes the production user-initiated Library refresh
+workflow and hardens its interaction with RetroVault's existing Bulk
+Import workflow.
 
-RVA1-C.12 establishes RetroVault's production Bulk Import workflow
-for adding ROM directories to the live application library while
-preserving the protected library, RVDB, collection, launch, archive,
-RVV, and runtime architecture.
+The milestone builds on the protected RVA1-C.14 live source-reload
+foundation. Library content can now be refreshed from configured
+sources without restarting RetroVault while preserving the active
+Library experience and synchronizing dependent application views.
 
-### Bulk Import discovery
+### A.1 — User-initiated Library refresh
 
-RetroVault provides a production Bulk Import service built on the
-existing library scanner architecture.
+The Library exposes a production refresh action through its toolbar.
 
-The workflow:
+A refresh delegates to the existing Library controller reload boundary
+rather than creating a second loading implementation.
 
-- Accepts a user-selected ROM directory.
-- Validates the directory through the existing source-validation
-  boundary.
-- Uses RetroVault's existing recursive ROM scanner.
-- Preserves RVDB resolver integration.
-- Deduplicates discovered games by canonical ROM identity.
-- Produces deterministic import ordering.
-- Ignores unsupported files through the existing scanner contract.
-- Rejects invalid or missing source directories.
-- Safely supports an empty valid ROM directory.
+After a successful reload, RetroVault synchronizes the dependent
+Systems and Playlists views with the refreshed Library snapshot.
 
-Bulk Import discovery itself does not directly mutate runtime
-configuration or durable library state.
+### A.2 — Library state preservation
 
-### Production application experience
+Manual refresh preserves the active Library experience across the
+reload boundary.
 
-The Library page exposes Bulk Import through the production toolbar.
+Protected state includes:
 
-A successful import reports:
+- search text;
+- system filter;
+- sort selection;
+- favorites filter;
+- recent filter;
+- current Library view mode; and
+- selected game when that game survives the reload.
 
-- ROMs discovered.
-- Games added.
-- Games already present or skipped.
-- Duplicates found inside the selected source.
-- Whether the directory was newly saved or was already registered
-  as a library source.
+If the selected system no longer exists, the system filter safely falls
+back to All Systems.
 
-Import failures are surfaced through the production Bulk Import
-failure path.
+If the selected game no longer exists, the details pane is cleared
+instead of retaining stale game state.
 
-Development and coding diagnostics remain separate from intentional
-production-facing application feedback.
+The RVA1-C.14 identity-preserving reload contract remains intact for
+surviving games.
 
-### Live library integration
+### A.3 — Refresh status feedback
 
-A successful Bulk Import is merged into the active RetroVault
-library immediately.
+The Library toolbar exposes non-modal refresh status feedback.
 
-The controller returns the authoritative live library snapshot after
-the merge.
+During refresh:
 
-The Gallery consumes that explicit snapshot rather than relying on
-handler ownership or bound-method introspection.
+- the refresh control is disabled;
+- the status reports that the Library is refreshing; and
+- no development error popup is introduced.
 
-The protected implementation does not use:
+Successful refresh reports completion through the Library status
+surface.
 
-- `_bulk_import_games` handler introspection.
-- `__self__` handler-owner inspection.
+Expected refresh failures are contained and reported through the same
+non-modal status boundary.
 
-This keeps the Bulk Import boundary explicit and compatible with
-wrapped or independently supplied handlers.
+### A.4 — Refresh completion hardening
 
-### Application synchronization
+Application-level completion synchronization occurs only after the
+Library snapshot has been refreshed.
 
-After a successful import, RetroVault synchronizes dependent
-application surfaces.
+Expected completion failures are contained without leaving the Library
+control surface disabled.
 
-The Systems page refreshes its live library-derived information for
-the current system selection.
+A completion synchronization failure is represented as a partial
+refresh rather than incorrectly reporting full success.
 
-The Playlists page refreshes its live collection contents while
-preserving the currently selected collection when possible.
+No new modal development-error path is introduced.
 
-The Library page already receives the authoritative post-import
-library snapshot.
+### A.5 — Refresh reentrancy protection
 
-Bulk Import completion synchronization is not emitted when the
-import fails.
+Manual Library refresh is serialized.
 
-### Persistent library sources
+A second refresh request is ignored while a refresh is already in
+progress.
 
-Successfully imported directories are stored as enabled local
-library sources in RetroVault runtime configuration.
+All expected refresh completion paths clear the busy state and restore
+the refresh control.
 
-Persistence:
+### A.6 — Refresh / Bulk Import serialization
 
-- Preserves existing configured sources.
-- Uses canonical source paths.
-- Avoids duplicate registration of the same directory.
-- Generates unique source IDs when required.
-- Uses the existing atomic runtime configuration writer.
+Manual refresh and Bulk Import cannot execute concurrently.
 
-A directory that is already registered is reported as an existing
-source rather than duplicated.
+While refresh is active:
 
-### Restart rehydration
+- another refresh request is ignored; and
+- Bulk Import is unavailable.
 
-Persisted Bulk Import sources participate in RetroVault's normal
-startup library-loading architecture.
+While Bulk Import is active:
 
-On a subsequent application startup:
+- another Bulk Import request is ignored; and
+- manual refresh is unavailable.
 
-- Runtime configuration is merged with default configuration.
-- SourceManager reconstructs the persisted local source.
-- LibraryService supplies that source to LibraryBuilder.
-- The normal scanner architecture rebuilds the imported library.
+Cancellation of the Bulk Import directory chooser does not enter the
+busy state.
 
-The restart contract is explicitly regression-tested.
+Expected failure paths restore both controls.
 
-Repeated persistence of the same source does not create duplicate
-startup sources.
+### A.7 — Bulk Import completion containment
 
-### Empty-source hardening
+Bulk Import completion synchronization remains ordered after the
+imported Library snapshot is applied.
 
-A valid empty ROM directory is a supported Bulk Import source.
+Expected completion callback failures are contained.
 
-It produces:
+On completion failure:
 
-- Zero discovered games.
-- Zero duplicate games.
-- An empty immutable game result.
-- A valid enabled local source identity.
+- the imported Library snapshot remains applied;
+- the Bulk Import busy state is cleared;
+- Library refresh and Bulk Import controls are restored;
+- another Bulk Import can be attempted; and
+- no new failure popup is introduced.
 
-This behavior is protected by regression coverage.
+The existing production Bulk Import success and import-handler failure
+dialogs remain preserved.
 
-### Protected Bulk Import boundaries
+### A.8 — Bulk Import finalization safety
 
-RVA1-C.12 protects:
+The Bulk Import post-handler boundary is protected by guaranteed
+finalization.
 
-- Bulk Import discovery and validation.
-- Recursive scanner reuse.
-- RVDB resolver propagation.
-- Canonical ROM identity deduplication.
-- Deterministic discovery results.
-- Live LibraryService merge behavior.
-- Explicit authoritative post-import game snapshots.
-- Production success and failure feedback.
-- Runtime source persistence.
-- Duplicate source prevention.
-- Unique source IDs.
-- Cross-page application synchronization.
-- Restart rehydration.
-- Empty-source behavior.
+Expected failures while applying or interpreting a Bulk Import result
+are contained, including malformed result data and expected snapshot
+processing failures.
 
-### Preserved earlier architecture
+The finalization contract guarantees:
 
-RVA1-C.12 does not alter the protected contracts for:
+- Bulk Import busy state returns to idle;
+- Bulk Import control is restored;
+- Library refresh control is restored; and
+- the workflow can be retried.
 
-- RVA1-C.10 launch/session ownership and lifecycle behavior.
-- RVA1-C.11 application UX hardening.
-- Archive variant selection and archive-member safety.
-- RetroArch process ownership and shared-session protection.
-- Favorites and Recently Played identity rules.
-- Collection identity and persistence.
-- RVDB resolver architecture.
-- Interactive hardware-state architecture.
-- NES protected RVV visual geometry.
-- SNES protected RVV visual geometry.
+The production Bulk Import success dialog remains available only after
+successful result processing.
+
+No additional failure popup is introduced by this hardening boundary.
+
+### Protected application boundaries
+
+RVA1-C.15 preserves the following established RetroVault contracts:
+
+- RVA1-C.14 atomic live source reload behavior;
+- surviving game object identity across source reloads;
+- Library, Systems, and Playlists synchronization;
+- existing production Bulk Import dialogs;
+- protected Game Details production warning dialogs;
+- collection and recent-game behavior;
+- launch and lifecycle behavior;
+- RVDB-backed canonical platform identity;
+- existing RVV presentation and calibrated NES/SNES visual geometry.
 
 ### Closure validation
 
-RVA1-C.12 closure validation established:
+RVA1-C.15 closure validation established:
 
-- Bulk Import regression: PASS.
-- Cross-page regression: PASS.
-- Discovery contract: PASS.
-- Persistence contract: PASS.
-- Live-library integration contract: PASS.
-- Gallery refresh contract: PASS.
-- Application synchronization contract: PASS.
-- Restart rehydration contract: PASS.
-- Empty-source hardening contract: PASS.
-- Full RetroVault regression: 1185 passed.
-- Python compile validation: PASS.
-- Local/remote protected branch synchronization: PASS.
-- Clean worktree before documentation closure.
+- C.15 targeted Library regression: 156 passed;
+- RVA1-C.14 protected regression: 77 passed;
+- protected modal-guard regression: 62 passed;
+- complete RetroVault regression: 1273 passed;
+- Python compile validation: PASS;
+- Git diff integrity: PASS;
+- local and remote protected checkpoint synchronization: PASS; and
+- clean worktree: PASS.
+
+No remaining C.15 hardening markers were detected at the closure
+boundary.
 
 ### Technical closure checkpoint
 
-RVA1-C.12 technical implementation was validated at:
+The final technical implementation checkpoint before documentation
+closure is:
 
-`886af98de5826ff079630ffc581f5937f626e027`
+`ebe4bba2725defcb9b8cc84ca6e82dd79d7cb7fb`
 
-The final protected milestone checkpoint is the documentation closure
-commit that contains this document.
+Commit:
 
-### Next milestone
+`fix: finalize bulk import safely`
 
-The next RetroVault milestone begins from the protected RVA1-C.12
-closure checkpoint.
+This checkpoint includes the complete RVA1-C.15 A.1 through A.8
+implementation and regression contracts.
+
+### Milestone status
+
+**RVA1-C.15 is complete.**
+
+The next RetroVault application milestone must begin from the protected
+RVA1-C.15 documentation closure checkpoint.
