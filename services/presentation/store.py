@@ -565,6 +565,116 @@ class PresentationStore:
             games=games,
         )
 
+    def clear_default_overlay(
+        self,
+    ):
+        data = self.load()
+
+        self.save(
+            default=replace(
+                data["default"],
+                overlay="",
+            ),
+            systems=data["systems"],
+            games=data["games"],
+        )
+
+    def clear_system_overlay(
+        self,
+        platform_id,
+    ):
+        if (
+            not isinstance(platform_id, str)
+            or not platform_id
+        ):
+            raise ValueError(
+                "Presentation system identity "
+                "must be a non-empty string."
+            )
+
+        data = self.load()
+        systems = dict(
+            data["systems"]
+        )
+
+        current = systems.get(
+            platform_id
+        )
+
+        if current is None:
+            return
+
+        updated = replace(
+            current,
+            overlay="",
+        )
+
+        if (
+            not updated.shader
+            and not updated.overlay
+            and not updated.artwork
+        ):
+            systems.pop(
+                platform_id,
+                None,
+            )
+        else:
+            systems[platform_id] = updated
+
+        self.save(
+            default=data["default"],
+            systems=systems,
+            games=data["games"],
+        )
+
+    def clear_game_overlay(
+        self,
+        identity,
+    ):
+        if (
+            not isinstance(identity, str)
+            or not identity
+        ):
+            raise ValueError(
+                "Presentation game identity "
+                "must be a non-empty string."
+            )
+
+        data = self.load()
+        games = dict(
+            data["games"]
+        )
+
+        current = games.get(
+            identity
+        )
+
+        if current is None:
+            return
+
+        updated = replace(
+            current,
+            overlay="",
+        )
+
+        if (
+            not updated.shader
+            and not updated.overlay
+            and not updated.artwork
+        ):
+            games.pop(
+                identity,
+                None,
+            )
+        else:
+            games[identity] = updated
+
+        self.save(
+            default=data["default"],
+            systems=data["systems"],
+            games=games,
+        )
+
     def resolver(self):
         from .resolver import (
             PresentationResolver,

@@ -803,3 +803,272 @@ def test_overlay_assignment_validates_values(
             "/roms/game.nes",
             None,
         )
+
+
+
+def test_clear_default_overlay_preserves_other_fields(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "XDG_CONFIG_HOME",
+        str(tmp_path),
+    )
+
+    store = PresentationStore(
+        presentation_file=(
+            tmp_path / "presentation.json"
+        )
+    )
+
+    store.save(
+        default=PresentationProfile(
+            shader="/default.slangp",
+            overlay="/default.cfg",
+            artwork="/default.png",
+        ),
+        systems={
+            "nes": PresentationProfile(
+                overlay="/system.cfg",
+            ),
+        },
+        games={
+            "/roms/game.nes": PresentationProfile(
+                overlay="/game.cfg",
+            ),
+        },
+    )
+
+    store.clear_default_overlay()
+
+    data = store.load()
+
+    assert data["default"] == PresentationProfile(
+        shader="/default.slangp",
+        overlay="",
+        artwork="/default.png",
+    )
+
+    assert (
+        data["systems"]["nes"].overlay
+        == "/system.cfg"
+    )
+
+    assert (
+        data["games"]["/roms/game.nes"].overlay
+        == "/game.cfg"
+    )
+
+
+def test_clear_system_overlay_preserves_other_fields(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "XDG_CONFIG_HOME",
+        str(tmp_path),
+    )
+
+    store = PresentationStore(
+        presentation_file=(
+            tmp_path / "presentation.json"
+        )
+    )
+
+    store.save(
+        default=PresentationProfile(
+            overlay="/default.cfg",
+        ),
+        systems={
+            "nes": PresentationProfile(
+                shader="/system.slangp",
+                overlay="/system.cfg",
+                artwork="/system.png",
+            ),
+            "snes": PresentationProfile(
+                overlay="/snes.cfg",
+            ),
+        },
+        games={},
+    )
+
+    store.clear_system_overlay(
+        "nes"
+    )
+
+    data = store.load()
+
+    assert data["systems"]["nes"] == (
+        PresentationProfile(
+            shader="/system.slangp",
+            overlay="",
+            artwork="/system.png",
+        )
+    )
+
+    assert (
+        data["systems"]["snes"].overlay
+        == "/snes.cfg"
+    )
+
+    assert (
+        data["default"].overlay
+        == "/default.cfg"
+    )
+
+
+def test_clear_game_overlay_preserves_other_fields(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "XDG_CONFIG_HOME",
+        str(tmp_path),
+    )
+
+    store = PresentationStore(
+        presentation_file=(
+            tmp_path / "presentation.json"
+        )
+    )
+
+    identity = "/roms/game.nes"
+
+    store.save(
+        default=PresentationProfile(),
+        systems={},
+        games={
+            identity: PresentationProfile(
+                shader="/game.slangp",
+                overlay="/game.cfg",
+                artwork="/game.png",
+            ),
+        },
+    )
+
+    store.clear_game_overlay(
+        identity
+    )
+
+    assert (
+        store.load()["games"][identity]
+        == PresentationProfile(
+            shader="/game.slangp",
+            overlay="",
+            artwork="/game.png",
+        )
+    )
+
+
+def test_clear_empty_system_and_game_profiles_are_removed(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "XDG_CONFIG_HOME",
+        str(tmp_path),
+    )
+
+    store = PresentationStore(
+        presentation_file=(
+            tmp_path / "presentation.json"
+        )
+    )
+
+    identity = "/roms/game.nes"
+
+    store.save(
+        default=PresentationProfile(),
+        systems={
+            "nes": PresentationProfile(
+                overlay="/system.cfg",
+            ),
+        },
+        games={
+            identity: PresentationProfile(
+                overlay="/game.cfg",
+            ),
+        },
+    )
+
+    store.clear_system_overlay(
+        "nes"
+    )
+
+    store.clear_game_overlay(
+        identity
+    )
+
+    data = store.load()
+
+    assert "nes" not in data["systems"]
+    assert identity not in data["games"]
+
+
+def test_clear_missing_overlay_assignments_are_safe_noops(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "XDG_CONFIG_HOME",
+        str(tmp_path),
+    )
+
+    store = PresentationStore(
+        presentation_file=(
+            tmp_path / "presentation.json"
+        )
+    )
+
+    store.save(
+        default=PresentationProfile(),
+        systems={},
+        games={},
+    )
+
+    store.clear_system_overlay(
+        "nes"
+    )
+
+    store.clear_game_overlay(
+        "/roms/game.nes"
+    )
+
+    data = store.load()
+
+    assert data["systems"] == {}
+    assert data["games"] == {}
+
+
+def test_clear_overlay_assignment_validates_identity(
+    tmp_path,
+    monkeypatch,
+):
+    monkeypatch.setenv(
+        "XDG_CONFIG_HOME",
+        str(tmp_path),
+    )
+
+    store = PresentationStore(
+        presentation_file=(
+            tmp_path / "presentation.json"
+        )
+    )
+
+    import pytest
+
+    with pytest.raises(
+        ValueError,
+        match="Presentation system identity",
+    ):
+        store.clear_system_overlay(
+            ""
+        )
+
+    with pytest.raises(
+        ValueError,
+        match="Presentation game identity",
+    ):
+        store.clear_game_overlay(
+            ""
+        )

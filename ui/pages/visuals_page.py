@@ -189,6 +189,30 @@ class NativeVisualsPage(QWidget):
             "Set for Game"
         )
 
+        self.clear_default_button = QPushButton(
+            "Clear Default"
+        )
+
+        self.clear_system_button = QPushButton(
+            "Clear System"
+        )
+
+        self.clear_game_button = QPushButton(
+            "Clear Game"
+        )
+
+        self.clear_default_button.setEnabled(
+            self.presentation_store is not None
+        )
+
+        self.clear_system_button.setEnabled(
+            self.presentation_store is not None
+        )
+
+        self.clear_game_button.setEnabled(
+            self.presentation_store is not None
+        )
+
         self.default_button.setEnabled(
             False
         )
@@ -382,6 +406,18 @@ class NativeVisualsPage(QWidget):
             self.game_button
         )
 
+        details.addWidget(
+            self.clear_default_button
+        )
+
+        details.addWidget(
+            self.clear_system_button
+        )
+
+        details.addWidget(
+            self.clear_game_button
+        )
+
         details.addStretch(1)
 
         self.details_scroll = QScrollArea()
@@ -456,6 +492,18 @@ class NativeVisualsPage(QWidget):
 
         self.game_button.clicked.connect(
             self.assign_game_visual
+        )
+
+        self.clear_default_button.clicked.connect(
+            self.clear_default_visual
+        )
+
+        self.clear_system_button.clicked.connect(
+            self.clear_system_visual
+        )
+
+        self.clear_game_button.clicked.connect(
+            self.clear_game_visual
         )
 
     @staticmethod
@@ -1158,6 +1206,129 @@ class NativeVisualsPage(QWidget):
             "Assigned "
             f"{selected.asset.display_name} "
             f'to game "{getattr(game, "name", identity)}".'
+        )
+
+    def clear_default_visual(
+        self,
+    ):
+        if self.presentation_store is None:
+            return
+
+        try:
+            self.presentation_store.clear_default_overlay()
+        except (
+            OSError,
+            TypeError,
+            ValueError,
+            RuntimeError,
+        ) as exc:
+            self.status_label.setText(
+                "Unable to clear RetroVault visual: "
+                f"{exc}"
+            )
+            return
+
+        self.status_label.setText(
+            "Cleared RetroVault default visual."
+        )
+
+    def clear_system_visual(
+        self,
+    ):
+        if self.presentation_store is None:
+            return
+
+        game = self._current_game()
+
+        if game is None:
+            self.status_label.setText(
+                "Select a game in the Library "
+                "before clearing a system visual."
+            )
+            return
+
+        platform_id = str(
+            getattr(
+                game,
+                "rvdb_platform_id",
+                "",
+            )
+            or ""
+        )
+
+        if not platform_id:
+            self.status_label.setText(
+                "The selected game does not have "
+                "a canonical RVDB system identity."
+            )
+            return
+
+        try:
+            self.presentation_store.clear_system_overlay(
+                platform_id
+            )
+        except (
+            OSError,
+            TypeError,
+            ValueError,
+            RuntimeError,
+        ) as exc:
+            self.status_label.setText(
+                "Unable to clear RetroVault visual: "
+                f"{exc}"
+            )
+            return
+
+        self.status_label.setText(
+            "Cleared RetroVault visual for "
+            f"system {platform_id}."
+        )
+
+    def clear_game_visual(
+        self,
+    ):
+        if self.presentation_store is None:
+            return
+
+        game = self._current_game()
+
+        if game is None:
+            self.status_label.setText(
+                "Select a game in the Library "
+                "before clearing a game visual."
+            )
+            return
+
+        try:
+            identity = game_identity(
+                game
+            )
+        except ValueError:
+            self.status_label.setText(
+                "The selected game does not have "
+                "a stable RetroVault game identity."
+            )
+            return
+
+        try:
+            self.presentation_store.clear_game_overlay(
+                identity
+            )
+        except (
+            OSError,
+            TypeError,
+            ValueError,
+            RuntimeError,
+        ) as exc:
+            self.status_label.setText(
+                "Unable to clear RetroVault visual: "
+                f"{exc}"
+            )
+            return
+
+        self.status_label.setText(
+            "Cleared RetroVault visual for "
+            f'"{getattr(game, "name", identity)}".'
         )
 
     def install_selected_visual(

@@ -1,3 +1,4 @@
+import ast
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -1853,3 +1854,74 @@ def test_native_install_confirmation_remains_explicit():
         "QMessageBox.StandardButton.No"
         in source
     )
+
+
+
+def test_native_visual_page_exposes_clear_assignment_controls():
+    source = Path(
+        "ui/pages/visuals_page.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    for name in (
+        "clear_default_button",
+        "clear_system_button",
+        "clear_game_button",
+        "clear_default_visual",
+        "clear_system_visual",
+        "clear_game_visual",
+    ):
+        assert name in source
+
+    assert ".clear_default_overlay(" in source
+    assert ".clear_system_overlay(" in source
+    assert ".clear_game_overlay(" in source
+
+
+def test_native_clear_assignment_boundary_has_no_warning_dialog():
+    source = Path(
+        "ui/pages/visuals_page.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    tree = ast.parse(source)
+
+    klass = next(
+        node
+        for node in tree.body
+        if (
+            isinstance(node, ast.ClassDef)
+            and node.name == "NativeVisualsPage"
+        )
+    )
+
+    methods = {
+        node.name: node
+        for node in klass.body
+        if isinstance(
+            node,
+            ast.FunctionDef,
+        )
+    }
+
+    for name in (
+        "clear_default_visual",
+        "clear_system_visual",
+        "clear_game_visual",
+    ):
+        method_source = ast.get_source_segment(
+            source,
+            methods[name],
+        )
+
+        assert (
+            "Unable to clear RetroVault visual: "
+            in method_source
+        )
+
+        assert (
+            "QMessageBox.warning"
+            not in method_source
+        )
