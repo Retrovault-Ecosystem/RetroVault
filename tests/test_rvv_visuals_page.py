@@ -1747,3 +1747,109 @@ def test_native_assignment_error_boundary_has_no_warning_dialog():
             "Unable to assign RetroVault visual: "
             in source
         )
+def test_native_install_failure_is_reported_inline(
+    app,
+    tmp_path,
+    monkeypatch,
+):
+    status = make_status(
+        tmp_path,
+        state=NativeVisualInstallStatus.NOT_INSTALLED,
+    )
+
+    service = FakeNativeVisualService(
+        [status]
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=service
+    )
+
+    page.visual_list.setCurrentRow(
+        0
+    )
+
+    app.processEvents()
+
+    warning_calls = []
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "question",
+        lambda *args, **kwargs: (
+            QMessageBox.StandardButton.Yes
+        ),
+    )
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda *args, **kwargs: (
+            warning_calls.append(
+                (args, kwargs)
+            )
+        ),
+    )
+
+    def fail_install(
+        _asset_id,
+    ):
+        raise OSError(
+            "simulated installation failure"
+        )
+
+    monkeypatch.setattr(
+        service,
+        "install",
+        fail_install,
+    )
+
+    page.install_button.click()
+
+    app.processEvents()
+
+    assert page.status_label.text() == (
+        "Unable to install RetroVault visual: "
+        "simulated installation failure"
+    )
+
+    assert warning_calls == []
+
+    assert page.install_button.isEnabled()
+
+
+def test_native_install_error_boundary_has_no_warning_dialog():
+    import inspect
+
+    source = inspect.getsource(
+        NativeVisualsPage.install_selected_visual
+    )
+
+    assert "QMessageBox.warning" not in source
+
+    assert (
+        "Unable to install RetroVault visual: "
+        in source
+    )
+
+    assert "QMessageBox.question" in source
+
+
+def test_native_install_confirmation_remains_explicit():
+    import inspect
+
+    source = inspect.getsource(
+        NativeVisualsPage.install_selected_visual
+    )
+
+    assert "QMessageBox.question" in source
+
+    assert (
+        "QMessageBox.StandardButton.Yes"
+        in source
+    )
+
+    assert (
+        "QMessageBox.StandardButton.No"
+        in source
+    )

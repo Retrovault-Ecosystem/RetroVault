@@ -1225,14 +1225,9 @@ class NativeVisualsPage(QWidget):
             ValueError,
             RuntimeError,
         ) as exc:
-            QMessageBox.warning(
-                self,
-                "RetroVault Visual Installation Failed",
-                str(exc),
-            )
-
             self.status_label.setText(
-                "Unable to install RetroVault visual."
+                "Unable to install RetroVault visual: "
+                f"{exc}"
             )
 
             return
