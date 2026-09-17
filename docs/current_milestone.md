@@ -192,3 +192,46 @@ implementation and regression contracts.
 
 The next RetroVault application milestone must begin from the protected
 RVA1-C.15 documentation closure checkpoint.
+
+## RVA1-C.16 — RetroVault Visuals Application Integration — COMPLETE
+
+Protected technical checkpoint before closure:
+
+`71dfd95d835a81b2882db1c0517fce174e57cd40`
+
+RVA1-C.16 integrates the native RetroVault Visuals collection into
+the production RetroVault application while preserving the shared
+presentation architecture and RetroArch runtime composition path.
+
+Completed contracts:
+
+- RetroVault Visuals refresh through the native visual service boundary.
+- Installation/update state and explicit installation confirmation.
+- Default, canonical-system, and stable-game visual assignments.
+- Clear/unassign support with natural presentation fallback.
+- Direct Default/System/Game assignment visibility.
+- Effective assignment visibility using production presentation
+  precedence: game -> system -> default -> empty.
+- Shared PresentationStore between the RVV page and production
+  PresentationCompositionFactory.
+- Production runtime composition consumes RVV assignments without a
+  parallel presentation store.
+- Current Library game context is shared with system/game assignment.
+- Navigation refresh keeps visual discovery and assignment state current.
+- Expected RVV operational failures are reported inline without error
+  popups.
+- Explicit install/update confirmation remains preserved.
+- Existing shader, overlay, artwork, library, launcher, and presentation
+  contracts remain protected.
+
+Closure verification:
+
+- C.16 targeted regression: PASS.
+- Full RetroVault regression: PASS.
+- Python compileall: PASS.
+- Production RVV integration contract: PASS.
+- Shared presentation-store contract: PASS.
+- Runtime composition contract: PASS.
+- Inline-error/no-warning-popup contract: PASS.
+
+RVA1-C.16 is closed and protected.
