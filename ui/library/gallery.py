@@ -552,9 +552,26 @@ class GalleryView(QWidget):
             self.bulk_import_completed_handler
             is not None
         ):
-            self.bulk_import_completed_handler(
-                result
-            )
+            try:
+                self.bulk_import_completed_handler(
+                    result
+                )
+            except (
+                OSError,
+                RuntimeError,
+                ValueError,
+            ):
+                self._bulk_import_in_progress = False
+
+                self.toolbar.bulk_import_button.setEnabled(
+                    True
+                )
+
+                self.toolbar.refresh_button.setEnabled(
+                    True
+                )
+
+                return
 
         discovered = result["discovered"]
         persisted = result.get(

@@ -791,3 +791,269 @@ def test_bulk_import_cancel_does_not_enter_busy_state(
         view.toolbar.refresh_button.isEnabled()
         is True
     )
+
+
+def test_bulk_import_completion_failure_clears_busy_state(
+    monkeypatch,
+):
+    QApplication.instance() or QApplication([])
+
+    class Discovered:
+        discovered_count = 1
+        duplicate_count = 0
+
+    def import_handler(_directory):
+        return {
+            "games": [],
+            "discovered": Discovered(),
+            "added_count": 1,
+            "skipped_count": 0,
+            "persisted": {
+                "added": True,
+            },
+        }
+
+    def completed(_result):
+        raise RuntimeError(
+            "dependent refresh failed"
+        )
+
+    view = GalleryView(
+        [],
+        bulk_import_handler=import_handler,
+        bulk_import_completed_handler=completed,
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *_args, **_kwargs: "/roms",
+    )
+
+    information_calls = []
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *args, **kwargs: (
+            information_calls.append(
+                (args, kwargs)
+            )
+        ),
+    )
+
+    view.bulk_import()
+
+    assert (
+        view._bulk_import_in_progress
+        is False
+    )
+
+    assert (
+        view.toolbar.bulk_import_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+    assert information_calls == []
+
+
+def test_bulk_import_completion_failure_preserves_imported_snapshot(
+    monkeypatch,
+):
+    QApplication.instance() or QApplication([])
+
+    imported = FakeGame(
+        "Completion Failure",
+        "/roms/completion-failure.sfc",
+        "SNES",
+    )
+
+    class Discovered:
+        discovered_count = 1
+        duplicate_count = 0
+
+    def import_handler(_directory):
+        return {
+            "games": [imported],
+            "discovered": Discovered(),
+            "added_count": 1,
+            "skipped_count": 0,
+            "persisted": {
+                "added": True,
+            },
+        }
+
+    def completed(_result):
+        raise ValueError(
+            "dependent refresh failed"
+        )
+
+    view = GalleryView(
+        [],
+        bulk_import_handler=import_handler,
+        bulk_import_completed_handler=completed,
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *_args, **_kwargs: "/roms",
+    )
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *_args, **_kwargs: None,
+    )
+
+    view.bulk_import()
+
+    assert view.all_games == [
+        imported,
+    ]
+
+    assert (
+        view._bulk_import_in_progress
+        is False
+    )
+
+
+def test_bulk_import_can_retry_after_completion_failure(
+    monkeypatch,
+):
+    QApplication.instance() or QApplication([])
+
+    completion_calls = []
+
+    class Discovered:
+        discovered_count = 0
+        duplicate_count = 0
+
+    def import_handler(_directory):
+        return {
+            "games": [],
+            "discovered": Discovered(),
+            "added_count": 0,
+            "skipped_count": 0,
+            "persisted": {
+                "added": False,
+            },
+        }
+
+    def completed(_result):
+        completion_calls.append(
+            "completed"
+        )
+
+        if len(completion_calls) == 1:
+            raise OSError(
+                "first completion failed"
+            )
+
+    view = GalleryView(
+        [],
+        bulk_import_handler=import_handler,
+        bulk_import_completed_handler=completed,
+    )
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *_args, **_kwargs: "/roms",
+    )
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *_args, **_kwargs: None,
+    )
+
+    view.bulk_import()
+    view.bulk_import()
+
+    assert completion_calls == [
+        "completed",
+        "completed",
+    ]
+
+    assert (
+        view._bulk_import_in_progress
+        is False
+    )
+
+    assert (
+        view.toolbar.bulk_import_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+
+def test_bulk_import_completion_failure_adds_no_new_popup():
+    from pathlib import Path
+
+    text = Path(
+        "ui/library/gallery.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    method_start = text.index(
+        "    def bulk_import(self):"
+    )
+
+    method_end = text.index(
+        "    def _manual_system_filter_changed(",
+        method_start,
+    )
+
+    method = text[
+        method_start:method_end
+    ]
+
+    callback_call = method.index(
+        "self.bulk_import_completed_handler("
+    )
+
+    try_start = method.rfind(
+        "            try:",
+        0,
+        callback_call,
+    )
+
+    assert try_start >= 0
+
+    callback_end = method.index(
+        '        discovered = result["discovered"]',
+        callback_call,
+    )
+
+    callback_boundary = method[
+        try_start:callback_end
+    ]
+
+    assert (
+        "self.bulk_import_completed_handler("
+        in callback_boundary
+    )
+
+    assert (
+        "except ("
+        in callback_boundary
+    )
+
+    for forbidden in (
+        "QMessageBox",
+        ".critical(",
+        ".warning(",
+        ".information(",
+    ):
+        assert forbidden not in callback_boundary

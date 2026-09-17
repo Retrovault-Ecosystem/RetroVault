@@ -47,8 +47,8 @@ def test_bulk_import_callback_runs_after_library_snapshot_refresh():
     )
 
     callback = source.index(
-        "self.bulk_import_completed_handler(\n"
-        "                result"
+        "self.bulk_import_completed_handler(",
+        set_games,
     )
 
     assert set_games < callback
