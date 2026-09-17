@@ -1037,10 +1037,9 @@ class NativeVisualsPage(QWidget):
             ValueError,
             RuntimeError,
         ) as exc:
-            QMessageBox.warning(
-                self,
-                "RetroVault Visual Assignment Failed",
-                str(exc),
+            self.status_label.setText(
+                "Unable to assign RetroVault visual: "
+                f"{exc}"
             )
             return
 
@@ -1096,10 +1095,9 @@ class NativeVisualsPage(QWidget):
             ValueError,
             RuntimeError,
         ) as exc:
-            QMessageBox.warning(
-                self,
-                "RetroVault Visual Assignment Failed",
-                str(exc),
+            self.status_label.setText(
+                "Unable to assign RetroVault visual: "
+                f"{exc}"
             )
             return
 
@@ -1150,10 +1148,9 @@ class NativeVisualsPage(QWidget):
             ValueError,
             RuntimeError,
         ) as exc:
-            QMessageBox.warning(
-                self,
-                "RetroVault Visual Assignment Failed",
-                str(exc),
+            self.status_label.setText(
+                "Unable to assign RetroVault visual: "
+                f"{exc}"
             )
             return
 

@@ -1623,3 +1623,127 @@ def test_refresh_page_uses_existing_visual_refresh_boundary():
     )
 
     assert "self.refresh_visuals()" in source
+def test_native_assignment_failures_are_reported_inline(
+    app,
+    tmp_path,
+    monkeypatch,
+):
+    status = make_status(
+        tmp_path,
+        state=NativeVisualInstallStatus.CURRENT,
+    )
+
+    class AssignmentFailureStore:
+        def assign_default_overlay(
+            self,
+            *_args,
+            **_kwargs,
+        ):
+            return None
+
+        def assign_system_overlay(
+            self,
+            *_args,
+            **_kwargs,
+        ):
+            return None
+
+        def assign_game_overlay(
+            self,
+            *_args,
+            **_kwargs,
+        ):
+            return None
+
+    store = AssignmentFailureStore()
+
+    game = _assignment_game(
+        tmp_path
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                [status]
+            )
+        ),
+        presentation_store=store,
+        current_game_provider=lambda: game,
+    )
+
+    page.visual_list.setCurrentRow(
+        0
+    )
+
+    app.processEvents()
+
+    popup_calls = []
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "warning",
+        lambda *args, **kwargs: (
+            popup_calls.append(
+                (args, kwargs)
+            )
+        ),
+    )
+
+    failures = (
+        (
+            page.default_button,
+            store,
+            "assign_default_overlay",
+        ),
+        (
+            page.system_button,
+            store,
+            "assign_system_overlay",
+        ),
+        (
+            page.game_button,
+            store,
+            "assign_game_overlay",
+        ),
+    )
+
+    for button, target, method_name in failures:
+        monkeypatch.setattr(
+            target,
+            method_name,
+            lambda *args, **kwargs: (
+                (_ for _ in ()).throw(
+                    OSError("simulated assignment failure")
+                )
+            ),
+        )
+
+        button.click()
+        app.processEvents()
+
+        assert page.status_label.text() == (
+            "Unable to assign RetroVault visual: "
+            "simulated assignment failure"
+        )
+
+    assert popup_calls == []
+
+
+def test_native_assignment_error_boundary_has_no_warning_dialog():
+    import inspect
+
+    for method in (
+        NativeVisualsPage.assign_default_visual,
+        NativeVisualsPage.assign_system_visual,
+        NativeVisualsPage.assign_game_visual,
+    ):
+        source = inspect.getsource(
+            method
+        )
+
+        assert "QMessageBox.warning" not in source
+
+        assert (
+            "Unable to assign RetroVault visual: "
+            in source
+        )
