@@ -1550,3 +1550,76 @@ def test_filtered_status_message_reports_result_count(
         "Showing 1 of 2 RetroVault visuals. "
         "Select one to preview and manage it."
     )
+def test_refresh_page_reloads_native_collection_for_navigation(
+    app,
+    tmp_path,
+):
+    first = make_status(
+        tmp_path,
+        asset_id="rvv.overlay.nes.classic",
+        display_name="Nintendo NES — RetroVault Classic",
+    )
+
+    second = make_status(
+        tmp_path,
+        asset_id="rvv.overlay.snes.classic",
+        display_name="Super Nintendo — RetroVault Classic",
+    )
+
+    service = FakeNativeVisualService(
+        [first]
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=service
+    )
+
+    assert page.visual_list.count() == 1
+
+    page.visual_list.setCurrentRow(
+        0
+    )
+
+    app.processEvents()
+
+    selected_id = (
+        page._selected_asset_id()
+    )
+
+    service.status_by_id[
+        second.asset.id
+    ] = second
+
+    page.refresh_page()
+
+    app.processEvents()
+
+    assert page.visual_list.count() == 2
+
+    assert (
+        page._selected_asset_id()
+        == selected_id
+    )
+
+    labels = [
+        page.visual_list.item(index).text()
+        for index in range(
+            page.visual_list.count()
+        )
+    ]
+
+    assert any(
+        "Super Nintendo — RetroVault Classic"
+        in label
+        for label in labels
+    )
+
+
+def test_refresh_page_uses_existing_visual_refresh_boundary():
+    import inspect
+
+    source = inspect.getsource(
+        NativeVisualsPage.refresh_page
+    )
+
+    assert "self.refresh_visuals()" in source

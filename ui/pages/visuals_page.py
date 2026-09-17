@@ -751,6 +751,10 @@ class NativeVisualsPage(QWidget):
             ),
         )
 
+    def refresh_page(self):
+        """Refresh native visuals when the page becomes active."""
+        self.refresh_visuals()
+
     def refresh_visuals(self):
         preserve_asset_id = (
             self._selected_asset_id()
