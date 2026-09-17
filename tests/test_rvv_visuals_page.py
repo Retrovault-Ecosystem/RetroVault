@@ -2224,3 +2224,264 @@ def test_native_assignment_visibility_errors_are_inline():
     assert "QMessageBox.warning" not in (
         method_source
     )
+
+
+
+def test_rvv_application_integration_shares_production_presentation_store():
+    source = Path(
+        "ui/main_window.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    tree = ast.parse(
+        source
+    )
+
+    main_window = next(
+        node
+        for node in tree.body
+        if (
+            isinstance(node, ast.ClassDef)
+            and node.name == "MainWindow"
+        )
+    )
+
+    init = next(
+        node
+        for node in main_window.body
+        if (
+            isinstance(node, ast.FunctionDef)
+            and node.name == "__init__"
+        )
+    )
+
+    init_source = ast.get_source_segment(
+        source,
+        init,
+    )
+
+    assert (
+        "presentation_store = PresentationStore()"
+        in init_source
+    )
+
+    assert (
+        "PresentationCompositionFactory("
+        in init_source
+    )
+
+    assert (
+        "presentation_store=(\n"
+        "                    presentation_store"
+        in init_source
+    )
+
+    assert (
+        '"RetroVault Visuals",\n'
+        "            NativeVisualsPage("
+        in init_source
+    )
+
+    visual_index = init_source.index(
+        '"RetroVault Visuals"'
+    )
+
+    visual_surface = init_source[
+        visual_index:
+    ]
+
+    assert (
+        "presentation_store=(\n"
+        "                    presentation_store"
+        in visual_surface
+    )
+
+    assert (
+        "current_game_provider=("
+        in visual_surface
+    )
+
+    assert (
+        "library_page\n"
+        "                        .details\n"
+        "                        .current_game"
+        in visual_surface
+    )
+
+
+def test_rvv_navigation_refreshes_service_and_assignment_visibility():
+    source = Path(
+        "ui/pages/visuals_page.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    tree = ast.parse(
+        source
+    )
+
+    klass = next(
+        node
+        for node in tree.body
+        if (
+            isinstance(node, ast.ClassDef)
+            and node.name == "NativeVisualsPage"
+        )
+    )
+
+    methods = {
+        node.name: node
+        for node in klass.body
+        if isinstance(
+            node,
+            ast.FunctionDef,
+        )
+    }
+
+    refresh_page = ast.get_source_segment(
+        source,
+        methods["refresh_page"],
+    )
+
+    refresh_visuals = ast.get_source_segment(
+        source,
+        methods["refresh_visuals"],
+    )
+
+    clear_details = ast.get_source_segment(
+        source,
+        methods["clear_details"],
+    )
+
+    show_visual = ast.get_source_segment(
+        source,
+        methods["show_visual"],
+    )
+
+    assert (
+        "self.refresh_visuals()"
+        in refresh_page
+    )
+
+    assert (
+        "self.native_visual_service.native_assets()"
+        in refresh_visuals
+    )
+
+    assert (
+        "self.native_visual_service.status("
+        in refresh_visuals
+    )
+
+    assert (
+        "self._refresh_assignment_state()"
+        in clear_details
+    )
+
+    assert (
+        "self._refresh_assignment_state()"
+        in show_visual
+    )
+
+
+def test_rvv_assignment_and_runtime_composition_share_game_context():
+    main_source = Path(
+        "ui/main_window.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "presentation_resolver_provider=(\n"
+        "                presentation_composition_factory.build"
+        in main_source
+    )
+
+    assert (
+        '"RetroVault Visuals",\n'
+        "            NativeVisualsPage("
+        in main_source
+    )
+
+    visual_index = main_source.index(
+        '"RetroVault Visuals"'
+    )
+
+    visual_surface = main_source[
+        visual_index:
+    ]
+
+    assert (
+        "current_game_provider=(\n"
+        "                    lambda: (\n"
+        "                        library_page\n"
+        "                        .details\n"
+        "                        .current_game"
+        in visual_surface
+    )
+
+
+def test_rvv_integration_error_surfaces_remain_inline():
+    source = Path(
+        "ui/pages/visuals_page.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    tree = ast.parse(
+        source
+    )
+
+    klass = next(
+        node
+        for node in tree.body
+        if (
+            isinstance(node, ast.ClassDef)
+            and node.name == "NativeVisualsPage"
+        )
+    )
+
+    methods = {
+        node.name: node
+        for node in klass.body
+        if isinstance(
+            node,
+            ast.FunctionDef,
+        )
+    }
+
+    for name in (
+        "refresh_visuals",
+        "_refresh_assignment_state",
+        "assign_default_visual",
+        "assign_system_visual",
+        "assign_game_visual",
+        "clear_default_visual",
+        "clear_system_visual",
+        "clear_game_visual",
+    ):
+        method_source = ast.get_source_segment(
+            source,
+            methods[name],
+        )
+
+        assert (
+            "QMessageBox.warning"
+            not in method_source
+        )
+
+    install_source = ast.get_source_segment(
+        source,
+        methods["install_selected_visual"],
+    )
+
+    assert (
+        "QMessageBox.warning"
+        not in install_source
+    )
+
+    assert (
+        "QMessageBox.question"
+        in install_source
+    )
