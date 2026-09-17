@@ -539,73 +539,44 @@ class GalleryView(QWidget):
             )
             return
 
-        imported_games = result.get(
-            "games"
-        )
-
-        if imported_games is not None:
-            self.set_games(
-                imported_games
+        try:
+            imported_games = result.get(
+                "games"
             )
 
-        if (
-            self.bulk_import_completed_handler
-            is not None
-        ):
-            try:
+            if imported_games is not None:
+                self.set_games(
+                    imported_games
+                )
+
+            if (
+                self.bulk_import_completed_handler
+                is not None
+            ):
                 self.bulk_import_completed_handler(
                     result
                 )
-            except (
-                OSError,
-                RuntimeError,
-                ValueError,
-            ):
-                self._bulk_import_in_progress = False
 
-                self.toolbar.bulk_import_button.setEnabled(
-                    True
-                )
-
-                self.toolbar.refresh_button.setEnabled(
-                    True
-                )
-
-                return
-
-        discovered = result["discovered"]
-        persisted = result.get(
-            "persisted",
-            {},
-        )
-
-        source_saved = bool(
-            persisted.get(
-                "added",
-                False,
+            discovered = result["discovered"]
+            persisted = result.get(
+                "persisted",
+                {},
             )
-        )
 
-        source_status = (
-            "Saved as a library source"
-            if source_saved
-            else "Already registered as a library source"
-        )
+            source_saved = bool(
+                persisted.get(
+                    "added",
+                    False,
+                )
+            )
 
-        self._bulk_import_in_progress = False
+            source_status = (
+                "Saved as a library source"
+                if source_saved
+                else "Already registered as a library source"
+            )
 
-        self.toolbar.bulk_import_button.setEnabled(
-            True
-        )
-
-        self.toolbar.refresh_button.setEnabled(
-            True
-        )
-
-        QMessageBox.information(
-            self,
-            "Bulk Import Complete",
-            (
+            summary = (
                 "RetroVault finished scanning "
                 "the selected folder.\n\n"
                 f"ROMs discovered: "
@@ -617,7 +588,30 @@ class GalleryView(QWidget):
                 f"Duplicates inside source: "
                 f"{discovered.duplicate_count}\n"
                 f"Source: {source_status}"
-            ),
+            )
+        except (
+            KeyError,
+            OSError,
+            RuntimeError,
+            TypeError,
+            ValueError,
+        ):
+            return
+        finally:
+            self._bulk_import_in_progress = False
+
+            self.toolbar.bulk_import_button.setEnabled(
+                True
+            )
+
+            self.toolbar.refresh_button.setEnabled(
+                True
+            )
+
+        QMessageBox.information(
+            self,
+            "Bulk Import Complete",
+            summary,
         )
 
 

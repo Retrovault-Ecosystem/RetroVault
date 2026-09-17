@@ -999,6 +999,7 @@ def test_bulk_import_can_retry_after_completion_failure(
 
 def test_bulk_import_completion_failure_adds_no_new_popup():
     from pathlib import Path
+    import ast
 
     text = Path(
         "ui/library/gallery.py"
@@ -1006,48 +1007,41 @@ def test_bulk_import_completion_failure_adds_no_new_popup():
         encoding="utf-8"
     )
 
-    method_start = text.index(
-        "    def bulk_import(self):"
+    tree = ast.parse(text)
+
+    gallery = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef)
+        and node.name == "GalleryView"
     )
 
-    method_end = text.index(
-        "    def _manual_system_filter_changed(",
-        method_start,
+    method = next(
+        node
+        for node in gallery.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "bulk_import"
     )
 
-    method = text[
-        method_start:method_end
-    ]
-
-    callback_call = method.index(
-        "self.bulk_import_completed_handler("
+    post_handler_try = next(
+        node
+        for node in method.body
+        if (
+            isinstance(node, ast.Try)
+            and node.finalbody
+        )
     )
 
-    try_start = method.rfind(
-        "            try:",
-        0,
-        callback_call,
+    source = ast.get_source_segment(
+        text,
+        post_handler_try,
     )
 
-    assert try_start >= 0
-
-    callback_end = method.index(
-        '        discovered = result["discovered"]',
-        callback_call,
-    )
-
-    callback_boundary = method[
-        try_start:callback_end
-    ]
+    assert source is not None
 
     assert (
         "self.bulk_import_completed_handler("
-        in callback_boundary
-    )
-
-    assert (
-        "except ("
-        in callback_boundary
+        in source
     )
 
     for forbidden in (
@@ -1056,4 +1050,257 @@ def test_bulk_import_completion_failure_adds_no_new_popup():
         ".warning(",
         ".information(",
     ):
-        assert forbidden not in callback_boundary
+        assert forbidden not in source
+
+def test_bulk_import_malformed_result_clears_busy_state(
+    monkeypatch,
+):
+    QApplication.instance() or QApplication([])
+
+    view = GalleryView([])
+
+    calls = []
+
+    view.bulk_import_handler = lambda directory: {
+        "games": [],
+        "persisted": {
+            "added": True,
+        },
+    }
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: "/roms",
+    )
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *args, **kwargs: calls.append(
+            "information"
+        ),
+    )
+
+    view.bulk_import()
+
+    assert (
+        view._bulk_import_in_progress
+        is False
+    )
+
+    assert (
+        view.toolbar.bulk_import_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+    assert calls == []
+
+
+def test_bulk_import_malformed_result_can_retry(
+    monkeypatch,
+):
+    QApplication.instance() or QApplication([])
+
+    view = GalleryView([])
+
+    attempts = []
+
+    class Discovered:
+        discovered_count = 0
+        duplicate_count = 0
+
+    def handler(directory):
+        attempts.append(directory)
+
+        if len(attempts) == 1:
+            return {
+                "games": [],
+            }
+
+        return {
+            "games": [],
+            "discovered": Discovered(),
+            "added_count": 0,
+            "skipped_count": 0,
+            "persisted": {
+                "added": False,
+            },
+        }
+
+    view.bulk_import_handler = handler
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: "/roms",
+    )
+
+    monkeypatch.setattr(
+        QMessageBox,
+        "information",
+        lambda *args, **kwargs: None,
+    )
+
+    view.bulk_import()
+    view.bulk_import()
+
+    assert attempts == [
+        "/roms",
+        "/roms",
+    ]
+
+    assert (
+        view._bulk_import_in_progress
+        is False
+    )
+
+
+def test_bulk_import_snapshot_failure_finalizes_controls(
+    monkeypatch,
+):
+    QApplication.instance() or QApplication([])
+
+    view = GalleryView([])
+
+    class BrokenGames:
+        def __iter__(self):
+            raise RuntimeError(
+                "snapshot failed"
+            )
+
+    class Discovered:
+        discovered_count = 1
+        duplicate_count = 0
+
+    view.bulk_import_handler = lambda directory: {
+        "games": BrokenGames(),
+        "discovered": Discovered(),
+        "added_count": 1,
+        "skipped_count": 0,
+        "persisted": {
+            "added": True,
+        },
+    }
+
+    monkeypatch.setattr(
+        QFileDialog,
+        "getExistingDirectory",
+        lambda *args, **kwargs: "/roms",
+    )
+
+    view.bulk_import()
+
+    assert (
+        view._bulk_import_in_progress
+        is False
+    )
+
+    assert (
+        view.toolbar.bulk_import_button.isEnabled()
+        is True
+    )
+
+    assert (
+        view.toolbar.refresh_button.isEnabled()
+        is True
+    )
+
+
+def test_bulk_import_post_handler_failure_adds_no_popup_contract():
+    from pathlib import Path
+    import ast
+
+    text = Path(
+        "ui/library/gallery.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    tree = ast.parse(text)
+
+    gallery = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef)
+        and node.name == "GalleryView"
+    )
+
+    method = next(
+        node
+        for node in gallery.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "bulk_import"
+    )
+
+    post_handler_try = next(
+        node
+        for node in method.body
+        if (
+            isinstance(node, ast.Try)
+            and node.finalbody
+        )
+    )
+
+    assert len(
+        post_handler_try.handlers
+    ) == 1
+
+    handler = post_handler_try.handlers[0]
+
+    assert isinstance(
+        handler.type,
+        ast.Tuple,
+    )
+
+    caught = {
+        item.id
+        for item in handler.type.elts
+        if isinstance(item, ast.Name)
+    }
+
+    assert caught == {
+        "KeyError",
+        "OSError",
+        "RuntimeError",
+        "TypeError",
+        "ValueError",
+    }
+
+    source = ast.get_source_segment(
+        text,
+        post_handler_try,
+    )
+
+    assert source is not None
+
+    assert "QMessageBox" not in source
+
+    final_source = "\n".join(
+        ast.get_source_segment(
+            text,
+            node,
+        )
+        or ""
+        for node in post_handler_try.finalbody
+    )
+
+    assert (
+        "self._bulk_import_in_progress = False"
+        in final_source
+    )
+
+    assert (
+        "self.toolbar.bulk_import_button.setEnabled"
+        in final_source
+    )
+
+    assert (
+        "self.toolbar.refresh_button.setEnabled"
+        in final_source
+    )

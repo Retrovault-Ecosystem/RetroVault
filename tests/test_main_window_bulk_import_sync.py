@@ -42,8 +42,7 @@ def test_bulk_import_callback_runs_after_library_snapshot_refresh():
     )
 
     set_games = source.index(
-        "self.set_games(\n"
-        "                imported_games"
+        "self.set_games("
     )
 
     callback = source.index(
