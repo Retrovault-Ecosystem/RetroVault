@@ -1925,3 +1925,302 @@ def test_native_clear_assignment_boundary_has_no_warning_dialog():
             "QMessageBox.warning"
             not in method_source
         )
+
+
+def test_native_visual_page_exposes_assignment_state_labels():
+    source = Path(
+        "ui/pages/visuals_page.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    for name in (
+        "default_assignment_value",
+        "system_assignment_value",
+        "game_assignment_value",
+        "effective_assignment_value",
+        "_refresh_assignment_state",
+    ):
+        assert name in source
+
+
+def test_native_assignment_state_distinguishes_direct_and_effective(
+    app,
+    tmp_path,
+):
+    from services.library.state import game_identity
+    from services.presentation.store import (
+        PresentationStore,
+    )
+
+    store = PresentationStore(
+        presentation_file=(
+            tmp_path / "presentation-state.json"
+        )
+    )
+
+    game = _assignment_game(
+        tmp_path,
+        rvdb_platform_id="nintendo-entertainment-system",
+    )
+
+    identity = game_identity(
+        game
+    )
+
+    store.assign_default_overlay(
+        "rvv://default"
+    )
+
+    store.assign_system_overlay(
+        "nintendo-entertainment-system",
+        "rvv://system",
+    )
+
+    store.assign_game_overlay(
+        identity,
+        "rvv://game",
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                []
+            )
+        ),
+        presentation_store=store,
+        current_game_provider=lambda: game,
+    )
+
+    page._refresh_assignment_state()
+
+    assert (
+        page.default_assignment_value.text()
+        == "Default: rvv://default"
+    )
+
+    assert (
+        page.system_assignment_value.text()
+        == "System: rvv://system"
+    )
+
+    assert (
+        page.game_assignment_value.text()
+        == "Game: rvv://game"
+    )
+
+    assert (
+        page.effective_assignment_value.text()
+        == "Effective: rvv://game"
+    )
+
+
+def test_native_assignment_state_reveals_fallback_after_clear(
+    app,
+    tmp_path,
+):
+    from services.library.state import game_identity
+    from services.presentation.store import (
+        PresentationStore,
+    )
+
+    store = PresentationStore(
+        presentation_file=(
+            tmp_path / "presentation-state.json"
+        )
+    )
+
+    game = _assignment_game(
+        tmp_path,
+        rvdb_platform_id="nintendo-entertainment-system",
+    )
+
+    identity = game_identity(
+        game
+    )
+
+    store.assign_default_overlay(
+        "rvv://default"
+    )
+
+    store.assign_system_overlay(
+        "nintendo-entertainment-system",
+        "rvv://system",
+    )
+
+    store.assign_game_overlay(
+        identity,
+        "rvv://game",
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                []
+            )
+        ),
+        presentation_store=store,
+        current_game_provider=lambda: game,
+    )
+
+    page.clear_game_visual()
+
+    assert (
+        page.game_assignment_value.text()
+        == "Game: —"
+    )
+
+    assert (
+        page.system_assignment_value.text()
+        == "System: rvv://system"
+    )
+
+    assert (
+        page.effective_assignment_value.text()
+        == "Effective: rvv://system"
+    )
+
+    page.clear_system_visual()
+
+    assert (
+        page.system_assignment_value.text()
+        == "System: —"
+    )
+
+    assert (
+        page.effective_assignment_value.text()
+        == "Effective: rvv://default"
+    )
+
+
+def test_native_assignment_state_without_game_uses_default(
+    app,
+    tmp_path,
+):
+    from services.presentation.store import (
+        PresentationStore,
+    )
+
+    store = PresentationStore(
+        presentation_file=(
+            tmp_path / "presentation-state.json"
+        )
+    )
+
+    store.assign_default_overlay(
+        "rvv://default"
+    )
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                []
+            )
+        ),
+        presentation_store=store,
+        current_game_provider=lambda: None,
+    )
+
+    page._refresh_assignment_state()
+
+    assert (
+        page.default_assignment_value.text()
+        == "Default: rvv://default"
+    )
+
+    assert (
+        page.system_assignment_value.text()
+        == "System: —"
+    )
+
+    assert (
+        page.game_assignment_value.text()
+        == "Game: —"
+    )
+
+    assert (
+        page.effective_assignment_value.text()
+        == "Effective: rvv://default"
+    )
+
+
+def test_native_assignment_visibility_supports_assignment_only_store(
+    app,
+):
+    class AssignmentOnlyStore:
+        def assign_default_overlay(
+            self,
+            *_args,
+            **_kwargs,
+        ):
+            return None
+
+    page = NativeVisualsPage(
+        native_visual_service=(
+            FakeNativeVisualService(
+                []
+            )
+        ),
+        presentation_store=AssignmentOnlyStore(),
+        current_game_provider=lambda: None,
+    )
+
+    assert (
+        page.default_assignment_value.text()
+        == "Default: —"
+    )
+
+    assert (
+        page.effective_assignment_value.text()
+        == "Effective: —"
+    )
+
+
+def test_native_assignment_visibility_errors_are_inline():
+    source = Path(
+        "ui/pages/visuals_page.py"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    tree = ast.parse(
+        source
+    )
+
+    klass = next(
+        node
+        for node in tree.body
+        if (
+            isinstance(node, ast.ClassDef)
+            and node.name == "NativeVisualsPage"
+        )
+    )
+
+    method = next(
+        node
+        for node in klass.body
+        if (
+            isinstance(node, ast.FunctionDef)
+            and node.name
+            == "_refresh_assignment_state"
+        )
+    )
+
+    method_source = ast.get_source_segment(
+        source,
+        method,
+    )
+
+    assert (
+        "Unable to read RetroVault visual "
+        in method_source
+    )
+
+    assert (
+        "Unable to resolve RetroVault "
+        in method_source
+    )
+
+    assert "QMessageBox.warning" not in (
+        method_source
+    )
