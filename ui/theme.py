@@ -1,3 +1,6 @@
+from ui.themes.visuals import visuals_stylesheet
+
+
 def apply_theme(app):
     """Apply RetroVault's shared dark desktop theme."""
 
@@ -147,4 +150,5 @@ def apply_theme(app):
             width: 0;
         }
         """
+        + visuals_stylesheet()
     )

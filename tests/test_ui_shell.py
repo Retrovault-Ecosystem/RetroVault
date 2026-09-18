@@ -84,3 +84,90 @@ def test_theme_covers_navigation_and_browser_controls(
     assert "QComboBox" in stylesheet
     assert "QListWidget" in stylesheet
     assert "QScrollArea" in stylesheet
+
+
+def test_visuals_showroom_theme_contract(
+    app,
+):
+    """
+    C.17-A.3 composes the approved RetroVault Visuals
+    showroom styling through stable semantic selectors.
+    """
+    apply_theme(
+        app
+    )
+
+    stylesheet = app.styleSheet()
+
+    required_selectors = (
+        "QLabel#VisualsCollectionTitle",
+        "QLabel#VisualsAssignmentTitle",
+        "QLabel#VisualsCount",
+        "QLineEdit#VisualsSearch",
+        "QComboBox#VisualsTypeFilter",
+        "QPushButton#VisualsClearFiltersButton",
+        "QPushButton#VisualsRefreshButton",
+        "QListWidget#VisualsCollectionList",
+        "QScrollArea#VisualsDetailsScroll",
+        "QFrame#VisualsDetailsPanel",
+        "QLabel#VisualsName",
+        "QLabel#VisualsPreview",
+        "QPushButton#VisualsInstallButton",
+        "QPushButton#VisualsAssignDefaultButton",
+        "QPushButton#VisualsAssignSystemButton",
+        "QPushButton#VisualsAssignGameButton",
+        "QPushButton#VisualsClearDefaultButton",
+        "QPushButton#VisualsClearSystemButton",
+        "QPushButton#VisualsClearGameButton",
+        "QLabel#VisualsStatus",
+    )
+
+    for selector in required_selectors:
+        assert selector in stylesheet
+
+
+def test_visuals_showroom_refinement_theme_contract(
+    app,
+):
+    apply_theme(
+        app
+    )
+
+    stylesheet = app.styleSheet()
+
+    required = (
+        "QLabel#VisualsMetadataValue",
+        "QLabel#VisualsInstallStatus",
+        "QLabel#VisualsReferenceValue",
+        "QLabel#VisualsAttributionValue",
+        "QFrame#VisualsAssignmentSummary",
+        "QLabel#VisualsAssignmentValue",
+        "QLabel#VisualsEffectiveAssignment",
+        "#55c7e8",
+    )
+
+    for token in required:
+        assert token in stylesheet
+
+
+def test_visuals_showroom_pass2_theme_contract(
+    app,
+):
+    apply_theme(
+        app
+    )
+
+    stylesheet = app.styleSheet()
+
+    required = (
+        "showroom refinement pass #2",
+        "QFrame#VisualsMetadataPanel",
+        "QLabel#VisualsMetadataLabel",
+        "QListWidget#VisualsCollectionList::item:hover",
+        "QPushButton#VisualsInstallButton",
+        "QLabel#VisualsStatus",
+        "#55c7e8",
+    )
+
+    for token in required:
+        assert token in stylesheet

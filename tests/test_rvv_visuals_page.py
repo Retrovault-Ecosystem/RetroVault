@@ -2485,3 +2485,178 @@ def test_rvv_integration_error_surfaces_remain_inline():
         "QMessageBox.question"
         in install_source
     )
+
+
+
+def test_rvv_bring_it_to_life_semantic_visual_contract():
+    """
+    C.17 establishes stable semantic identities for the
+    RetroVault Visuals production surface.
+
+    Styling may evolve independently, but these identities
+    provide a deliberate page-specific theming boundary.
+    """
+    from PyQt6.QtCore import QObject
+    from PyQt6.QtWidgets import QApplication
+
+    from ui.pages.visuals_page import NativeVisualsPage
+
+    app = QApplication.instance() or QApplication([])
+
+    page = NativeVisualsPage(
+        native_visual_service=FakeNativeVisualService(
+            []
+        )
+    )
+
+    expected = {
+        "title_label": "PageTitle",
+        "subtitle_label": "PageSubtitle",
+        "collection_label":
+            "VisualsCollectionTitle",
+        "count_label": "VisualsCount",
+        "status_label": "VisualsStatus",
+        "search_edit": "VisualsSearch",
+        "type_filter": "VisualsTypeFilter",
+        "clear_filters_button":
+            "VisualsClearFiltersButton",
+        "visual_list": "VisualsCollectionList",
+        "preview": "VisualsPreview",
+        "name_value": "VisualsName",
+        "install_button":
+            "VisualsInstallButton",
+        "refresh_button":
+            "VisualsRefreshButton",
+        "default_button":
+            "VisualsAssignDefaultButton",
+        "system_button":
+            "VisualsAssignSystemButton",
+        "game_button":
+            "VisualsAssignGameButton",
+        "clear_default_button":
+            "VisualsClearDefaultButton",
+        "clear_system_button":
+            "VisualsClearSystemButton",
+        "clear_game_button":
+            "VisualsClearGameButton",
+        "details_scroll":
+            "VisualsDetailsScroll",
+    }
+
+    for attribute, object_name in expected.items():
+        widget = getattr(
+            page,
+            attribute,
+        )
+
+        assert widget.objectName() == object_name
+
+    assert page.findChild(
+        QObject,
+        "VisualsDetailsPanel",
+    ) is not None
+
+    assert page.findChild(
+        QObject,
+        "VisualsAssignmentTitle",
+    ) is not None
+
+
+def test_rvv_showroom_refinement_semantic_contract():
+    """
+    C.17-A.3 refinement keeps the showroom composition
+    targetable without changing Visuals business behavior.
+    """
+    from PyQt6.QtCore import QObject
+    from PyQt6.QtWidgets import QApplication
+
+    from ui.pages.visuals_page import NativeVisualsPage
+
+    app = QApplication.instance() or QApplication([])
+
+    page = NativeVisualsPage(
+        native_visual_service=FakeNativeVisualService(
+            []
+        )
+    )
+
+    assert page.source_value.objectName() == (
+        "VisualsMetadataValue"
+    )
+    assert page.type_value.objectName() == (
+        "VisualsMetadataValue"
+    )
+    assert page.author_value.objectName() == (
+        "VisualsMetadataValue"
+    )
+
+    assert page.install_status_value.objectName() == (
+        "VisualsInstallStatus"
+    )
+    assert page.reference_value.objectName() == (
+        "VisualsReferenceValue"
+    )
+    assert page.attribution_value.objectName() == (
+        "VisualsAttributionValue"
+    )
+
+    assert page.default_assignment_value.objectName() == (
+        "VisualsAssignmentValue"
+    )
+    assert page.system_assignment_value.objectName() == (
+        "VisualsAssignmentValue"
+    )
+    assert page.game_assignment_value.objectName() == (
+        "VisualsAssignmentValue"
+    )
+
+    assert page.effective_assignment_value.objectName() == (
+        "VisualsEffectiveAssignment"
+    )
+
+    assert page.findChild(
+        QObject,
+        "VisualsAssignmentSummary",
+    ) is not None
+
+    assert page.preview.minimumWidth() >= 420
+    assert page.preview.minimumHeight() >= 300
+
+
+def test_rvv_showroom_pass2_layout_contract():
+    """
+    C.17-A.3 pass #2 protects the compact metadata/showroom
+    boundary without changing Visuals domain behavior.
+    """
+    from PyQt6.QtCore import QObject
+    from PyQt6.QtWidgets import QApplication
+
+    from ui.pages.visuals_page import NativeVisualsPage
+
+    app = QApplication.instance() or QApplication([])
+
+    page = NativeVisualsPage(
+        native_visual_service=FakeNativeVisualService(
+            []
+        )
+    )
+
+    metadata_panel = page.findChild(
+        QObject,
+        "VisualsMetadataPanel",
+    )
+
+    assert metadata_panel is not None
+
+    labels = page.findChildren(
+        QObject,
+        "VisualsMetadataLabel",
+    )
+
+    assert len(labels) == 6
+
+    assert page.visual_list.minimumWidth() == 280
+    assert page.visual_list.maximumWidth() == 390
+
+    assert "RETROVAULT VISUALS" in page.preview.text()
+    assert "Select a visual" in page.preview.text()

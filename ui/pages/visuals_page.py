@@ -4,6 +4,7 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtGui import QPixmap
 from PyQt6.QtWidgets import (
     QFrame,
+    QGridLayout,
     QHBoxLayout,
     QLabel,
     QLineEdit,
@@ -89,13 +90,23 @@ class NativeVisualsPage(QWidget):
             "RetroVault Collection"
         )
         self.collection_label.setObjectName(
-            "SectionTitle"
+            "VisualsCollectionTitle"
         )
 
         self.count_label = QLabel()
+        self.count_label.setObjectName(
+            "VisualsCount"
+        )
+
         self.status_label = QLabel()
+        self.status_label.setObjectName(
+            "VisualsStatus"
+        )
 
         self.search_edit = QLineEdit()
+        self.search_edit.setObjectName(
+            "VisualsSearch"
+        )
         self.search_edit.setPlaceholderText(
             "Search RetroVault visuals…"
         )
@@ -104,6 +115,9 @@ class NativeVisualsPage(QWidget):
         )
 
         self.type_filter = QComboBox()
+        self.type_filter.setObjectName(
+            "VisualsTypeFilter"
+        )
         self.type_filter.addItem(
             "All Visual Types",
             "",
@@ -118,42 +132,70 @@ class NativeVisualsPage(QWidget):
         self.clear_filters_button = QPushButton(
             "Clear Filters"
         )
+        self.clear_filters_button.setObjectName(
+            "VisualsClearFiltersButton"
+        )
         self.clear_filters_button.setEnabled(
             False
         )
 
         self.visual_list = QListWidget()
+        self.visual_list.setObjectName(
+            "VisualsCollectionList"
+        )
         self.visual_list.setMinimumWidth(
-            320
+            280
+        )
+        self.visual_list.setMaximumWidth(
+            390
         )
 
         self.preview = QLabel(
-            "Select a RetroVault visual"
+            "RETROVAULT VISUALS\n"
+            "Select a visual from the collection to begin."
+        )
+        self.preview.setObjectName(
+            "VisualsPreview"
         )
         self.preview.setAlignment(
             Qt.AlignmentFlag.AlignCenter
         )
         self.preview.setMinimumSize(
             420,
-            240,
+            300,
         )
 
         self.name_value = QLabel(
             "Select a RetroVault visual"
         )
         self.name_value.setObjectName(
-            "SectionTitle"
+            "VisualsName"
         )
         self.name_value.setWordWrap(
             True
         )
 
         self.source_value = QLabel("—")
+        self.source_value.setObjectName(
+            "VisualsMetadataValue"
+        )
         self.type_value = QLabel("—")
+        self.type_value.setObjectName(
+            "VisualsMetadataValue"
+        )
         self.author_value = QLabel("—")
+        self.author_value.setObjectName(
+            "VisualsMetadataValue"
+        )
         self.install_status_value = QLabel("—")
+        self.install_status_value.setObjectName(
+            "VisualsInstallStatus"
+        )
 
         self.reference_value = QLabel("—")
+        self.reference_value.setObjectName(
+            "VisualsReferenceValue"
+        )
         self.reference_value.setWordWrap(
             True
         )
@@ -162,6 +204,9 @@ class NativeVisualsPage(QWidget):
         )
 
         self.attribution_value = QLabel("—")
+        self.attribution_value.setObjectName(
+            "VisualsAttributionValue"
+        )
         self.attribution_value.setWordWrap(
             True
         )
@@ -204,17 +249,29 @@ class NativeVisualsPage(QWidget):
         self.default_assignment_value = QLabel(
             "Default: —"
         )
+        self.default_assignment_value.setObjectName(
+            "VisualsAssignmentValue"
+        )
 
         self.system_assignment_value = QLabel(
             "System: —"
+        )
+        self.system_assignment_value.setObjectName(
+            "VisualsAssignmentValue"
         )
 
         self.game_assignment_value = QLabel(
             "Game: —"
         )
+        self.game_assignment_value.setObjectName(
+            "VisualsAssignmentValue"
+        )
 
         self.effective_assignment_value = QLabel(
             "Effective: —"
+        )
+        self.effective_assignment_value.setObjectName(
+            "VisualsEffectiveAssignment"
         )
 
         for assignment_value in (
@@ -241,6 +298,48 @@ class NativeVisualsPage(QWidget):
         self.clear_game_button.setEnabled(
             self.presentation_store is not None
         )
+
+        button_object_names = (
+            (
+                self.install_button,
+                "VisualsInstallButton",
+            ),
+            (
+                self.refresh_button,
+                "VisualsRefreshButton",
+            ),
+            (
+                self.default_button,
+                "VisualsAssignDefaultButton",
+            ),
+            (
+                self.system_button,
+                "VisualsAssignSystemButton",
+            ),
+            (
+                self.game_button,
+                "VisualsAssignGameButton",
+            ),
+            (
+                self.clear_default_button,
+                "VisualsClearDefaultButton",
+            ),
+            (
+                self.clear_system_button,
+                "VisualsClearSystemButton",
+            ),
+            (
+                self.clear_game_button,
+                "VisualsClearGameButton",
+            ),
+        )
+
+        for button, object_name in (
+            button_object_names
+        ):
+            button.setObjectName(
+                object_name
+            )
 
         self.default_button.setEnabled(
             False
@@ -330,6 +429,9 @@ class NativeVisualsPage(QWidget):
         )
 
         details_frame = QFrame()
+        details_frame.setObjectName(
+            "VisualsDetailsPanel"
+        )
         details_frame.setFrameShape(
             QFrame.Shape.StyledPanel
         )
@@ -356,52 +458,88 @@ class NativeVisualsPage(QWidget):
             1,
         )
 
-        details.addWidget(
-            QLabel("Collection")
+        metadata_frame = QFrame()
+        metadata_frame.setObjectName(
+            "VisualsMetadataPanel"
         )
 
-        details.addWidget(
-            self.source_value
+        metadata_grid = QGridLayout(
+            metadata_frame
+        )
+        metadata_grid.setContentsMargins(
+            14,
+            12,
+            14,
+            12,
+        )
+        metadata_grid.setHorizontalSpacing(
+            18
+        )
+        metadata_grid.setVerticalSpacing(
+            8
+        )
+        metadata_grid.setColumnStretch(
+            0,
+            0,
+        )
+        metadata_grid.setColumnStretch(
+            1,
+            1,
         )
 
-        details.addWidget(
-            QLabel("Visual type")
+        metadata_rows = (
+            (
+                "Collection",
+                self.source_value,
+            ),
+            (
+                "Visual type",
+                self.type_value,
+            ),
+            (
+                "Author",
+                self.author_value,
+            ),
+            (
+                "Installation",
+                self.install_status_value,
+            ),
+            (
+                "Portable reference",
+                self.reference_value,
+            ),
+            (
+                "Attribution",
+                self.attribution_value,
+            ),
         )
 
-        details.addWidget(
-            self.type_value
-        )
+        for row_index, (
+            label_text,
+            value_widget,
+        ) in enumerate(
+            metadata_rows
+        ):
+            field_label = QLabel(
+                label_text
+            )
+            field_label.setObjectName(
+                "VisualsMetadataLabel"
+            )
+
+            metadata_grid.addWidget(
+                field_label,
+                row_index,
+                0,
+            )
+            metadata_grid.addWidget(
+                value_widget,
+                row_index,
+                1,
+            )
 
         details.addWidget(
-            QLabel("Author")
-        )
-
-        details.addWidget(
-            self.author_value
-        )
-
-        details.addWidget(
-            QLabel("Installation")
-        )
-
-        details.addWidget(
-            self.install_status_value
-        )
-
-        details.addWidget(
-            QLabel("Portable reference")
-        )
-
-        details.addWidget(
-            self.reference_value
-        )
-
-        details.addWidget(
-            QLabel("Attribution")
-        )
-
-        details.addWidget(
-            self.attribution_value
+            metadata_frame
         )
 
         details.addSpacing(8)
@@ -416,58 +554,94 @@ class NativeVisualsPage(QWidget):
             "RetroVault Presentation Assignment"
         )
         assignment_label.setObjectName(
-            "SectionTitle"
+            "VisualsAssignmentTitle"
         )
 
         details.addWidget(
             assignment_label
         )
 
-        details.addWidget(
-            self.default_assignment_value
+        assignment_summary = QFrame()
+        assignment_summary.setObjectName(
+            "VisualsAssignmentSummary"
         )
 
-        details.addWidget(
-            self.system_assignment_value
+        assignment_summary_layout = QVBoxLayout(
+            assignment_summary
+        )
+        assignment_summary_layout.setContentsMargins(
+            12,
+            10,
+            12,
+            10,
+        )
+        assignment_summary_layout.setSpacing(
+            7
         )
 
-        details.addWidget(
-            self.game_assignment_value
-        )
-
-        details.addWidget(
+        assignment_summary_layout.addWidget(
             self.effective_assignment_value
         )
 
-        details.addSpacing(6)
+        for (
+            value_widget,
+            set_button,
+            clear_button,
+        ) in (
+            (
+                self.default_assignment_value,
+                self.default_button,
+                self.clear_default_button,
+            ),
+            (
+                self.system_assignment_value,
+                self.system_button,
+                self.clear_system_button,
+            ),
+            (
+                self.game_assignment_value,
+                self.game_button,
+                self.clear_game_button,
+            ),
+        ):
+            row = QHBoxLayout()
+            row.setSpacing(
+                8
+            )
+
+            row.addWidget(
+                value_widget,
+                1,
+            )
+
+            set_button.setMinimumWidth(
+                118
+            )
+            clear_button.setMinimumWidth(
+                78
+            )
+
+            row.addWidget(
+                set_button
+            )
+            row.addWidget(
+                clear_button
+            )
+
+            assignment_summary_layout.addLayout(
+                row
+            )
 
         details.addWidget(
-            self.default_button
-        )
-
-        details.addWidget(
-            self.system_button
-        )
-
-        details.addWidget(
-            self.game_button
-        )
-
-        details.addWidget(
-            self.clear_default_button
-        )
-
-        details.addWidget(
-            self.clear_system_button
-        )
-
-        details.addWidget(
-            self.clear_game_button
+            assignment_summary
         )
 
         details.addStretch(1)
 
         self.details_scroll = QScrollArea()
+        self.details_scroll.setObjectName(
+            "VisualsDetailsScroll"
+        )
         self.details_scroll.setWidgetResizable(
             True
         )
@@ -492,17 +666,6 @@ class NativeVisualsPage(QWidget):
             self.status_label
         )
 
-        secondary_style = (
-            "color: #9aa0a6;"
-        )
-
-        self.count_label.setStyleSheet(
-            secondary_style
-        )
-
-        self.status_label.setStyleSheet(
-            secondary_style
-        )
 
     def _connect_signals(self):
         self.search_edit.textChanged.connect(
@@ -916,7 +1079,8 @@ class NativeVisualsPage(QWidget):
 
         self.preview.clear()
         self.preview.setText(
-            "Select a RetroVault visual"
+            "RETROVAULT VISUALS\n"
+            "Select a visual from the collection to begin."
         )
 
         self.install_button.setText(
