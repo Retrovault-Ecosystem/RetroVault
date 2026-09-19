@@ -52,25 +52,28 @@ class RetroArchPage(QWidget):
             "RetroArch"
         )
         title.setObjectName(
-            "PageTitle"
+            "RetroArchTitle"
         )
 
         subtitle = QLabel(
             "Frontend and core knowledge from RVDB"
         )
         subtitle.setObjectName(
-            "PageSubtitle"
+            "RetroArchSubtitle"
         )
 
         self.status_label = QLabel()
         self.status_label.setObjectName(
-            "PageSubtitle"
+            "RetroArchStatus"
         )
         self.status_label.setWordWrap(
             True
         )
 
         self.summary_label = QLabel()
+        self.summary_label.setObjectName(
+            "RetroArchSummary"
+        )
         self.summary_label.setWordWrap(
             True
         )
@@ -91,6 +94,9 @@ class RetroArchPage(QWidget):
         )
 
         browser_frame = QFrame()
+        browser_frame.setObjectName(
+            "RetroArchBrowserPanel"
+        )
         browser_frame.setFrameShape(
             QFrame.Shape.StyledPanel
         )
@@ -112,15 +118,18 @@ class RetroArchPage(QWidget):
             "Available RVDB Cores"
         )
         cores_title.setObjectName(
-            "SectionTitle"
+            "RetroArchSectionTitle"
         )
 
         self.core_count_label = QLabel()
         self.core_count_label.setObjectName(
-            "PageSubtitle"
+            "RetroArchCoreCount"
         )
 
         self.core_list = QListWidget()
+        self.core_list.setObjectName(
+            "RetroArchCoreList"
+        )
 
         browser_layout.addWidget(
             cores_title
@@ -134,6 +143,9 @@ class RetroArchPage(QWidget):
         )
 
         details_frame = QFrame()
+        details_frame.setObjectName(
+            "RetroArchDetailsPanel"
+        )
         details_frame.setFrameShape(
             QFrame.Shape.StyledPanel
         )
@@ -154,16 +166,13 @@ class RetroArchPage(QWidget):
         self.core_name_label = QLabel(
             "Select a core"
         )
-        self.core_name_label.setStyleSheet(
-            """
-            font-size: 22px;
-            font-weight: 700;
-            """
+        self.core_name_label.setObjectName(
+            "RetroArchCoreName"
         )
 
         self.core_id_label = QLabel()
         self.core_id_label.setObjectName(
-            "PageSubtitle"
+            "RetroArchCoreId"
         )
         self.core_id_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
@@ -183,7 +192,7 @@ class RetroArchPage(QWidget):
             "Platform Compatibility"
         )
         compatibility_title.setObjectName(
-            "SectionTitle"
+            "RetroArchSectionTitle"
         )
 
         detail_layout.addWidget(
@@ -205,11 +214,8 @@ class RetroArchPage(QWidget):
             self.playability_label,
             self.evidence_label,
         ):
-            label.setStyleSheet(
-                """
-                font-weight: 700;
-                color: #b8b8b8;
-                """
+            label.setObjectName(
+                "RetroArchFieldLabel"
             )
 
         self.platforms_value = QLabel(
@@ -227,6 +233,9 @@ class RetroArchPage(QWidget):
             self.playability_value,
             self.evidence_value,
         ):
+            value.setObjectName(
+                "RetroArchFieldValue"
+            )
             value.setWordWrap(
                 True
             )
@@ -295,7 +304,7 @@ class RetroArchPage(QWidget):
             "Frontend Relationship"
         )
         frontend_title.setObjectName(
-            "SectionTitle"
+            "RetroArchSectionTitle"
         )
 
         detail_layout.addWidget(
@@ -305,15 +314,15 @@ class RetroArchPage(QWidget):
         self.frontends_label = QLabel(
             "Launched By"
         )
-        self.frontends_label.setStyleSheet(
-            """
-            font-weight: 700;
-            color: #b8b8b8;
-            """
+        self.frontends_label.setObjectName(
+            "RetroArchFieldLabel"
         )
 
         self.frontends_value = QLabel(
             "No core selected."
+        )
+        self.frontends_value.setObjectName(
+            "RetroArchFieldValue"
         )
         self.frontends_value.setWordWrap(
             True
@@ -385,6 +394,14 @@ class RetroArchPage(QWidget):
             self._core_selected
         )
 
+    @staticmethod
+    def _core_display_name(name: str) -> str:
+        """Return polished UI text without changing RVDB identity."""
+        if name.casefold() == "bsnes":
+            return "Bsnes"
+
+        return name
+
     def _load_retroarch(self) -> None:
         self.core_list.clear()
         self._cores = []
@@ -439,7 +456,9 @@ class RetroArchPage(QWidget):
 
         for core in self._cores:
             item = QListWidgetItem(
-                core.name
+                self._core_display_name(
+                    core.name
+                )
             )
 
             item.setData(
@@ -494,7 +513,9 @@ class RetroArchPage(QWidget):
         core: RVDBCoreView,
     ) -> None:
         self.core_name_label.setText(
-            core.name
+            self._core_display_name(
+                core.name
+            )
         )
 
         self.core_id_label.setText(

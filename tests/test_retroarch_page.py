@@ -236,7 +236,7 @@ def test_retroarch_page_real_rvdb_contract(
     }
 
     assert names == {
-        "bsnes",
+        "Bsnes",
         "Genesis Plus GX",
         "Mesen",
         "Snes9x",
@@ -247,14 +247,14 @@ def test_retroarch_page_real_rvdb_contract(
     ):
         item = page.core_list.item(row)
 
-        if item.text() == "bsnes":
+        if item.text() == "Bsnes":
             page.core_list.setCurrentRow(
                 row
             )
             break
     else:
         raise AssertionError(
-            "bsnes missing from RetroArch page"
+            "Bsnes missing from RetroArch page"
         )
 
     app.processEvents()

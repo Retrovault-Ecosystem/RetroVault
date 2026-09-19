@@ -281,3 +281,28 @@ def test_shaders_laboratory_theme_contract():
 
     for selector in expected_selectors:
         assert selector in stylesheet
+
+
+def test_retroarch_core_intelligence_theme_contract():
+    from ui.themes.retroarch import retroarch_stylesheet
+
+    stylesheet = retroarch_stylesheet()
+
+    expected_selectors = (
+        "QLabel#RetroArchTitle",
+        "QLabel#RetroArchSubtitle",
+        "QLabel#RetroArchSummary",
+        "QFrame#RetroArchBrowserPanel",
+        "QFrame#RetroArchDetailsPanel",
+        "QLabel#RetroArchSectionTitle",
+        "QLabel#RetroArchCoreCount",
+        "QListWidget#RetroArchCoreList",
+        "QLabel#RetroArchCoreName",
+        "QLabel#RetroArchCoreId",
+        "QLabel#RetroArchFieldLabel",
+        "QLabel#RetroArchFieldValue",
+        "QLabel#RetroArchStatus",
+    )
+
+    for selector in expected_selectors:
+        assert selector in stylesheet

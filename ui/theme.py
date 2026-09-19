@@ -3,6 +3,7 @@ from ui.themes.systems import systems_stylesheet
 from ui.themes.playlists import playlists_stylesheet
 from ui.themes.overlays import overlays_stylesheet
 from ui.themes.shaders import shaders_stylesheet
+from ui.themes.retroarch import retroarch_stylesheet
 
 
 def apply_theme(app):
@@ -159,4 +160,5 @@ def apply_theme(app):
         + playlists_stylesheet()
         + overlays_stylesheet()
         + shaders_stylesheet()
+        + retroarch_stylesheet()
     )
