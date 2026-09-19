@@ -328,30 +328,33 @@ def visuals_stylesheet():
     QLabel#VisualsMetadataLabel {
         background-color: transparent;
         color: #7f8992;
-        font-size: 11px;
+        font-size: 14px;
         font-weight: 600;
-        padding: 4px 4px 4px 0px;
+        padding: 9px 11px 9px 7px;
         min-width: 104px;
     }
 
     QLabel#VisualsMetadataValue {
         background-color: transparent;
         color: #e1e6ea;
-        padding: 4px 0px;
+        font-size: 15px;
+        padding: 9px 8px;
     }
 
     QLabel#VisualsInstallStatus {
         background-color: transparent;
         color: #72d5ee;
+        font-size: 15px;
         font-weight: 700;
-        padding: 4px 0px;
+        padding: 10px 8px;
     }
 
     QLabel#VisualsReferenceValue,
     QLabel#VisualsAttributionValue {
         background-color: transparent;
         color: #aab3bb;
-        padding: 4px 0px;
+        font-size: 14px;
+        padding: 9px 8px;
     }
 
     QLabel#VisualsPreview {
@@ -395,14 +398,16 @@ def visuals_stylesheet():
         color: #8ce7fb;
         border: 1px solid #356474;
         border-radius: 7px;
-        padding: 8px 10px;
+        font-size: 13px;
+        padding: 14px 17px;
         font-weight: 700;
     }
 
     QLabel#VisualsAssignmentValue {
         background-color: transparent;
         color: #c9d0d6;
-        padding: 6px 8px;
+        font-size: 13px;
+        padding: 11px 14px;
     }
 
     QPushButton#VisualsAssignDefaultButton,

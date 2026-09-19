@@ -22,7 +22,7 @@ def overlays_stylesheet():
 
     QLabel#OverlaysDirectoryLabel {
         color: #8198b2;
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 600;
     }
 
@@ -31,7 +31,8 @@ def overlays_stylesheet():
         background: #0d1621;
         border: 1px solid #203247;
         border-radius: 7px;
-        padding: 6px 9px;
+        font-size: 13px;
+        padding: 13px 16px;
     }
 
     QLabel#OverlaysCount {
@@ -93,34 +94,36 @@ def overlays_stylesheet():
 
     QLabel#OverlaysFieldLabel {
         color: #7892ac;
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 700;
-        padding-top: 3px;
+        padding: 8px 8px 4px 8px;
     }
 
     QLabel#OverlaysFieldValue {
         color: #d7e3ee;
         background: transparent;
-        padding: 1px 2px 4px 2px;
+        font-size: 13px;
+        padding: 7px 10px 12px 10px;
     }
 
     QLabel#OverlaysReadiness {
         color: #7ed9f1;
+        font-size: 13px;
         font-weight: 700;
-        padding: 2px;
+        padding: 8px 10px;
     }
 
     QLabel#OverlaysAssignmentTitle {
         color: #8fdcff;
-        font-size: 12px;
+        font-size: 13px;
         font-weight: 700;
-        padding-top: 5px;
+        padding: 8px 6px 3px 6px;
     }
 
     QLabel#OverlaysStatus {
         color: #91a8c2;
-        font-size: 11px;
-        padding: 3px 4px;
+        font-size: 12px;
+        padding: 9px 12px;
     }
 
     QPushButton#OverlaysPrimaryAction {

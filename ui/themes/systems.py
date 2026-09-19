@@ -92,24 +92,24 @@ def systems_stylesheet():
 
     QLabel#SystemsPlatformId {
         color: #6faed2;
-        font-size: 11px;
+        font-size: 13px;
     }
 
     QLabel#SystemsSectionTitle {
         color: #8fdcff;
-        font-size: 12px;
+        font-size: 14px;
         font-weight: 700;
     }
 
     QLabel#SystemsFieldLabel {
         color: #758da8;
-        font-size: 11px;
+        font-size: 13px;
         font-weight: 600;
     }
 
     QLabel#SystemsFieldValue {
         color: #e3edf8;
-        font-size: 12px;
+        font-size: 14px;
     }
 
     QFrame#SystemsLibraryPanel {
@@ -120,13 +120,13 @@ def systems_stylesheet():
 
     QLabel#SystemsMetricLabel {
         color: #7891ac;
-        font-size: 10px;
+        font-size: 12px;
         font-weight: 600;
     }
 
     QLabel#SystemsMetricValue {
         color: #f2f8ff;
-        font-size: 17px;
+        font-size: 19px;
         font-weight: 700;
     }
 
