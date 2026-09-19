@@ -171,3 +171,32 @@ def test_visuals_showroom_pass2_theme_contract(
 
     for token in required:
         assert token in stylesheet
+
+
+def test_systems_showroom_theme_contract():
+    from ui.themes.systems import systems_stylesheet
+
+    stylesheet = systems_stylesheet()
+
+    expected_selectors = (
+        "QLabel#SystemsTitle",
+        "QLabel#SystemsSubtitle",
+        "QLabel#SystemsCount",
+        "QLabel#SystemsStatus",
+        "QLineEdit#SystemsSearch",
+        "QListWidget#SystemsList",
+        "QFrame#SystemsDetailsPanel",
+        "QLabel#SystemsPlatformName",
+        "QLabel#SystemsPlatformId",
+        "QLabel#SystemsSectionTitle",
+        "QLabel#SystemsFieldLabel",
+        "QLabel#SystemsFieldValue",
+        "QFrame#SystemsLibraryPanel",
+        "QLabel#SystemsMetricLabel",
+        "QLabel#SystemsMetricValue",
+        "QPushButton#SystemsPrimaryAction",
+        "QPushButton#SystemsSecondaryAction",
+    )
+
+    for selector in expected_selectors:
+        assert selector in stylesheet

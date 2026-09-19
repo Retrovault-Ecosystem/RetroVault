@@ -46,11 +46,23 @@ class SystemsPage(QWidget):
         self.subtitle_label = QLabel(
             "Platform knowledge from RVDB"
         )
+        self.subtitle_label.setObjectName(
+            "SystemsSubtitle"
+        )
+        self.title_label.setObjectName(
+            "SystemsTitle"
+        )
         self.count_label = QLabel()
 
         self.search_input = QLineEdit()
         self.search_input.setPlaceholderText(
             "Search systems..."
+        )
+        self.search_input.setObjectName(
+            "SystemsSearch"
+        )
+        self.count_label.setObjectName(
+            "SystemsCount"
         )
 
         self.category_filter = QComboBox()
@@ -65,28 +77,85 @@ class SystemsPage(QWidget):
         self.name_label = QLabel(
             "Select a system"
         )
+        self.name_label.setObjectName(
+            "SystemsPlatformName"
+        )
+        self.system_list.setObjectName(
+            "SystemsList"
+        )
         self.id_label = QLabel()
 
         self.category_value = QLabel("—")
+        self.category_value.setObjectName(
+            "SystemsFieldValue"
+        )
         self.manufacturer_value = QLabel("—")
+        self.manufacturer_value.setObjectName(
+            "SystemsFieldValue"
+        )
         self.release_year_value = QLabel("—")
+        self.release_year_value.setObjectName(
+            "SystemsFieldValue"
+        )
         self.generation_value = QLabel("—")
+        self.generation_value.setObjectName(
+            "SystemsFieldValue"
+        )
         self.media_value = QLabel("—")
+        self.media_value.setObjectName(
+            "SystemsFieldValue"
+        )
         self.extensions_value = QLabel("—")
+        self.extensions_value.setObjectName(
+            "SystemsFieldValue"
+        )
         self.aliases_value = QLabel("—")
+        self.aliases_value.setObjectName(
+            "SystemsFieldValue"
+        )
         self.retroarch_value = QLabel("—")
+        self.retroarch_value.setObjectName(
+            "SystemsFieldValue"
+        )
 
         self.cores_value = QLabel("—")
+        self.cores_value.setObjectName(
+            "SystemsFieldValue"
+        )
         self.emulators_value = QLabel("—")
+        self.emulators_value.setObjectName(
+            "SystemsFieldValue"
+        )
         self.frontends_value = QLabel("—")
+        self.frontends_value.setObjectName(
+            "SystemsFieldValue"
+        )
 
         self.library_games_value = QLabel("—")
+        self.library_games_value.setObjectName(
+            "SystemsMetricValue"
+        )
         self.library_favorites_value = QLabel("—")
+        self.library_favorites_value.setObjectName(
+            "SystemsMetricValue"
+        )
         self.library_recent_value = QLabel("—")
+        self.library_recent_value.setObjectName(
+            "SystemsMetricValue"
+        )
         self.library_collections_value = QLabel("—")
+        self.library_collections_value.setObjectName(
+            "SystemsMetricValue"
+        )
 
         self.view_library_button = QPushButton(
             "View Games in Library"
+        )
+        self.view_library_button.setObjectName(
+            "SystemsPrimaryAction"
+        )
+        self.id_label.setObjectName(
+            "SystemsPlatformId"
         )
         self.view_library_button.setEnabled(
             False
@@ -95,6 +164,9 @@ class SystemsPage(QWidget):
         self.view_favorites_button = QPushButton(
             "View Favorites in Library"
         )
+        self.view_favorites_button.setObjectName(
+            "SystemsSecondaryAction"
+        )
         self.view_favorites_button.setEnabled(
             False
         )
@@ -102,12 +174,18 @@ class SystemsPage(QWidget):
         self.view_recent_button = QPushButton(
             "View Recently Played in Library"
         )
+        self.view_recent_button.setObjectName(
+            "SystemsSecondaryAction"
+        )
         self.view_recent_button.setEnabled(
             False
         )
 
         self.view_collections_button = QPushButton(
             "View Collections with Games"
+        )
+        self.view_collections_button.setObjectName(
+            "SystemsSecondaryAction"
         )
         self.view_collections_button.setEnabled(
             False
@@ -128,29 +206,17 @@ class SystemsPage(QWidget):
             32,
             28,
         )
+        self.status_label.setObjectName(
+            "SystemsStatus"
+        )
         main_layout.setSpacing(16)
 
-        self.title_label.setStyleSheet(
-            """
-            font-size: 28px;
-            font-weight: 700;
-            """
-        )
 
         secondary_style = """
             font-size: 13px;
             color: #9aa0a6;
         """
 
-        self.subtitle_label.setStyleSheet(
-            secondary_style
-        )
-        self.count_label.setStyleSheet(
-            secondary_style
-        )
-        self.status_label.setStyleSheet(
-            secondary_style
-        )
 
         main_layout.addWidget(
             self.title_label
@@ -209,16 +275,7 @@ class SystemsPage(QWidget):
         )
         details_layout.setSpacing(12)
 
-        self.name_label.setStyleSheet(
-            """
-            font-size: 24px;
-            font-weight: 600;
-            """
-        )
 
-        self.id_label.setStyleSheet(
-            secondary_style
-        )
         self.id_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
         )
@@ -281,12 +338,8 @@ class SystemsPage(QWidget):
             value_label,
         ) in enumerate(fields):
             label = QLabel(label_text)
-
-            label.setStyleSheet(
-                """
-                font-weight: 700;
-                color: #b8b8b8;
-                """
+            label.setObjectName(
+                "SystemsFieldLabel"
             )
 
             value_label.setWordWrap(True)
@@ -389,11 +442,8 @@ class SystemsPage(QWidget):
             )
         ):
             label = QLabel(label_text)
-            label.setStyleSheet(
-                """
-                font-weight: 700;
-                color: #b8b8b8;
-                """
+            label.setObjectName(
+                "SystemsMetricLabel"
             )
 
             value_label.setTextInteractionFlags(
@@ -465,12 +515,8 @@ class SystemsPage(QWidget):
         text: str,
     ) -> QLabel:
         label = QLabel(text)
-
-        label.setStyleSheet(
-            """
-            font-size: 15px;
-            font-weight: 700;
-            """
+        label.setObjectName(
+            "SystemsSectionTitle"
         )
 
         return label
@@ -480,12 +526,8 @@ class SystemsPage(QWidget):
         text: str,
     ) -> QLabel:
         label = QLabel(text)
-
-        label.setStyleSheet(
-            """
-            font-size: 13px;
-            font-weight: 700;
-            """
+        label.setObjectName(
+            "SystemsFieldLabel"
         )
 
         return label
