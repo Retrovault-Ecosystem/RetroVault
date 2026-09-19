@@ -99,7 +99,7 @@ class OverlaysPage(QWidget):
             "Overlays"
         )
         self.title_label.setObjectName(
-            "PageTitle"
+            "OverlaysTitle"
         )
 
         self.subtitle_label = QLabel(
@@ -107,13 +107,16 @@ class OverlaysPage(QWidget):
             "RetroArch overlays."
         )
         self.subtitle_label.setObjectName(
-            "PageSubtitle"
+            "OverlaysSubtitle"
         )
 
         self.path_label = QLabel(
             str(
                 self.overlay_directory
             )
+        )
+        self.path_label.setObjectName(
+            "OverlaysDirectoryValue"
         )
         self.path_label.setTextInteractionFlags(
             Qt.TextInteractionFlag.TextSelectableByMouse
@@ -123,24 +126,46 @@ class OverlaysPage(QWidget):
         )
 
         self.count_label = QLabel()
+        self.count_label.setObjectName(
+            "OverlaysCount"
+        )
+
         self.status_label = QLabel()
+        self.status_label.setObjectName(
+            "OverlaysStatus"
+        )
 
         self.organize_button = QPushButton(
             "Organize Assets…"
+        )
+        self.organize_button.setObjectName(
+            "OverlaysPrimaryAction"
         )
 
         self.refresh_button = QPushButton(
             "Refresh"
         )
+        self.refresh_button.setObjectName(
+            "OverlaysSecondaryAction"
+        )
 
         self.default_button = QPushButton(
             "Set as Default"
         )
+        self.default_button.setObjectName(
+            "OverlaysAssignmentAction"
+        )
         self.system_button = QPushButton(
             "Set for System"
         )
+        self.system_button.setObjectName(
+            "OverlaysAssignmentAction"
+        )
         self.game_button = QPushButton(
             "Set for Game"
+        )
+        self.game_button.setObjectName(
+            "OverlaysAssignmentAction"
         )
 
         self.default_button.setEnabled(
@@ -154,9 +179,15 @@ class OverlaysPage(QWidget):
         )
 
         self.overlay_list = QListWidget()
+        self.overlay_list.setObjectName(
+            "OverlaysAssetList"
+        )
 
         self.preview = QLabel(
             "No preview"
+        )
+        self.preview.setObjectName(
+            "OverlaysPreview"
         )
         self.preview.setAlignment(
             Qt.AlignmentFlag.AlignCenter
@@ -170,10 +201,13 @@ class OverlaysPage(QWidget):
             "Select an overlay"
         )
         self.name_value.setObjectName(
-            "SectionTitle"
+            "OverlaysAssetName"
         )
 
         self.config_value = QLabel("—")
+        self.config_value.setObjectName(
+            "OverlaysFieldValue"
+        )
         self.config_value.setWordWrap(
             True
         )
@@ -182,8 +216,19 @@ class OverlaysPage(QWidget):
         )
 
         self.images_value = QLabel("—")
+        self.images_value.setObjectName(
+            "OverlaysFieldValue"
+        )
+
         self.missing_value = QLabel("—")
+        self.missing_value.setObjectName(
+            "OverlaysFieldValue"
+        )
+
         self.readiness_value = QLabel("—")
+        self.readiness_value.setObjectName(
+            "OverlaysReadiness"
+        )
 
         self._build_ui()
         self._connect_signals()
@@ -209,8 +254,15 @@ class OverlaysPage(QWidget):
         path_row = QHBoxLayout()
         path_row.setSpacing(10)
 
+        directory_label = QLabel(
+            "Overlay directory:"
+        )
+        directory_label.setObjectName(
+            "OverlaysDirectoryLabel"
+        )
+
         path_row.addWidget(
-            QLabel("Overlay directory:")
+            directory_label
         )
         path_row.addWidget(
             self.path_label,
@@ -242,6 +294,9 @@ class OverlaysPage(QWidget):
         )
 
         details_frame = QFrame()
+        details_frame.setObjectName(
+            "OverlaysDetailsPanel"
+        )
         details_frame.setFrameShape(
             QFrame.Shape.StyledPanel
         )
@@ -264,26 +319,50 @@ class OverlaysPage(QWidget):
             self.preview,
             1,
         )
+        configuration_label = QLabel(
+            "Configuration"
+        )
+        configuration_label.setObjectName(
+            "OverlaysFieldLabel"
+        )
         details.addWidget(
-            QLabel("Configuration")
+            configuration_label
         )
         details.addWidget(
             self.config_value
         )
+        images_label = QLabel(
+            "Referenced images"
+        )
+        images_label.setObjectName(
+            "OverlaysFieldLabel"
+        )
         details.addWidget(
-            QLabel("Referenced images")
+            images_label
         )
         details.addWidget(
             self.images_value
         )
+        missing_label = QLabel(
+            "Missing images"
+        )
+        missing_label.setObjectName(
+            "OverlaysFieldLabel"
+        )
         details.addWidget(
-            QLabel("Missing images")
+            missing_label
         )
         details.addWidget(
             self.missing_value
         )
+        readiness_label = QLabel(
+            "Status"
+        )
+        readiness_label.setObjectName(
+            "OverlaysFieldLabel"
+        )
         details.addWidget(
-            QLabel("Status")
+            readiness_label
         )
         details.addWidget(
             self.readiness_value
@@ -295,7 +374,7 @@ class OverlaysPage(QWidget):
             "RetroVault Presentation Assignment"
         )
         assignment_label.setObjectName(
-            "SectionTitle"
+            "OverlaysAssignmentTitle"
         )
 
         details.addWidget(
@@ -326,16 +405,6 @@ class OverlaysPage(QWidget):
             self.status_label
         )
 
-        secondary_style = (
-            "color: #9aa0a6;"
-        )
-
-        self.count_label.setStyleSheet(
-            secondary_style
-        )
-        self.status_label.setStyleSheet(
-            secondary_style
-        )
 
     def _connect_signals(self):
         self.organize_button.clicked.connect(

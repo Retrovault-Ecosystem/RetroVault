@@ -224,3 +224,32 @@ def test_playlists_showcase_theme_contract():
 
     for selector in expected_selectors:
         assert selector in stylesheet
+
+
+def test_overlays_control_center_theme_contract():
+    from ui.themes.overlays import overlays_stylesheet
+
+    stylesheet = overlays_stylesheet()
+
+    expected_selectors = (
+        "QLabel#OverlaysTitle",
+        "QLabel#OverlaysSubtitle",
+        "QLabel#OverlaysDirectoryLabel",
+        "QLabel#OverlaysDirectoryValue",
+        "QLabel#OverlaysCount",
+        "QListWidget#OverlaysAssetList",
+        "QFrame#OverlaysDetailsPanel",
+        "QLabel#OverlaysAssetName",
+        "QLabel#OverlaysPreview",
+        "QLabel#OverlaysFieldLabel",
+        "QLabel#OverlaysFieldValue",
+        "QLabel#OverlaysReadiness",
+        "QLabel#OverlaysAssignmentTitle",
+        "QLabel#OverlaysStatus",
+        "QPushButton#OverlaysPrimaryAction",
+        "QPushButton#OverlaysSecondaryAction",
+        "QPushButton#OverlaysAssignmentAction",
+    )
+
+    for selector in expected_selectors:
+        assert selector in stylesheet
