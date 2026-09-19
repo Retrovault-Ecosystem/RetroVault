@@ -34,7 +34,7 @@ class PlaylistsPage(QWidget):
             "Playlists"
         )
         self.title_label.setObjectName(
-            "PageTitle"
+            "PlaylistsTitle"
         )
 
         self.subtitle_label = QLabel(
@@ -42,24 +42,43 @@ class PlaylistsPage(QWidget):
             "collections."
         )
         self.subtitle_label.setObjectName(
-            "PageSubtitle"
+            "PlaylistsSubtitle"
         )
 
         self.collection_list = QListWidget()
+        self.collection_list.setObjectName(
+            "PlaylistsCollectionList"
+        )
+
         self.game_list = QListWidget()
+        self.game_list.setObjectName(
+            "PlaylistsGameList"
+        )
 
         self.create_button = QPushButton(
             "New Collection"
         )
+        self.create_button.setObjectName(
+            "PlaylistsPrimaryAction"
+        )
         self.rename_button = QPushButton(
             "Rename"
+        )
+        self.rename_button.setObjectName(
+            "PlaylistsSecondaryAction"
         )
         self.delete_button = QPushButton(
             "Delete"
         )
+        self.delete_button.setObjectName(
+            "PlaylistsDangerAction"
+        )
 
         self.remove_game_button = QPushButton(
             "Remove Selected Game"
+        )
+        self.remove_game_button.setObjectName(
+            "PlaylistsDangerAction"
         )
         self.remove_game_button.setEnabled(
             False
@@ -97,10 +116,13 @@ class PlaylistsPage(QWidget):
             "Select a collection"
         )
         self.collection_title.setObjectName(
-            "SectionTitle"
+            "PlaylistsCollectionTitle"
         )
 
         self.status_label = QLabel()
+        self.status_label.setObjectName(
+            "PlaylistsStatus"
+        )
 
         self._build_ui()
         self._connect_signals()
@@ -143,6 +165,9 @@ class PlaylistsPage(QWidget):
         content.setSpacing(20)
 
         collection_frame = QFrame()
+        collection_frame.setObjectName(
+            "PlaylistsCollectionPanel"
+        )
         collection_frame.setFrameShape(
             QFrame.Shape.StyledPanel
         )
@@ -150,14 +175,24 @@ class PlaylistsPage(QWidget):
         collection_layout = QVBoxLayout(
             collection_frame
         )
+        collections_label = QLabel(
+            "Collections"
+        )
+        collections_label.setObjectName(
+            "PlaylistsPanelTitle"
+        )
+
         collection_layout.addWidget(
-            QLabel("Collections")
+            collections_label
         )
         collection_layout.addWidget(
             self.collection_list
         )
 
         games_frame = QFrame()
+        games_frame.setObjectName(
+            "PlaylistsGamesPanel"
+        )
         games_frame.setFrameShape(
             QFrame.Shape.StyledPanel
         )
@@ -200,9 +235,6 @@ class PlaylistsPage(QWidget):
             260
         )
 
-        self.status_label.setStyleSheet(
-            "color: #9aa0a6;"
-        )
 
     def _connect_signals(self):
         self.collection_list.currentTextChanged.connect(

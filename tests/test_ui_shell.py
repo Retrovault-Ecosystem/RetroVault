@@ -200,3 +200,27 @@ def test_systems_showroom_theme_contract():
 
     for selector in expected_selectors:
         assert selector in stylesheet
+
+
+def test_playlists_showcase_theme_contract():
+    from ui.themes.playlists import playlists_stylesheet
+
+    stylesheet = playlists_stylesheet()
+
+    expected_selectors = (
+        "QLabel#PlaylistsTitle",
+        "QLabel#PlaylistsSubtitle",
+        "QFrame#PlaylistsCollectionPanel",
+        "QFrame#PlaylistsGamesPanel",
+        "QLabel#PlaylistsPanelTitle",
+        "QLabel#PlaylistsCollectionTitle",
+        "QListWidget#PlaylistsCollectionList",
+        "QListWidget#PlaylistsGameList",
+        "QLabel#PlaylistsStatus",
+        "QPushButton#PlaylistsPrimaryAction",
+        "QPushButton#PlaylistsSecondaryAction",
+        "QPushButton#PlaylistsDangerAction",
+    )
+
+    for selector in expected_selectors:
+        assert selector in stylesheet

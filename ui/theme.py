@@ -1,5 +1,6 @@
 from ui.themes.visuals import visuals_stylesheet
 from ui.themes.systems import systems_stylesheet
+from ui.themes.playlists import playlists_stylesheet
 
 
 def apply_theme(app):
@@ -153,4 +154,5 @@ def apply_theme(app):
         """
         + visuals_stylesheet()
         + systems_stylesheet()
+        + playlists_stylesheet()
     )
