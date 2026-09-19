@@ -71,7 +71,7 @@ class ShadersPage(QWidget):
             "Shaders"
         )
         self.title_label.setObjectName(
-            "PageTitle"
+            "ShadersTitle"
         )
 
         self.subtitle_label = QLabel(
@@ -79,13 +79,16 @@ class ShadersPage(QWidget):
             "RetroArch shader presets."
         )
         self.subtitle_label.setObjectName(
-            "PageSubtitle"
+            "ShadersSubtitle"
         )
 
         self.path_label = QLabel(
             str(
                 self.shader_directory
             )
+        )
+        self.path_label.setObjectName(
+            "ShadersDirectoryValue"
         )
         self.path_label.setTextInteractionFlags(
             Qt.TextInteractionFlag
@@ -96,20 +99,39 @@ class ShadersPage(QWidget):
         )
 
         self.count_label = QLabel()
+        self.count_label.setObjectName(
+            "ShadersCount"
+        )
+
         self.status_label = QLabel()
+        self.status_label.setObjectName(
+            "ShadersStatus"
+        )
 
         self.refresh_button = QPushButton(
             "Refresh"
+        )
+        self.refresh_button.setObjectName(
+            "ShadersSecondaryAction"
         )
 
         self.default_button = QPushButton(
             "Set as Default"
         )
+        self.default_button.setObjectName(
+            "ShadersAssignmentAction"
+        )
         self.system_button = QPushButton(
             "Set for System"
         )
+        self.system_button.setObjectName(
+            "ShadersAssignmentAction"
+        )
         self.game_button = QPushButton(
             "Set for Game"
+        )
+        self.game_button.setObjectName(
+            "ShadersAssignmentAction"
         )
 
         self.default_button.setEnabled(
@@ -123,17 +145,26 @@ class ShadersPage(QWidget):
         )
 
         self.shader_list = QListWidget()
+        self.shader_list.setObjectName(
+            "ShadersPresetList"
+        )
 
         self.name_value = QLabel(
             "Select a shader preset"
         )
         self.name_value.setObjectName(
-            "SectionTitle"
+            "ShadersPresetName"
         )
 
         self.type_value = QLabel("—")
+        self.type_value.setObjectName(
+            "ShadersFieldValue"
+        )
 
         self.preset_value = QLabel("—")
+        self.preset_value.setObjectName(
+            "ShadersPresetPath"
+        )
         self.preset_value.setWordWrap(
             True
         )
@@ -143,8 +174,19 @@ class ShadersPage(QWidget):
         )
 
         self.passes_value = QLabel("—")
+        self.passes_value.setObjectName(
+            "ShadersFieldValue"
+        )
+
         self.missing_value = QLabel("—")
+        self.missing_value.setObjectName(
+            "ShadersFieldValue"
+        )
+
         self.readiness_value = QLabel("—")
+        self.readiness_value.setObjectName(
+            "ShadersReadiness"
+        )
 
         self._build_ui()
         self._connect_signals()
@@ -170,8 +212,15 @@ class ShadersPage(QWidget):
         path_row = QHBoxLayout()
         path_row.setSpacing(10)
 
+        directory_label = QLabel(
+            "Shader directory:"
+        )
+        directory_label.setObjectName(
+            "ShadersDirectoryLabel"
+        )
+
         path_row.addWidget(
-            QLabel("Shader directory:")
+            directory_label
         )
         path_row.addWidget(
             self.path_label,
@@ -200,6 +249,9 @@ class ShadersPage(QWidget):
         )
 
         details_frame = QFrame()
+        details_frame.setObjectName(
+            "ShadersDetailsPanel"
+        )
         details_frame.setFrameShape(
             QFrame.Shape.StyledPanel
         )
@@ -218,32 +270,62 @@ class ShadersPage(QWidget):
         details.addWidget(
             self.name_value
         )
+        preset_type_label = QLabel(
+            "Preset type"
+        )
+        preset_type_label.setObjectName(
+            "ShadersFieldLabel"
+        )
         details.addWidget(
-            QLabel("Preset type")
+            preset_type_label
         )
         details.addWidget(
             self.type_value
         )
+        preset_path_label = QLabel(
+            "Preset path"
+        )
+        preset_path_label.setObjectName(
+            "ShadersFieldLabel"
+        )
         details.addWidget(
-            QLabel("Preset path")
+            preset_path_label
         )
         details.addWidget(
             self.preset_value
         )
+        passes_label = QLabel(
+            "Referenced shader passes"
+        )
+        passes_label.setObjectName(
+            "ShadersFieldLabel"
+        )
         details.addWidget(
-            QLabel("Referenced shader passes")
+            passes_label
         )
         details.addWidget(
             self.passes_value
         )
+        missing_label = QLabel(
+            "Missing dependencies"
+        )
+        missing_label.setObjectName(
+            "ShadersFieldLabel"
+        )
         details.addWidget(
-            QLabel("Missing dependencies")
+            missing_label
         )
         details.addWidget(
             self.missing_value
         )
+        readiness_label = QLabel(
+            "Status"
+        )
+        readiness_label.setObjectName(
+            "ShadersFieldLabel"
+        )
         details.addWidget(
-            QLabel("Status")
+            readiness_label
         )
         details.addWidget(
             self.readiness_value
@@ -255,7 +337,7 @@ class ShadersPage(QWidget):
             "RetroVault Presentation Assignment"
         )
         assignment_label.setObjectName(
-            "SectionTitle"
+            "ShadersAssignmentTitle"
         )
 
         details.addWidget(
@@ -286,16 +368,6 @@ class ShadersPage(QWidget):
             self.status_label
         )
 
-        secondary_style = (
-            "color: #9aa0a6;"
-        )
-
-        self.count_label.setStyleSheet(
-            secondary_style
-        )
-        self.status_label.setStyleSheet(
-            secondary_style
-        )
 
     def _connect_signals(self):
         self.refresh_button.clicked.connect(

@@ -253,3 +253,31 @@ def test_overlays_control_center_theme_contract():
 
     for selector in expected_selectors:
         assert selector in stylesheet
+
+
+def test_shaders_laboratory_theme_contract():
+    from ui.themes.shaders import shaders_stylesheet
+
+    stylesheet = shaders_stylesheet()
+
+    expected_selectors = (
+        "QLabel#ShadersTitle",
+        "QLabel#ShadersSubtitle",
+        "QLabel#ShadersDirectoryLabel",
+        "QLabel#ShadersDirectoryValue",
+        "QLabel#ShadersCount",
+        "QListWidget#ShadersPresetList",
+        "QFrame#ShadersDetailsPanel",
+        "QLabel#ShadersPresetName",
+        "QLabel#ShadersFieldLabel",
+        "QLabel#ShadersFieldValue",
+        "QLabel#ShadersPresetPath",
+        "QLabel#ShadersReadiness",
+        "QLabel#ShadersAssignmentTitle",
+        "QLabel#ShadersStatus",
+        "QPushButton#ShadersSecondaryAction",
+        "QPushButton#ShadersAssignmentAction",
+    )
+
+    for selector in expected_selectors:
+        assert selector in stylesheet

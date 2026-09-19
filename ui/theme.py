@@ -2,6 +2,7 @@ from ui.themes.visuals import visuals_stylesheet
 from ui.themes.systems import systems_stylesheet
 from ui.themes.playlists import playlists_stylesheet
 from ui.themes.overlays import overlays_stylesheet
+from ui.themes.shaders import shaders_stylesheet
 
 
 def apply_theme(app):
@@ -157,4 +158,5 @@ def apply_theme(app):
         + systems_stylesheet()
         + playlists_stylesheet()
         + overlays_stylesheet()
+        + shaders_stylesheet()
     )
