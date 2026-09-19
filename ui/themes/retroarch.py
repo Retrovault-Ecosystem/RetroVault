@@ -17,7 +17,7 @@ def retroarch_stylesheet():
 
     QLabel#RetroArchSubtitle {
         color: #8fa7c4;
-        font-size: 12px;
+        font-size: 15px;
     }
 
     QLabel#RetroArchSummary {

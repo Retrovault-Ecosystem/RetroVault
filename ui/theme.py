@@ -4,6 +4,7 @@ from ui.themes.playlists import playlists_stylesheet
 from ui.themes.overlays import overlays_stylesheet
 from ui.themes.shaders import shaders_stylesheet
 from ui.themes.retroarch import retroarch_stylesheet
+from ui.themes.settings import settings_stylesheet
 
 
 def apply_theme(app):
@@ -28,7 +29,7 @@ def apply_theme(app):
 
         QLabel#PageSubtitle {
             color: #9aa0a6;
-            font-size: 13px;
+            font-size: 15px;
         }
 
         QLabel#SectionTitle {
@@ -161,4 +162,5 @@ def apply_theme(app):
         + overlays_stylesheet()
         + shaders_stylesheet()
         + retroarch_stylesheet()
+        + settings_stylesheet()
     )

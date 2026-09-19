@@ -288,7 +288,7 @@ class SettingsPage(QWidget):
         )
 
         self.title_label.setObjectName(
-            "PageTitle"
+            "SettingsTitle"
         )
 
         self.subtitle_label = QLabel(
@@ -297,7 +297,7 @@ class SettingsPage(QWidget):
         )
 
         self.subtitle_label.setObjectName(
-            "PageSubtitle"
+            "SettingsSubtitle"
         )
 
         self.subtitle_label.setWordWrap(
@@ -319,6 +319,9 @@ class SettingsPage(QWidget):
         runtime_group = QGroupBox(
             "RetroArch Runtime"
         )
+        runtime_group.setObjectName(
+            "SettingsRuntimeGroup"
+        )
 
         runtime_layout = QVBoxLayout(
             runtime_group
@@ -326,6 +329,10 @@ class SettingsPage(QWidget):
 
         self.retroarch_status = ReadyCheckButton(
             self.STATUS_CHECK_TEXT
+        )
+
+        self.retroarch_status.setObjectName(
+            "SettingsValidationStatus"
         )
 
         self.retroarch_status.setToolTip(
@@ -346,8 +353,16 @@ class SettingsPage(QWidget):
             "Browse…"
         )
 
+        self.retroarch_browse_button.setObjectName(
+            "SettingsBrowseAction"
+        )
+
         self.retroarch_browse_button.clicked.connect(
             self._browse_retroarch
+        )
+
+        self.retroarch_edit.setObjectName(
+            "SettingsPathEditor"
         )
 
         self._configure_path_editor(
@@ -374,6 +389,10 @@ class SettingsPage(QWidget):
             self.STATUS_CHECK_TEXT
         )
 
+        self.core_directory_status.setObjectName(
+            "SettingsValidationStatus"
+        )
+
         self.core_directory_status.setToolTip(
             "Validate the RetroArch core directory"
         )
@@ -392,8 +411,16 @@ class SettingsPage(QWidget):
             "Browse…"
         )
 
+        self.core_directory_browse_button.setObjectName(
+            "SettingsBrowseAction"
+        )
+
         self.core_directory_browse_button.clicked.connect(
             self._browse_core_directory
+        )
+
+        self.core_directory_edit.setObjectName(
+            "SettingsPathEditor"
         )
 
         self._configure_path_editor(
@@ -430,6 +457,10 @@ class SettingsPage(QWidget):
             "Save Runtime Settings"
         )
 
+        self.save_button.setObjectName(
+            "SettingsPrimaryAction"
+        )
+
         self.save_button.clicked.connect(
             self.save_runtime_settings
         )
@@ -438,11 +469,18 @@ class SettingsPage(QWidget):
             "Restore Default Paths"
         )
 
+        self.restore_defaults_button.setObjectName(
+            "SettingsSecondaryAction"
+        )
+
         self.restore_defaults_button.clicked.connect(
             self.restore_default_paths
         )
 
         self.save_status = QLabel()
+        self.save_status.setObjectName(
+            "SettingsSaveStatus"
+        )
 
         save_layout.addWidget(
             self.save_button
@@ -471,29 +509,54 @@ class SettingsPage(QWidget):
         library_group = QGroupBox(
             "Library"
         )
+        library_group.setObjectName(
+            "SettingsLibraryGroup"
+        )
 
         library_layout = QVBoxLayout(
             library_group
         )
 
         self.library_sources_value = QLabel()
+        self.library_sources_value.setObjectName(
+            "SettingsSummaryValue"
+        )
         self.library_sources_value.setWordWrap(
             True
         )
 
         self.library_source_list = QListWidget()
+        self.library_source_list.setObjectName(
+            "SettingsSourceList"
+        )
+        self.library_source_list.setMinimumHeight(
+            44
+        )
+        self.library_source_list.setMaximumHeight(
+            52
+        )
 
         self.library_source_list.currentItemChanged.connect(
             self._library_source_selection_changed
         )
 
         self.library_source_name_edit = QLineEdit()
+        self.library_source_name_edit.setObjectName(
+            "SettingsSourceNameEditor"
+        )
+        self.library_source_name_edit.setMinimumHeight(
+            34
+        )
         self.library_source_name_edit.setPlaceholderText(
             "Source name"
         )
 
         self.library_source_rename_button = QPushButton(
             "Rename"
+        )
+
+        self.library_source_rename_button.setObjectName(
+            "SettingsSecondaryAction"
         )
 
         self.library_source_rename_button.clicked.connect(
@@ -504,12 +567,20 @@ class SettingsPage(QWidget):
             "Disable"
         )
 
+        self.library_source_toggle_button.setObjectName(
+            "SettingsSecondaryAction"
+        )
+
         self.library_source_toggle_button.clicked.connect(
             self._toggle_library_source
         )
 
         self.library_source_remove_button = QPushButton(
             "Remove"
+        )
+
+        self.library_source_remove_button.setObjectName(
+            "SettingsDangerAction"
         )
 
         self.library_source_remove_button.clicked.connect(
@@ -550,6 +621,10 @@ class SettingsPage(QWidget):
             self.STATUS_CHECK_TEXT
         )
 
+        self.library_sources_status.setObjectName(
+            "SettingsValidationStatus"
+        )
+
         self.library_sources_status.setToolTip(
             "Validate the library directory"
         )
@@ -568,8 +643,16 @@ class SettingsPage(QWidget):
             "Browse…"
         )
 
+        self.library_browse_button.setObjectName(
+            "SettingsBrowseAction"
+        )
+
         self.library_browse_button.clicked.connect(
             self._browse_library
+        )
+
+        self.library_path_edit.setObjectName(
+            "SettingsPathEditor"
         )
 
         self._configure_path_editor(
@@ -596,6 +679,10 @@ class SettingsPage(QWidget):
             self.STATUS_CHECK_TEXT
         )
 
+        self.artwork_directory_status.setObjectName(
+            "SettingsValidationStatus"
+        )
+
         self.artwork_directory_status.setToolTip(
             "Validate the artwork directory"
         )
@@ -614,8 +701,16 @@ class SettingsPage(QWidget):
             "Browse…"
         )
 
+        self.artwork_directory_browse_button.setObjectName(
+            "SettingsBrowseAction"
+        )
+
         self.artwork_directory_browse_button.clicked.connect(
             self._browse_artwork_directory
+        )
+
+        self.artwork_directory_edit.setObjectName(
+            "SettingsPathEditor"
         )
 
         self._configure_path_editor(
@@ -645,6 +740,9 @@ class SettingsPage(QWidget):
         assets_group = QGroupBox(
             "RetroArch Assets"
         )
+        assets_group.setObjectName(
+            "SettingsAssetsGroup"
+        )
 
         assets_layout = QVBoxLayout(
             assets_group
@@ -654,6 +752,10 @@ class SettingsPage(QWidget):
             ReadyCheckButton(
                 self.STATUS_CHECK_TEXT
             )
+        )
+
+        self.overlay_directory_status.setObjectName(
+            "SettingsValidationStatus"
         )
 
         self.overlay_directory_status.setToolTip(
@@ -676,11 +778,19 @@ class SettingsPage(QWidget):
             )
         )
 
+        self.overlay_directory_browse_button.setObjectName(
+            "SettingsBrowseAction"
+        )
+
         (
             self.overlay_directory_browse_button
             .clicked.connect(
                 self._browse_overlay_directory
             )
+        )
+
+        self.overlay_directory_edit.setObjectName(
+            "SettingsPathEditor"
         )
 
         self._configure_path_editor(
@@ -706,10 +816,22 @@ class SettingsPage(QWidget):
         # Compatibility inspection values retained
         # outside the visible layout.
         self.overlays_value = QLabel()
+        self.overlays_value.setObjectName(
+            "SettingsFieldValue"
+        )
         self.overlays_status = QLabel()
+        self.overlays_status.setObjectName(
+            "SettingsFieldStatus"
+        )
 
         self.shaders_value = QLabel()
+        self.shaders_value.setObjectName(
+            "SettingsFieldValue"
+        )
         self.shaders_status = QLabel()
+        self.shaders_status.setObjectName(
+            "SettingsFieldStatus"
+        )
 
         assets_layout.addLayout(
             self._setting_row(
@@ -726,17 +848,26 @@ class SettingsPage(QWidget):
         config_group = QGroupBox(
             "User Configuration"
         )
+        config_group.setObjectName(
+            "SettingsConfigGroup"
+        )
 
         config_layout = QVBoxLayout(
             config_group
         )
 
         self.runtime_config_value = QLabel()
+        self.runtime_config_value.setObjectName(
+            "SettingsFieldValue"
+        )
         self.runtime_config_value.setWordWrap(
             True
         )
 
         self.runtime_config_status = QLabel()
+        self.runtime_config_status.setObjectName(
+            "SettingsFieldStatus"
+        )
 
         config_layout.addLayout(
             self._setting_row(
@@ -755,8 +886,8 @@ class SettingsPage(QWidget):
             True
         )
 
-        note.setStyleSheet(
-            "color: #9aa0a6;"
+        note.setObjectName(
+            "SettingsNote"
         )
 
         config_layout.addWidget(
@@ -876,6 +1007,9 @@ class SettingsPage(QWidget):
         title_label = QLabel(
             title
         )
+        title_label.setObjectName(
+            "SettingsFieldLabel"
+        )
 
         value_label.setTextInteractionFlags(
             value_label.textInteractionFlags()
@@ -890,8 +1024,15 @@ class SettingsPage(QWidget):
             value_label,
         )
 
+        status_title_label = QLabel(
+            "Status"
+        )
+        status_title_label.setObjectName(
+            "SettingsFieldLabel"
+        )
+
         frame_layout.addRow(
-            QLabel("Status"),
+            status_title_label,
             status_label,
         )
 

@@ -17,7 +17,7 @@ def playlists_stylesheet():
 
     QLabel#PlaylistsSubtitle {
         color: #8fa7c4;
-        font-size: 12px;
+        font-size: 15px;
     }
 
     QFrame#PlaylistsCollectionPanel,

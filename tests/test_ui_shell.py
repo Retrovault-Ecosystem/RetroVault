@@ -306,3 +306,35 @@ def test_retroarch_core_intelligence_theme_contract():
 
     for selector in expected_selectors:
         assert selector in stylesheet
+
+
+def test_settings_configuration_console_theme_contract():
+    from ui.themes.settings import settings_stylesheet
+
+    stylesheet = settings_stylesheet()
+
+    required_selectors = (
+        "#SettingsTitle",
+        "#SettingsSubtitle",
+        "#SettingsRuntimeGroup",
+        "#SettingsLibraryGroup",
+        "#SettingsAssetsGroup",
+        "#SettingsConfigGroup",
+        "#SettingsPathEditor",
+        "#SettingsSourceNameEditor",
+        "#SettingsSourceList",
+        "#SettingsPrimaryAction",
+        "#SettingsSecondaryAction",
+        "#SettingsBrowseAction",
+        "#SettingsDangerAction",
+        "#SettingsValidationStatus",
+        "#SettingsSummaryValue",
+        "#SettingsFieldLabel",
+        "#SettingsFieldValue",
+        "#SettingsFieldStatus",
+        "#SettingsSaveStatus",
+        "#SettingsNote",
+    )
+
+    for selector in required_selectors:
+        assert selector in stylesheet

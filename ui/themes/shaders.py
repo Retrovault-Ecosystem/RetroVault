@@ -17,7 +17,7 @@ def shaders_stylesheet():
 
     QLabel#ShadersSubtitle {
         color: #8fa7c4;
-        font-size: 12px;
+        font-size: 15px;
     }
 
     QLabel#ShadersDirectoryLabel {
