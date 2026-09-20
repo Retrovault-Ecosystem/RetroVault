@@ -20,3 +20,5 @@ class LaunchProfile:
     shader: str = ""
 
     archive_member: str = ""
+
+    cheat_file: str = ""

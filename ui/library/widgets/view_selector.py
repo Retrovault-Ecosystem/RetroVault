@@ -2,6 +2,7 @@ from PyQt6.QtWidgets import (
     QWidget,
     QHBoxLayout,
     QPushButton,
+    QSizePolicy,
 )
 
 from PyQt6.QtCore import pyqtSignal
@@ -20,6 +21,10 @@ class ViewSelector(QWidget):
     def __init__(self):
 
         super().__init__()
+
+        self.setObjectName(
+            "LibraryViewSelector"
+        )
 
 
         layout = QHBoxLayout()
@@ -50,6 +55,23 @@ class ViewSelector(QWidget):
 
             button.setAutoExclusive(
                 True
+            )
+
+            # Preserve complete labels while avoiding a fixed
+            # 343px selector minimum propagating through the
+            # entire Library page. The stylesheet supplies the
+            # button padding; the minimum reserves the rendered
+            # label plus a small frame allowance.
+            button.setMinimumWidth(
+                button.fontMetrics().horizontalAdvance(
+                    button.text()
+                )
+                + 20
+            )
+
+            button.setSizePolicy(
+                QSizePolicy.Policy.Minimum,
+                QSizePolicy.Policy.Preferred,
             )
 
 

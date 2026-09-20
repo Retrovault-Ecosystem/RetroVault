@@ -19,10 +19,18 @@ class CompactView(QWidget):
 
         self.games = []
 
+        self.setObjectName(
+            "LibraryCompactView"
+        )
+
         self.details = details
 
 
         self.list = QListWidget()
+
+        self.list.setObjectName(
+            "LibraryCompactList"
+        )
 
 
         self.list.currentRowChanged.connect(

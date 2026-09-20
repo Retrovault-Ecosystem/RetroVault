@@ -9,6 +9,20 @@ def settings_stylesheet():
    RETROVAULT SETTINGS — CONFIGURATION CONSOLE
    ============================================================ */
 
+
+QScrollArea#SettingsScrollArea {
+    background-color: transparent;
+    border: none;
+}
+
+QScrollArea#SettingsScrollArea > QWidget > QWidget {
+    background-color: transparent;
+}
+
+QWidget#SettingsScrollContent {
+    background-color: #121212;
+}
+
 QLabel#SettingsTitle {
     color: #f5f8ff;
     font-size: 26px;

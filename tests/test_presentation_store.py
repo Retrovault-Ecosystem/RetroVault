@@ -1072,3 +1072,117 @@ def test_clear_overlay_assignment_validates_identity(
         store.clear_game_overlay(
             ""
         )
+
+
+def test_clear_game_shader_preserves_other_fields(
+    tmp_path,
+):
+    path = (
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    store = PresentationStore(
+        path
+    )
+
+    store.save(
+        default=PresentationProfile(
+            shader="/default/default.slangp",
+            overlay="/default/default.cfg",
+        ),
+        systems={
+            "nes": PresentationProfile(
+                shader="/system/system.slangp",
+                overlay="/system/system.cfg",
+            ),
+        },
+        games={
+            "game-id": PresentationProfile(
+                shader="/game/game.slangp",
+                overlay="/game/game.cfg",
+                artwork="/game/art.png",
+            ),
+        },
+    )
+
+    store.clear_game_shader(
+        "game-id"
+    )
+
+    data = store.load()
+
+    assert (
+        data["games"]["game-id"].shader
+        == ""
+    )
+
+    assert (
+        data["games"]["game-id"].overlay
+        == "/game/game.cfg"
+    )
+
+    assert (
+        data["games"]["game-id"].artwork
+        == "/game/art.png"
+    )
+
+    assert (
+        data["systems"]["nes"].shader
+        == "/system/system.slangp"
+    )
+
+    assert (
+        data["default"].shader
+        == "/default/default.slangp"
+    )
+
+
+def test_clear_game_shader_removes_empty_game_profile(
+    tmp_path,
+):
+    path = (
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    store = PresentationStore(
+        path
+    )
+
+    store.save(
+        games={
+            "game-id": PresentationProfile(
+                shader="/game/game.slangp",
+            ),
+        },
+    )
+
+    store.clear_game_shader(
+        "game-id"
+    )
+
+    assert (
+        "game-id"
+        not in store.load()["games"]
+    )
+
+
+def test_clear_missing_game_shader_is_safe_noop(
+    tmp_path,
+):
+    store = PresentationStore(
+        tmp_path
+        / "presentation-state.json"
+    )
+
+    store.save()
+
+    store.clear_game_shader(
+        "missing-game"
+    )
+
+    assert (
+        store.load()["games"]
+        == {}
+    )

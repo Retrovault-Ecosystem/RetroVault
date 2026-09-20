@@ -627,6 +627,56 @@ class PresentationStore:
             games=data["games"],
         )
 
+    def clear_game_shader(
+        self,
+        game,
+    ):
+        if not isinstance(game, str):
+            raise ValueError(
+                "Presentation game identity must be a string."
+            )
+
+        if not game:
+            raise ValueError(
+                "Presentation game identity cannot be empty."
+            )
+
+        data = self.load()
+
+        profile = data["games"].get(
+            game
+        )
+
+        if profile is None:
+            return
+
+        updated = replace(
+            profile,
+            shader="",
+        )
+
+        games = dict(
+            data["games"]
+        )
+
+        if (
+            updated.shader
+            or updated.overlay
+            or updated.artwork
+        ):
+            games[game] = updated
+        else:
+            games.pop(
+                game,
+                None,
+            )
+
+        self.save(
+            default=data["default"],
+            systems=data["systems"],
+            games=games,
+        )
+
     def clear_game_overlay(
         self,
         identity,

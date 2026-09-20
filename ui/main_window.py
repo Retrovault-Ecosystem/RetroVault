@@ -115,12 +115,6 @@ class MainWindow(QMainWindow):
             "RetroVault"
         )
 
-        self.resize(
-            1200,
-            800
-        )
-
-
         rvdb_consumer = None
         rvdb_service = None
         rvdb_resolver = None
@@ -250,6 +244,9 @@ class MainWindow(QMainWindow):
             ),
             presentation_resolver_provider=(
                 presentation_composition_factory.build
+            ),
+            presentation_store=(
+                presentation_store
             ),
             launcher=self.retroarch_launcher,
             process_lifecycle=self.process_lifecycle,

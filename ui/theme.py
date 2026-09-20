@@ -5,6 +5,7 @@ from ui.themes.overlays import overlays_stylesheet
 from ui.themes.shaders import shaders_stylesheet
 from ui.themes.retroarch import retroarch_stylesheet
 from ui.themes.settings import settings_stylesheet
+from ui.themes.library import library_stylesheet
 
 
 def apply_theme(app):
@@ -163,4 +164,5 @@ def apply_theme(app):
         + shaders_stylesheet()
         + retroarch_stylesheet()
         + settings_stylesheet()
+        + library_stylesheet()
     )

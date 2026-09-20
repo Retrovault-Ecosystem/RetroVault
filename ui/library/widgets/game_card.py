@@ -26,11 +26,19 @@ class GameCard(QWidget):
 
         self.game = game
 
+        self.setObjectName(
+            "LibraryGameCard"
+        )
+
 
         layout = QVBoxLayout()
 
 
         self.cover = QLabel()
+
+        self.cover.setObjectName(
+            "LibraryGameCover"
+        )
 
 
         self.cover.setFixedSize(
@@ -50,6 +58,10 @@ class GameCard(QWidget):
 
         self.title = QLabel(
             game.name
+        )
+
+        self.title.setObjectName(
+            "LibraryGameTitle"
         )
 
 
@@ -84,6 +96,43 @@ class GameCard(QWidget):
             Qt.AlignmentFlag.AlignCenter
         )
 
+        self.info.setObjectName(
+            "LibraryGameInfo"
+        )
+
+
+        variants = list(
+            getattr(
+                self.game,
+                "variants",
+                [],
+            )
+            or []
+        )
+
+        self.edition_count = QLabel()
+
+        self.edition_count.setObjectName(
+            "LibraryGameEditionCount"
+        )
+
+        self.edition_count.setAlignment(
+            Qt.AlignmentFlag.AlignCenter
+        )
+
+        if len(variants) > 1:
+            self.edition_count.setText(
+                f"{len(variants)} Editions"
+            )
+            self.edition_count.setVisible(
+                True
+            )
+        else:
+            self.edition_count.setText("")
+            self.edition_count.setVisible(
+                False
+            )
+
 
 
         layout.addWidget(
@@ -100,6 +149,10 @@ class GameCard(QWidget):
             self.info
         )
 
+        layout.addWidget(
+            self.edition_count
+        )
+
 
         self.setLayout(
             layout
@@ -113,36 +166,6 @@ class GameCard(QWidget):
 
 
 
-        self.setStyleSheet(
-    """
-    QWidget {
-
-        background-color:#202020;
-
-        border-radius:12px;
-
-        padding:8px;
-
-    }
-
-
-    QWidget:hover {
-
-        background-color:#3a3a3a;
-
-        border:2px solid #e91e63;
-
-    }
-
-
-    QLabel {
-
-        color:white;
-
-    }
-
-    """
-)
 
 
 

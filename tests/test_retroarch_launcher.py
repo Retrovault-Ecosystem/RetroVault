@@ -639,3 +639,169 @@ def test_launcher_preserves_automatic_archive_selection_by_default():
         "/library/Variant Game.7z",
         member=None,
     )
+
+
+def test_launcher_appends_ephemeral_cheat_runtime(
+    monkeypatch,
+):
+    class FakeArchiveRuntime:
+        def resolve(
+            self,
+            rom,
+            member=None,
+        ):
+            return rom
+
+    class FakeCheatRuntime:
+        def __init__(self):
+            self.calls = []
+
+        def create(
+            self,
+            cheat_file,
+            core,
+            runtime_rom,
+        ):
+            self.calls.append(
+                (
+                    cheat_file,
+                    core,
+                    runtime_rom,
+                )
+            )
+            return "/runtime/cheats.cfg"
+
+    cheat_runtime = FakeCheatRuntime()
+
+    launcher = RetroArchLauncher(
+        archive_runtime=FakeArchiveRuntime(),
+        cheat_runtime=cheat_runtime,
+    )
+
+    profile = LaunchProfile(
+        game="Cheat Game",
+        rom="/games/cheat-game.nes",
+        core="/cores/nes.so",
+        cheat_file="/tmp/cheat-game.cht",
+    )
+
+    process = Mock()
+    process.poll.return_value = None
+
+    popen = Mock(
+        return_value=process
+    )
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.subprocess.Popen",
+        popen,
+    )
+
+    result = launcher.launch(
+        profile
+    )
+
+    assert result["success"] is True
+
+    assert cheat_runtime.calls == [
+        (
+            "/tmp/cheat-game.cht",
+            "/cores/nes.so",
+            "/games/cheat-game.nes",
+        )
+    ]
+
+    command = popen.call_args.args[0]
+
+    assert "--appendconfig" in command
+
+    index = command.index(
+        "--appendconfig"
+    )
+
+    assert (
+        command[index + 1]
+        == "/runtime/cheats.cfg"
+    )
+
+
+def test_cheat_runtime_uses_game_specific_database_contract(
+    tmp_path,
+):
+    from pathlib import Path
+
+    from services.retroarch.cheat_runtime import (
+        CheatRuntimeConfig,
+    )
+
+    info_root = tmp_path / "info"
+    info_root.mkdir()
+
+    (
+        info_root
+        / "snes9x_libretro.info"
+    ).write_text(
+        'corename = "Snes9x"\n',
+        encoding="utf-8",
+    )
+
+    selected = tmp_path / "selected.cht"
+    selected.write_text(
+        (
+            "cheats = 1\n"
+            'cheat0_desc = "Test"\n'
+            'cheat0_code = "AAAA-BBBB"\n'
+            "cheat0_enable = true\n"
+        ),
+        encoding="utf-8",
+    )
+
+    runtime = CheatRuntimeConfig(
+        runtime_root=(
+            tmp_path
+            / "runtime"
+        ),
+        info_roots=(
+            info_root,
+        ),
+    )
+
+    config = Path(
+        runtime.create(
+            selected,
+            "/cores/snes9x_libretro.so",
+            "/runtime/Super Mario World (USA).sfc",
+        )
+    )
+
+    text = config.read_text(
+        encoding="utf-8"
+    )
+
+    assert (
+        "cheat_database_path"
+        in text
+    )
+    assert (
+        'apply_cheats_after_load = "true"'
+        in text
+    )
+    assert "cheat_file =" not in text
+    assert "cheat_apply_after_load" not in text
+
+    database = (
+        config.parent
+        / "database"
+        / "Snes9x"
+        / "Super Mario World (USA).cht"
+    )
+
+    assert database.is_file()
+    assert (
+        database.read_text(
+            encoding="utf-8"
+        )
+        == selected.read_text(
+            encoding="utf-8"
+        )
+    )

@@ -22,6 +22,7 @@ from PyQt6.QtWidgets import (
     QListWidget,
     QListWidgetItem,
     QPushButton,
+    QScrollArea,
     QSizePolicy,
     QVBoxLayout,
     QWidget,
@@ -268,8 +269,58 @@ class SettingsPage(QWidget):
         self._populate()
 
     def _build_ui(self):
-        layout = QVBoxLayout(
+        shell_layout = QVBoxLayout(
             self
+        )
+
+        shell_layout.setContentsMargins(
+            0,
+            0,
+            0,
+            0,
+        )
+
+        shell_layout.setSpacing(
+            0
+        )
+
+        self.settings_scroll = QScrollArea(
+            self
+        )
+
+        self.settings_scroll.setObjectName(
+            "SettingsScrollArea"
+        )
+
+        self.settings_scroll.setWidgetResizable(
+            True
+        )
+
+        self.settings_scroll.setFrameShape(
+            QFrame.Shape.NoFrame
+        )
+
+        self.settings_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+
+        self.settings_scroll.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+
+        self.settings_content = QWidget()
+
+        self.settings_content.setObjectName(
+            "SettingsScrollContent"
+        )
+
+        self.settings_content.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Preferred,
+        )
+
+        layout = QVBoxLayout(
+            self.settings_content
         )
 
         layout.setContentsMargins(
@@ -517,6 +568,21 @@ class SettingsPage(QWidget):
             library_group
         )
 
+        # The Library group contains substantially more vertical
+        # content than the other Settings groups: source selector,
+        # source-name editor, source actions, library path, and
+        # artwork path. Give the group a real minimum-size contract
+        # so the parent Settings layout cannot compress those rows
+        # until they paint on top of one another.
+        library_layout.setSizeConstraint(
+            QVBoxLayout.SizeConstraint.SetMinimumSize
+        )
+
+        library_group.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Minimum,
+        )
+
         self.library_sources_value = QLabel()
         self.library_sources_value.setObjectName(
             "SettingsSummaryValue"
@@ -530,10 +596,14 @@ class SettingsPage(QWidget):
             "SettingsSourceList"
         )
         self.library_source_list.setMinimumHeight(
-            44
+            72
         )
         self.library_source_list.setMaximumHeight(
-            52
+            132
+        )
+        self.library_source_list.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Preferred,
         )
 
         self.library_source_list.currentItemChanged.connect(
@@ -546,6 +616,10 @@ class SettingsPage(QWidget):
         )
         self.library_source_name_edit.setMinimumHeight(
             34
+        )
+        self.library_source_name_edit.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Fixed,
         )
         self.library_source_name_edit.setPlaceholderText(
             "Source name"
@@ -900,6 +974,14 @@ class SettingsPage(QWidget):
 
         layout.addStretch(
             1
+        )
+
+        self.settings_scroll.setWidget(
+            self.settings_content
+        )
+
+        shell_layout.addWidget(
+            self.settings_scroll
         )
 
     @staticmethod
@@ -1478,12 +1560,12 @@ class SettingsPage(QWidget):
             )
 
             label = (
-                f"{name} — {state}"
+                f"{name}  •  {state}"
             )
 
             if path_value:
                 label += (
-                    f" — {path_value}"
+                    f"  •  {path_value}"
                 )
 
             item = QListWidgetItem(

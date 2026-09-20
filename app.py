@@ -13,7 +13,13 @@ def main():
     apply_theme(app)
 
     window = MainWindow()
-    window.show()
+
+    # RetroVault is a desktop-first application whose primary
+    # Library workspace benefits from the complete available
+    # screen area. Ask the native window manager for a genuine
+    # maximized window instead of merely constructing a large
+    # normal-state window.
+    window.showMaximized()
 
     sys.exit(
         app.exec()

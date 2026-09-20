@@ -5265,3 +5265,123 @@ def test_settings_page_source_management_rejects_blank_name_inline(
     )
 
     assert not runtime.exists()
+
+
+def test_settings_library_group_preserves_vertical_layout_contract():
+    from PyQt6.QtWidgets import QApplication
+
+    from ui.pages.settings_page import SettingsPage
+
+    app = QApplication.instance() or QApplication([])
+
+    page = SettingsPage()
+    page.resize(1360, 820)
+    page.show()
+    app.processEvents()
+
+    # Use the production attributes rather than relying on text or
+    # translated labels. Each successive source-management/path row
+    # must occupy a distinct vertical band.
+    widgets = (
+        page.library_source_list,
+        page.library_source_name_edit,
+        page.library_source_toggle_button,
+        page.library_path_edit,
+        page.artwork_directory_edit,
+    )
+
+    def global_top(widget):
+        return widget.mapTo(page, widget.rect().topLeft()).y()
+
+    def global_bottom(widget):
+        return widget.mapTo(page, widget.rect().bottomLeft()).y()
+
+    for previous, current in zip(
+        widgets,
+        widgets[1:],
+    ):
+        assert global_bottom(previous) < global_top(current), (
+            previous.objectName(),
+            previous.geometry(),
+            current.objectName(),
+            current.geometry(),
+        )
+
+    assert (
+        page.library_source_list.height()
+        >= page.library_source_list.minimumHeight()
+    )
+    assert (
+        page.library_source_name_edit.height()
+        >= page.library_source_name_edit.minimumHeight()
+    )
+
+    page.close()
+
+
+def test_settings_page_uses_bounded_scroll_viewport():
+    from PyQt6.QtCore import Qt
+    from PyQt6.QtWidgets import (
+        QApplication,
+        QScrollArea,
+    )
+
+    from ui.pages.settings_page import SettingsPage
+
+    app = QApplication.instance() or QApplication([])
+
+    page = SettingsPage()
+    page.resize(900, 640)
+    page.show()
+    app.processEvents()
+
+    scroll = page.findChild(
+        QScrollArea,
+        "SettingsScrollArea",
+    )
+
+    assert scroll is not None
+    assert scroll.widgetResizable() is True
+    assert (
+        scroll.horizontalScrollBarPolicy()
+        == Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+    )
+    assert (
+        scroll.verticalScrollBarPolicy()
+        == Qt.ScrollBarPolicy.ScrollBarAsNeeded
+    )
+
+    content = scroll.widget()
+
+    assert content is page.settings_content
+    assert (
+        content.objectName()
+        == "SettingsScrollContent"
+    )
+
+    # The outer page is a viewport shell. Its minimum size must no
+    # longer equal the full configuration console's ~792px minimum.
+    assert page.minimumSizeHint().height() < 640
+
+    page.close()
+
+
+def test_settings_library_source_browser_has_multi_source_room():
+    from PyQt6.QtWidgets import QApplication
+
+    from ui.pages.settings_page import SettingsPage
+
+    app = QApplication.instance() or QApplication([])
+
+    page = SettingsPage()
+    page.resize(1360, 820)
+    page.show()
+    app.processEvents()
+
+    source_list = page.library_source_list
+
+    assert source_list.minimumHeight() >= 72
+    assert source_list.maximumHeight() >= 120
+    assert source_list.maximumHeight() > source_list.minimumHeight()
+
+    page.close()

@@ -15,6 +15,26 @@ if _APP is None:
 
 import pytest
 
+
+@pytest.fixture(autouse=True)
+def _continue_without_cheats(
+    monkeypatch,
+):
+    """
+    Archive-launch tests validate archive selection and
+    LaunchProfile propagation, not interactive Cheat Studio UX.
+
+    The production launch path must retain CheatStudio.choose().
+    These headless tests deterministically choose the supported
+    Continue Without Cheats path so no modal dialog can block.
+    """
+
+    monkeypatch.setattr(
+        GameDetails,
+        "_select_cheats",
+        lambda self, launch_game, archive_member="": [],
+    )
+
 # RETROVAULT_ARCHIVE_MODAL_TEST_GUARD
 # Production archive warnings remain modal. Automated tests intercept
 # QMessageBox.warning so development regressions cannot block headless
@@ -236,6 +256,20 @@ def test_selected_archive_variant_reaches_launch_profile(
         "Variant Game (U) [!].nes"
     )
 
+    runtime_rom = (
+        tmp_path
+        / "runtime"
+        / "Variant Game (J).nes"
+    )
+    runtime_rom.parent.mkdir()
+    runtime_rom.write_bytes(
+        b"RETROVAULT-JAPAN-VARIANT"
+    )
+
+    archive_runtime.resolve.return_value = str(
+        runtime_rom
+    )
+
     launcher = Mock()
     launcher.launch.return_value = {
         "success": True,
@@ -290,8 +324,15 @@ def test_selected_archive_variant_reaches_launch_profile(
 
     profile = launcher.launch.call_args.args[0]
 
-    assert profile.rom == str(archive)
-    assert profile.archive_member == "Variant Game (J).nes"
+    assert profile.rom == str(
+        runtime_rom
+    )
+
+    archive_runtime.resolve.assert_called_once_with(
+        str(archive),
+        member="Variant Game (J).nes",
+    )
+    assert profile.archive_member == ""
     assert profile.core == "/cores/fceumm_libretro.so"
 
 
@@ -417,6 +458,7 @@ def test_archive_inspection_failure_does_not_start_launch(
     details.current_game = Mock(
         rom="/library/Broken Archive.7z",
         rvdb_platform_id="platform.nintendo.nes",
+        variants=[],
     )
 
     details.launch_game()
@@ -445,6 +487,7 @@ def test_archive_selector_value_error_does_not_start_launch(
     details.current_game = Mock(
         rom="/library/Unsafe Archive.7z",
         rvdb_platform_id="platform.nintendo.nes",
+        variants=[],
     )
 
     details.launch_game()
@@ -479,6 +522,7 @@ def test_cancelled_variant_selector_does_not_start_launch(
     details.current_game = Mock(
         rom="/library/Variant Game.7z",
         rvdb_platform_id="platform.nintendo.nes",
+        variants=[],
     )
 
     monkeypatch.setattr(
@@ -522,6 +566,7 @@ def test_zero_playable_members_preserves_runtime_launch_path(
         rom="/library/Empty Archive.7z",
         core="fceumm",
         rvdb_platform_id="platform.nintendo.nes",
+        variants=[],
     )
 
     monkeypatch.setattr(
@@ -748,6 +793,7 @@ def test_unknown_selector_value_aborts_launch_before_lifecycle(
     details.current_game = Mock(
         rom="/library/Variant Game.7z",
         rvdb_platform_id="platform.nintendo.nes",
+        variants=[],
     )
 
     monkeypatch.setattr(

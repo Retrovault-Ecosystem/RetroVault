@@ -1,7 +1,10 @@
+import copy
 from PyQt6.QtWidgets import (
     QWidget,
     QLabel,
     QPushButton,
+    QScrollArea,
+    QSizePolicy,
     QInputDialog,
     QMessageBox,
     QVBoxLayout,
@@ -28,9 +31,27 @@ from services.retroarch import (
 from services.retroarch.launcher import RetroArchLauncher
 from services.retroarch.archive_runtime import ArchiveRuntime
 from services.retroarch.archive_variant import ArchiveVariantFormatter
+from services.cheats import CheatService
+from ui.library.widgets.game_edition_launcher import GameEditionLauncher
+from ui.library.widgets.cheat_studio import CheatStudio
 
 from services.rvdb import RVDBError
+from ui.library.widgets.presentation_studio import PresentationStudio
 
+
+
+class _GameDetailsScrollContent(QWidget):
+
+    def minimumSizeHint(
+        self
+    ):
+        hint = super().minimumSizeHint()
+
+        hint.setWidth(
+            0
+        )
+
+        return hint
 
 
 class GameDetails(QWidget):
@@ -44,12 +65,18 @@ class GameDetails(QWidget):
         collection_names_provider=None,
         collection_add_handler=None,
         presentation_resolver_provider=None,
+        presentation_store=None,
         launcher=None,
         process_lifecycle=None,
         archive_runtime=None,
+        cheat_service=None,
     ):
 
         super().__init__()
+
+        self.setObjectName(
+            "LibraryGameDetails"
+        )
 
 
         self.current_game = None
@@ -78,6 +105,10 @@ class GameDetails(QWidget):
             presentation_resolver_provider
         )
 
+        self.presentation_store = (
+            presentation_store
+        )
+
 
         self.config = ConfigLoader().load()
 
@@ -103,15 +134,88 @@ class GameDetails(QWidget):
             else ArchiveRuntime()
         )
 
+        self.cheat_service = (
+            cheat_service
+            if cheat_service is not None
+            else CheatService()
+        )
+
 
         self.diagnostics = LaunchDiagnostics()
 
 
 
-        main = QVBoxLayout()
+        outer = QVBoxLayout(
+            self
+        )
+
+        outer.setContentsMargins(
+            0,
+            0,
+            0,
+            0,
+        )
+
+        outer.setSpacing(
+            0
+        )
+
+        self.details_scroll = QScrollArea(
+            self
+        )
+
+        self.details_scroll.setObjectName(
+            "LibraryGameDetailsScroll"
+        )
+
+        self.details_scroll.setWidgetResizable(
+            True
+        )
+
+        self.details_scroll.setFrameShape(
+            QScrollArea.Shape.NoFrame
+        )
+
+        self.details_scroll.setHorizontalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAlwaysOff
+        )
+
+        self.details_scroll.setVerticalScrollBarPolicy(
+            Qt.ScrollBarPolicy.ScrollBarAsNeeded
+        )
+
+        self.details_content = _GameDetailsScrollContent()
+
+        self.details_content.setObjectName(
+            "LibraryGameDetailsContent"
+        )
+
+        self.details_content.setMinimumWidth(
+            0
+        )
+
+        self.details_content.setSizePolicy(
+            QSizePolicy.Policy.Ignored,
+            QSizePolicy.Policy.Preferred,
+        )
+
+        main = QVBoxLayout(
+            self.details_content
+        )
 
 
-        top = QHBoxLayout()
+        top = QVBoxLayout()
+
+        top.setContentsMargins(
+            0,
+            0,
+            0,
+            0,
+        )
+
+        top.setSpacing(
+            10
+        )
 
 
 
@@ -119,10 +223,26 @@ class GameDetails(QWidget):
             "🎮"
         )
 
+        self.cover.setObjectName(
+            "LibraryDetailsCover"
+        )
 
-        self.cover.setFixedSize(
-            250,
-            320
+
+        self.cover.setMinimumHeight(
+            220
+        )
+
+        self.cover.setMaximumHeight(
+            300
+        )
+
+        self.cover.setMinimumWidth(
+            0
+        )
+
+        self.cover.setSizePolicy(
+            QSizePolicy.Policy.Expanding,
+            QSizePolicy.Policy.Preferred,
         )
 
 
@@ -144,11 +264,41 @@ class GameDetails(QWidget):
             "Select a game"
         )
 
+        self.title.setObjectName(
+            "LibraryDetailsTitle"
+        )
+
+        self.title.setWordWrap(
+            True
+        )
+
+        self.title.setSizePolicy(
+            QSizePolicy.Policy.Ignored,
+            QSizePolicy.Policy.Preferred,
+        )
+
 
         self.metadata = QLabel()
 
+        self.metadata.setObjectName(
+            "LibraryDetailsMetadata"
+        )
+
+        self.metadata.setWordWrap(
+            True
+        )
+
+        self.metadata.setSizePolicy(
+            QSizePolicy.Policy.Ignored,
+            QSizePolicy.Policy.Preferred,
+        )
+
 
         self.description = QTextEdit()
+
+        self.description.setObjectName(
+            "LibraryDetailsDescription"
+        )
 
 
         self.description.setReadOnly(
@@ -175,6 +325,16 @@ class GameDetails(QWidget):
             info
         )
 
+        top.setStretch(
+            0,
+            0,
+        )
+
+        top.setStretch(
+            1,
+            0,
+        )
+
 
         main.addLayout(
             top
@@ -186,6 +346,10 @@ class GameDetails(QWidget):
             "Launch Profile"
         )
 
+        self.profile.setObjectName(
+            "LibraryLaunchProfile"
+        )
+
 
         main.addWidget(
             self.profile
@@ -195,6 +359,10 @@ class GameDetails(QWidget):
 
         self.favorite_button = QPushButton(
             "☆ Add to Favorites"
+        )
+
+        self.favorite_button.setObjectName(
+            "LibraryFavoriteAction"
         )
 
         self.favorite_button.setEnabled(
@@ -214,6 +382,10 @@ class GameDetails(QWidget):
             "＋ Add to Collection"
         )
 
+        self.collection_button.setObjectName(
+            "LibraryCollectionAction"
+        )
+
         self.collection_button.setEnabled(
             False
         )
@@ -229,6 +401,10 @@ class GameDetails(QWidget):
 
         self.launch_button = QPushButton(
             "▶ Launch Game"
+        )
+
+        self.launch_button.setObjectName(
+            "LibraryLaunchAction"
         )
 
         self.launch_button.setEnabled(
@@ -250,6 +426,10 @@ class GameDetails(QWidget):
             "■ Stop Game"
         )
 
+        self.stop_button.setObjectName(
+            "LibraryStopAction"
+        )
+
         self.stop_button.setEnabled(
             False
         )
@@ -269,6 +449,10 @@ class GameDetails(QWidget):
             "Ready when you are."
         )
 
+        self.launch_status.setObjectName(
+            "LibraryLaunchStatus"
+        )
+
         self.launch_status.setWordWrap(
             True
         )
@@ -278,10 +462,55 @@ class GameDetails(QWidget):
         )
 
 
-        self.setLayout(
-            main
+
+        self.presentation_studio = PresentationStudio(
+            presentation_store=(
+                self.presentation_store
+            ),
+            presentation_resolver_provider=(
+                self.presentation_resolver_provider
+            ),
+            parent=self,
         )
 
+        main.addWidget(
+            self.presentation_studio
+        )
+
+        main.addStretch(
+            1
+        )
+
+        self.details_scroll.setWidget(
+            self.details_content
+        )
+
+        outer.addWidget(
+            self.details_scroll
+        )
+
+
+
+    def _reset_details_scroll_position(
+        self
+    ):
+        """
+        Start a newly-selected Game Details context at the top.
+
+        The inspector is intentionally vertically scrollable.
+        Scroll position belongs to the current inspection
+        context and must not leak into the next selected game
+        or the empty-selection state.
+        """
+
+        bar = (
+            self.details_scroll
+            .verticalScrollBar()
+        )
+
+        bar.setValue(
+            bar.minimum()
+        )
 
 
     def show_game(
@@ -542,7 +771,11 @@ class GameDetails(QWidget):
             )
         )
 
+        self.presentation_studio.set_game(
+            self.current_game
+        )
 
+        self._reset_details_scroll_position()
 
     def _refresh_cover(self):
 
@@ -872,6 +1105,180 @@ class GameDetails(QWidget):
         self._refresh_launch_button()
 
 
+    def _select_game_edition(
+        self,
+    ):
+        """
+        Return the physical edition selected for this launch.
+
+        Canonical Library entries with one physical edition launch
+        directly. Multi-edition families use RetroVault's grouped
+        Game Edition Launcher.
+
+        Cancelling selection aborts only this launch attempt and does
+        not alter canonical Library identity.
+        """
+
+        if self.current_game is None:
+            return None
+
+        return GameEditionLauncher.choose(
+            self.current_game,
+            self,
+        )
+
+
+    def _launch_target_from_variant(
+        self,
+        variant,
+    ):
+        """
+        Build a launch-time game view for a selected physical edition.
+
+        The canonical Library object remains untouched. Presentation
+        resolution, core selection, validation and launch all receive
+        the selected edition's ROM while inheriting canonical metadata
+        that is shared by the game family.
+        """
+
+        if (
+            self.current_game is None
+            or not isinstance(
+                variant,
+                dict,
+            )
+        ):
+            return self.current_game
+
+        from copy import copy
+
+        launch_game = copy(
+            self.current_game
+        )
+
+        variant_name = str(
+            variant.get(
+                "name",
+                "",
+            )
+            or ""
+        ).strip()
+
+        variant_rom = str(
+            variant.get(
+                "rom",
+                "",
+            )
+            or ""
+        ).strip()
+
+        variant_source = str(
+            variant.get(
+                "source",
+                "",
+            )
+            or ""
+        ).strip()
+
+        if variant_name:
+            launch_game.name = (
+                variant_name
+            )
+
+        if variant_rom:
+            launch_game.rom = (
+                variant_rom
+            )
+
+        if variant_source:
+            launch_game.source = (
+                variant_source
+            )
+
+        launch_game.variant_category = (
+            GameEditionLauncher
+            ._category_key(
+                variant.get(
+                    "category",
+                    "other",
+                )
+            )
+        )
+
+        launch_game.variant_label = str(
+            variant.get(
+                "label",
+                "",
+            )
+            or ""
+        )
+
+        launch_game.variant_region = str(
+            variant.get(
+                "region",
+                "",
+            )
+            or ""
+        )
+
+        launch_game.variant_language = str(
+            variant.get(
+                "language",
+                "",
+            )
+            or ""
+        )
+
+        launch_game.variant_revision = str(
+            variant.get(
+                "revision",
+                "",
+            )
+            or ""
+        )
+
+        launch_game.is_primary_variant = bool(
+            variant.get(
+                "preferred",
+                False,
+            )
+        )
+
+        return launch_game
+
+
+    def _select_cheats(
+        self,
+        launch_game,
+        archive_member="",
+    ):
+        """
+        Run Cheat Studio against the exact physical launch target.
+
+        Returning None means the user cancelled the launch.
+        Returning an empty list means continue without cheats.
+        """
+
+        return CheatStudio.choose(
+            game=launch_game,
+            archive_member=archive_member,
+            cheat_service=self.cheat_service,
+            parent=self,
+        )
+
+
+    def _cheat_runtime_file(
+        self,
+        cheats,
+    ):
+        if not cheats:
+            return ""
+
+        return self.cheat_service.runtime_file(
+            cheats
+        )
+
+
     def launch_game(self):
 
 
@@ -886,22 +1293,41 @@ class GameDetails(QWidget):
             self._refresh_launch_button()
             return
 
+        selected_variant = (
+            self._select_game_edition()
+        )
+
+        if selected_variant is None:
+            self._set_launch_status(
+                "Launch cancelled."
+            )
+            return
+
+        launch_game = (
+            self._launch_target_from_variant(
+                selected_variant
+            )
+        )
+
+        if launch_game is None:
+            return
+
         self._set_launch_status(
-            f'Preparing "{self.current_game.name}"...'
+            f'Preparing "{launch_game.name}"...'
         )
 
         archive_member = ""
 
         if (
             Path(
-                self.current_game.rom
+                launch_game.rom
             ).suffix.lower()
             == ".7z"
         ):
             try:
                 archive_member = (
                     self._select_archive_member(
-                        self.current_game.rom
+                        launch_game.rom
                     )
                 )
             except (
@@ -932,10 +1358,76 @@ class GameDetails(QWidget):
                 )
                 return
 
+        cheat_game = launch_game
+        runtime_rom = ""
+
+        if archive_member:
+            try:
+                runtime_rom = (
+                    self.archive_runtime
+                    .resolve(
+                        launch_game.rom,
+                        member=archive_member,
+                    )
+                )
+            except (
+                OSError,
+                ValueError,
+            ) as exc:
+                self._set_launch_status(
+                    "Unable to prepare archive variant: "
+                    f"{exc}"
+                )
+                return
+
+            cheat_game = copy.copy(
+                launch_game
+            )
+            cheat_game.rom = runtime_rom
+
+        try:
+            selected_cheats = (
+                self._select_cheats(
+                    cheat_game,
+                    "",
+                )
+            )
+        except (
+            OSError,
+            ValueError,
+        ) as exc:
+            self._set_launch_status(
+                "Unable to load Cheat Studio: "
+                f"{exc}"
+            )
+            return
+
+        if selected_cheats is None:
+            self._set_launch_status(
+                "Launch cancelled."
+            )
+            return
+
+        try:
+            cheat_file = (
+                self._cheat_runtime_file(
+                    selected_cheats
+                )
+            )
+        except (
+            OSError,
+            ValueError,
+        ) as exc:
+            self._set_launch_status(
+                "Unable to prepare cheats: "
+                f"{exc}"
+            )
+            return
+
         if self.process_lifecycle is not None:
             self.process_lifecycle.launch_requested(
                 getattr(
-                    self.current_game,
+                    launch_game,
                     "rvdb_platform_id",
                     "",
                 )
@@ -945,7 +1437,7 @@ class GameDetails(QWidget):
 
         core_path = self.core_resolver.find(
 
-            self.current_game.core
+            launch_game.core
 
         )
 
@@ -967,7 +1459,7 @@ class GameDetails(QWidget):
                     "because its required emulator core "
                     "could not be found.\n\n"
                     f"Required core: "
-                    f"{self.current_game.core}"
+                    f"{launch_game.core}"
                 ),
             )
 
@@ -994,7 +1486,7 @@ class GameDetails(QWidget):
                     self.presentation_resolver_provider()
                 )
                 presentation = resolver.resolve(
-                    self.current_game
+                    launch_game
                 )
                 shader = presentation.shader
                 overlay = presentation.overlay
@@ -1016,9 +1508,12 @@ class GameDetails(QWidget):
 
         profile = LaunchProfile(
 
-            game=self.current_game.name,
+            game=launch_game.name,
 
-            rom=self.current_game.rom,
+            rom=(
+                runtime_rom
+                or launch_game.rom
+            ),
 
             core=core_path,
 
@@ -1026,7 +1521,13 @@ class GameDetails(QWidget):
 
             shader=shader,
 
-            archive_member=archive_member
+            archive_member=(
+                ""
+                if runtime_rom
+                else archive_member
+            ),
+
+            cheat_file=cheat_file
 
         )
 
@@ -1291,3 +1792,9 @@ class GameDetails(QWidget):
         self._refresh_favorite_button()
         self._refresh_collection_button()
         self._refresh_launch_button()
+
+        self.presentation_studio.set_game(
+            None
+        )
+
+        self._reset_details_scroll_position()

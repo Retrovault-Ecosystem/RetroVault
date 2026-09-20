@@ -19,10 +19,18 @@ class DetailsView(QWidget):
 
         self.games = []
 
+        self.setObjectName(
+            "LibraryDetailsView"
+        )
+
         self.details = details
 
 
         self.list = QListWidget()
+
+        self.list.setObjectName(
+            "LibraryDetailsList"
+        )
 
 
         self.list.currentRowChanged.connect(

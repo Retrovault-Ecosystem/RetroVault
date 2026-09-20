@@ -21,8 +21,16 @@ class GameGrid(QWidget):
 
         self.details = details
 
+        self.setObjectName(
+            "LibraryGrid"
+        )
+
 
         self.container = QWidget()
+
+        self.container.setObjectName(
+            "LibraryGridContainer"
+        )
 
 
         self.layout = QGridLayout()
@@ -39,6 +47,10 @@ class GameGrid(QWidget):
 
 
         scroll = QScrollArea()
+
+        scroll.setObjectName(
+            "LibraryGridScroll"
+        )
 
 
         scroll.setWidgetResizable(

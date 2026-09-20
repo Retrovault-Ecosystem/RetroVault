@@ -36,11 +36,20 @@ class GalleryView(QWidget):
         bulk_import_handler=None,
         bulk_import_completed_handler=None,
         presentation_resolver_provider=None,
+        presentation_store=None,
         launcher=None,
         process_lifecycle=None,
     ):
 
         super().__init__()
+
+        self.presentation_store = (
+            presentation_store
+        )
+
+        self.setObjectName(
+            "LibraryPage"
+        )
 
 
         self.all_games = games
@@ -129,9 +138,26 @@ class GalleryView(QWidget):
             "RetroVault Library"
         )
 
+        title.setObjectName(
+            "LibraryTitle"
+        )
+
+        subtitle = QLabel(
+            "Browse, curate, launch, and present "
+            "your game collection."
+        )
+
+        subtitle.setObjectName(
+            "LibrarySubtitle"
+        )
+
 
         main_layout.addWidget(
             title
+        )
+
+        main_layout.addWidget(
+            subtitle
         )
 
 
@@ -150,6 +176,9 @@ class GalleryView(QWidget):
             ),
             presentation_resolver_provider=(
                 presentation_resolver_provider
+            ),
+            presentation_store=(
+                presentation_store
             ),
             launcher=launcher,
             process_lifecycle=process_lifecycle,
@@ -175,6 +204,10 @@ class GalleryView(QWidget):
 
 
         self.library_view_stack = QStackedWidget()
+
+        self.library_view_stack.setObjectName(
+            "LibraryViewStack"
+        )
 
 
         self.library_view_stack.addWidget(

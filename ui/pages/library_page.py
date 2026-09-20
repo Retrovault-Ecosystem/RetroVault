@@ -16,6 +16,7 @@ class LibraryPage(GalleryView):
         bulk_import_handler=None,
         bulk_import_completed_handler=None,
         presentation_resolver_provider=None,
+        presentation_store=None,
         launcher=None,
         process_lifecycle=None,
     ):
@@ -45,6 +46,9 @@ class LibraryPage(GalleryView):
             ),
             presentation_resolver_provider=(
                 presentation_resolver_provider
+            ),
+            presentation_store=(
+                presentation_store
             ),
             launcher=launcher,
             process_lifecycle=process_lifecycle,

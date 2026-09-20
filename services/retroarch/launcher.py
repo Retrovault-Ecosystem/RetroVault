@@ -3,6 +3,7 @@ import subprocess
 from models.launch_profile import LaunchProfile
 
 from .archive_runtime import ArchiveRuntime
+from .cheat_runtime import CheatRuntimeConfig
 from .overlay_runtime import OverlayRuntimeConfig
 from .shader_runtime import ShaderRuntimeConfig
 
@@ -14,6 +15,7 @@ class RetroArchLauncher:
         overlay_runtime=None,
         shader_runtime=None,
         archive_runtime=None,
+        cheat_runtime=None,
     ):
         self.command = "retroarch"
 
@@ -30,6 +32,11 @@ class RetroArchLauncher:
         self.archive_runtime = (
             archive_runtime
             or ArchiveRuntime()
+        )
+
+        self.cheat_runtime = (
+            cheat_runtime
+            or CheatRuntimeConfig()
         )
 
         self._active_process = None
@@ -161,6 +168,31 @@ class RetroArchLauncher:
                 [
                     "--appendconfig",
                     append_config,
+                ]
+            )
+
+        if profile.cheat_file:
+            try:
+                cheat_config = (
+                    self.cheat_runtime.create(
+                        profile.cheat_file,
+                        profile.core,
+                        runtime_rom,
+                    )
+                )
+            except (
+                OSError,
+                ValueError,
+            ) as error:
+                return {
+                    "success": False,
+                    "error": str(error),
+                }
+
+            command.extend(
+                [
+                    "--appendconfig",
+                    cheat_config,
                 ]
             )
 

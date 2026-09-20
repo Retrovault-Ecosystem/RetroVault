@@ -8,6 +8,26 @@ from services.library.models import Game
 from ui.library.details.game_details import GameDetails
 
 
+@pytest.fixture(autouse=True)
+def _continue_without_cheats(
+    monkeypatch,
+):
+    """
+    Legacy launch tests validate their original launch boundary,
+    not interactive Cheat Studio UX.
+
+    The production launch path retains CheatStudio.choose().
+    Headless tests deterministically select the supported
+    Continue Without Cheats path.
+    """
+
+    monkeypatch.setattr(
+        GameDetails,
+        "_select_cheats",
+        lambda self, launch_game, archive_member="": [],
+    )
+
+
 # RETROVAULT_LAUNCH_STATUS_MODAL_TEST_GUARD
 # Production launch warnings remain modal. Automated tests intercept
 # QMessageBox.warning so headless development regression cannot block.

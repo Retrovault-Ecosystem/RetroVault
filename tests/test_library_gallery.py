@@ -1410,6 +1410,12 @@ def test_successful_process_spawn_records_played_game(
         },
     )
 
+    monkeypatch.setattr(
+        view.details,
+        "_select_cheats",
+        lambda launch_game, archive_member="": [],
+    )
+
     view.details.launch_game()
 
     assert recorded == [
@@ -1455,6 +1461,12 @@ def test_process_spawn_failure_does_not_record_played_game(
             "success": False,
             "error": "spawn failed",
         },
+    )
+
+    monkeypatch.setattr(
+        view.details,
+        "_select_cheats",
+        lambda launch_game, archive_member="": [],
     )
 
     view.details.launch_game()
@@ -1511,6 +1523,12 @@ def test_validation_failure_does_not_record_played_game(
         ),
     )
 
+    monkeypatch.setattr(
+        view.details,
+        "_select_cheats",
+        lambda launch_game, archive_member="": [],
+    )
+
     view.details.launch_game()
 
     assert called == []
@@ -1551,6 +1569,12 @@ def test_successful_launch_without_played_handler_is_safe(
         lambda profile: {
             "success": True,
         },
+    )
+
+    monkeypatch.setattr(
+        view.details,
+        "_select_cheats",
+        lambda launch_game, archive_member="": [],
     )
 
     view.details.launch_game()
