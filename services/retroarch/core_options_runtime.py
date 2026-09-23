@@ -3,6 +3,10 @@ import os
 import tempfile
 from pathlib import Path
 
+from services.presentation.platform_policy import (
+    PlatformPresentationPolicyRegistry,
+)
+
 
 def _default_runtime_directory() -> Path:
     cache_home = os.environ.get(
@@ -40,15 +44,21 @@ class CoreOptionsRuntimeConfig:
     future platform contract deliberately specifies otherwise.
 
     Permanent RetroArch configuration is never modified.
+
+    POLICIES is retained only as a backward-compatible read-only-style
+    snapshot for callers/tests that inspect the historical public
+    attribute. Canonical policy ownership remains exclusively in
+    PlatformPresentationPolicyRegistry.
     """
 
     POLICIES = {
-        "fceumm": {
-            "fceumm_overscan_h_left": "0",
-            "fceumm_overscan_h_right": "0",
-            "fceumm_overscan_v_top": "0",
-            "fceumm_overscan_v_bottom": "0",
-        },
+        core_identity: dict(
+            policy.core_options
+        )
+        for policy in (
+            PlatformPresentationPolicyRegistry.all()
+        )
+        for core_identity in policy.core_identities
     }
 
     def __init__(
@@ -123,20 +133,24 @@ class CoreOptionsRuntimeConfig:
     def policy_for(
         cls,
         core,
+        platform_id=None,
     ):
         identity = cls._core_identity(
             core
         )
 
-        policy = cls.POLICIES.get(
-            identity
+        policy = (
+            PlatformPresentationPolicyRegistry.resolve(
+                platform_id=platform_id,
+                core_identity=identity,
+            )
         )
 
         if policy is None:
             return {}
 
         return dict(
-            policy
+            policy.core_options
         )
 
     @staticmethod

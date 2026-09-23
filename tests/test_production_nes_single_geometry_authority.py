@@ -115,14 +115,33 @@ def test_nes_full_crt_preset_cannot_create_secondary_geometry():
 
 
 def test_fceumm_runtime_preserves_all_four_frame_edges():
-    text = CORE_OPTIONS.read_text(encoding="utf-8")
-
-    expected = (
-        '"fceumm_overscan_h_left": "0"',
-        '"fceumm_overscan_h_right": "0"',
-        '"fceumm_overscan_v_top": "0"',
-        '"fceumm_overscan_v_bottom": "0"',
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+    )
+    from services.retroarch.core_options_runtime import (
+        CoreOptionsRuntimeConfig,
     )
 
-    for line in expected:
-        assert line in text
+    expected = {
+        "fceumm_overscan_h_left": "0",
+        "fceumm_overscan_h_right": "0",
+        "fceumm_overscan_v_top": "0",
+        "fceumm_overscan_v_bottom": "0",
+    }
+
+    policy = PlatformPresentationPolicyRegistry.resolve(
+        platform_id="platform.nintendo.nes",
+        core_identity="fceumm",
+    )
+
+    assert policy is not None
+    assert dict(policy.core_options) == expected
+
+    assert (
+        CoreOptionsRuntimeConfig.policy_for(
+            "/opt/retropie/libretrocores/"
+            "lr-fceumm/fceumm_libretro.so",
+            platform_id="platform.nintendo.nes",
+        )
+        == expected
+    )
