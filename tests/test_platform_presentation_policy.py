@@ -700,3 +700,30 @@ def test_every_ready_policy_uses_canonical_core_compatibility():
                 platform_id
             )
         )
+
+
+def test_sega_shared_genesis_plus_gx_core_policy_remains_unconfigured():
+    """Shared core authority must not imply shared presentation geometry."""
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+    )
+
+    targets = (
+        "platform.sega.game.gear",
+        "platform.sega.master.system",
+        "platform.sega.sg1000",
+    )
+
+    for platform_id in targets:
+        assert (
+            PlatformPresentationPolicyRegistry
+            .compatible_core_identities(platform_id)
+            == ("genesis_plus_gx",)
+        )
+
+        assert (
+            PlatformPresentationPolicyRegistry
+            .state_for(platform_id)
+            .value
+            == "unconfigured"
+        )

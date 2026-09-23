@@ -184,6 +184,15 @@ PLATFORM_CORE_COMPATIBILITY = {
     "platform.sega.genesis": (
         "genesis_plus_gx",
     ),
+    "platform.sega.game.gear": (
+        "genesis_plus_gx",
+    ),
+    "platform.sega.master.system": (
+        "genesis_plus_gx",
+    ),
+    "platform.sega.sg1000": (
+        "genesis_plus_gx",
+    ),
 }
 
 

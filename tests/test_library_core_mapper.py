@@ -132,3 +132,39 @@ def test_unconfigured_platforms_with_known_library_cores_do_not_become_presentat
             .for_platform(platform_id)
             is None
         )
+
+
+def test_sega_shared_genesis_plus_gx_library_aliases():
+    """Library aliases resolve through canonical policy, not presentation fallback."""
+    from services.library.core_mapper import (
+        CoreMapper,
+        PLATFORM_ALIASES,
+    )
+
+    expected = {
+        "Game Gear":
+            "platform.sega.game.gear",
+        "Sega Game Gear":
+            "platform.sega.game.gear",
+        "Master System":
+            "platform.sega.master.system",
+        "Sega Master System":
+            "platform.sega.master.system",
+        "SG-1000":
+            "platform.sega.sg1000",
+        "Sega SG-1000":
+            "platform.sega.sg1000",
+    }
+
+    mapper = CoreMapper()
+
+    for alias, platform_id in expected.items():
+        assert (
+            PLATFORM_ALIASES[alias]
+            == platform_id
+        )
+
+        assert (
+            mapper.get_core(alias)
+            == "genesis_plus_gx_libretro.so"
+        )

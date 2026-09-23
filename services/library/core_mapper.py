@@ -35,6 +35,12 @@ PLATFORM_ALIASES = {
 
     "Arcade":
         "platform.arcade",
+    'Game Gear': 'platform.sega.game.gear',
+    'Sega Game Gear': 'platform.sega.game.gear',
+    'Master System': 'platform.sega.master.system',
+    'Sega Master System': 'platform.sega.master.system',
+    'SG-1000': 'platform.sega.sg1000',
+    'Sega SG-1000': 'platform.sega.sg1000',
 }
 
 
