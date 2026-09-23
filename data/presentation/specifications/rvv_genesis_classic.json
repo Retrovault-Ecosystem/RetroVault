@@ -1,0 +1,59 @@
+{
+  "schema_version": 1,
+  "specification_id": "rvv.genesis.classic",
+  "platform_id": "platform.sega.genesis",
+  "platform_name": "Sega Genesis",
+  "presentation_name": "RetroVault Genesis Classic",
+  "production_core": {
+    "identity": "genesis_plus_gx",
+    "rvdb_core_id": "core.genesis.plus.gx"
+  },
+  "source_preservation": {
+    "contract": "preserve_legitimate_source_content",
+    "edges": [
+      "top",
+      "right",
+      "bottom",
+      "left"
+    ],
+    "crop_policy": "no_unvalidated_crop",
+    "title_specific_geometry": false,
+    "notes": [
+      "Legitimate source content must not be removed merely to force different titles into identical internal framing.",
+      "Internal title-screen or gameplay composition differences are content behavior and must not become per-title viewport policy.",
+      "Any core option capable of cropping or suppressing source borders must be explicitly qualified before production activation."
+    ]
+  },
+  "presentation_authority": {
+    "overlay_authority_count": 1,
+    "shader_authority_count": 1,
+    "session_isolation_required": true,
+    "clear_inherited_overlay": true,
+    "clear_inherited_shader": true,
+    "physical_geometry_owner": "platform_package",
+    "shader_may_own_physical_geometry": false
+  },
+  "geometry": {
+    "status": "unqualified",
+    "canvas": null,
+    "aperture": null,
+    "viewport": null,
+    "aspect_ratio_index": null,
+    "integer_scaling": null,
+    "viewport_bias_x": null,
+    "viewport_bias_y": null,
+    "crop_overscan": null,
+    "notes": [
+      "Physical geometry is intentionally unset in A.3-N.5-A.",
+      "NES geometry must not be copied.",
+      "SNES geometry must not be copied.",
+      "Genesis geometry must be derived and validated in A.3-N.5-B before production activation."
+    ]
+  },
+  "production_state": {
+    "presentation_policy_state": "unconfigured",
+    "production_package_complete": false,
+    "production_ready": false,
+    "live_calibration_complete": false
+  }
+}
