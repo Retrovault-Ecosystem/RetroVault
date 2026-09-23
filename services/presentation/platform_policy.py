@@ -1,6 +1,26 @@
 from dataclasses import dataclass
 from types import MappingProxyType
 from typing import Mapping
+from enum import Enum
+
+
+
+class PlatformPresentationPolicyState(str, Enum):
+    """
+    Readiness state for a canonical RVDB platform.
+
+    READY means a validated RetroVault presentation policy exists.
+
+    UNCONFIGURED means the platform is canonical and known, but its
+    production presentation policy has not yet been implemented.
+
+    UNCONFIGURED platforms may participate in safe discovery/fallback
+    when no core policy is requested, but must never borrow a foreign
+    platform policy through core identity.
+    """
+
+    READY = "ready"
+    UNCONFIGURED = "unconfigured"
 
 
 @dataclass(
@@ -136,6 +156,73 @@ class PlatformPresentationPolicy:
 
 
 class PlatformPresentationPolicyRegistry:
+    # Explicit readiness state for every canonical RVDB platform.
+    # Physical viewport geometry remains package-owned.
+    PLATFORM_STATES = {
+        "platform.arcade": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.atari.2600": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.atari.5200": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.atari.7800": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.atari.8.bit.computers": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.atari.jaguar": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.atari.lynx": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.atari.st": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.nintendo.3ds": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.nintendo.ds": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.nintendo.game.boy": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.nintendo.game.boy.advance": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.nintendo.game.boy.color": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.nintendo.gamecube": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.nintendo.n64": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.nintendo.nes": PlatformPresentationPolicyState.READY,
+        "platform.nintendo.snes": PlatformPresentationPolicyState.READY,
+        "platform.nintendo.wii": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.nintendo.wii.u": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.sega.dreamcast": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.sega.game.gear": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.sega.genesis": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.sega.master.system": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.sega.saturn": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.sega.sc3000": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.sega.sg1000": PlatformPresentationPolicyState.UNCONFIGURED,
+    }
+
+    @classmethod
+    def state_for(cls, platform_id):
+        if not isinstance(platform_id, str):
+            return None
+
+        platform_id = platform_id.strip()
+
+        if not platform_id:
+            return None
+
+        return cls.PLATFORM_STATES.get(platform_id)
+
+    @classmethod
+    def canonical_platform_ids(cls):
+        return tuple(cls.PLATFORM_STATES)
+
+    @classmethod
+    def ready_platform_ids(cls):
+        return tuple(
+            platform_id
+            for platform_id, state
+            in cls.PLATFORM_STATES.items()
+            if state
+            is PlatformPresentationPolicyState.READY
+        )
+
+    @classmethod
+    def unconfigured_platform_ids(cls):
+        return tuple(
+            platform_id
+            for platform_id, state
+            in cls.PLATFORM_STATES.items()
+            if state
+            is PlatformPresentationPolicyState.UNCONFIGURED
+        )
+
     """
     Resolve canonical RVDB platform identity and RetroArch core identity
     to one explicit RetroVault platform presentation policy.
@@ -231,33 +318,83 @@ class PlatformPresentationPolicyRegistry:
         platform_id=None,
         core_identity=None,
     ):
-        platform_policy = (
-            cls.for_platform(
-                platform_id
-            )
-            if platform_id is not None
+        # Canonical platform identity is meaningful only when supplied
+        # as a non-empty string. This preserves legacy callers and test
+        # doubles whose platform_id attribute may be absent or non-string.
+        explicit_platform_id = (
+            platform_id.strip()
+            if isinstance(platform_id, str)
             else None
         )
 
-        core_policy = (
-            cls.for_core(
-                core_identity
-            )
-            if core_identity is not None
+        if not explicit_platform_id:
+            explicit_platform_id = None
+
+        explicit_core_identity = (
+            core_identity.strip()
+            if isinstance(core_identity, str)
             else None
         )
 
+        if not explicit_core_identity:
+            explicit_core_identity = None
+
+        if explicit_platform_id is None:
+            return (
+                cls.for_core(
+                    explicit_core_identity
+                )
+                if explicit_core_identity is not None
+                else None
+            )
+
+        state = cls.state_for(
+            explicit_platform_id
+        )
+
+        platform_policy = cls.for_platform(
+            explicit_platform_id
+        )
+
+        # Safe discovery/fallback remains valid when no core policy is
+        # requested. A known UNCONFIGURED or unknown platform therefore
+        # resolves to no policy rather than raising.
+        if explicit_core_identity is None:
+            return platform_policy
+
+        core_policy = cls.for_core(
+            explicit_core_identity
+        )
+
+        # Once both an explicit platform and a recognized core policy
+        # exist, they must identify the same platform. This closes the
+        # cross-platform borrowing defect.
+        if core_policy is not None:
+            if platform_policy is None:
+                raise ValueError(
+                    "Explicit platform cannot borrow a foreign "
+                    "core presentation policy."
+                )
+
+            if platform_policy is not core_policy:
+                raise ValueError(
+                    "Platform/core presentation policy mismatch."
+                )
+
+            return platform_policy
+
+        # A READY platform paired with an unknown/unregistered core
+        # cannot be proven compatible.
         if (
-            platform_policy is not None
-            and core_policy is not None
-            and platform_policy is not core_policy
+            state
+            is PlatformPresentationPolicyState.READY
         ):
             raise ValueError(
-                "Platform/core presentation policy mismatch."
+                "Core identity does not match READY platform "
+                "presentation policy."
             )
 
-        return (
-            platform_policy
-            if platform_policy is not None
-            else core_policy
-        )
+        # UNCONFIGURED/unknown platform + unknown core has no policy
+        # available to borrow. Returning None is safe and preserves
+        # existing fallback semantics.
+        return None

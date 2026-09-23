@@ -242,3 +242,338 @@ def test_core_options_runtime_rejects_cross_platform_core_pair():
             "/tmp/snes9x_libretro.so",
             platform_id="platform.nintendo.nes",
         )
+
+
+def test_every_canonical_rvdb_platform_has_explicit_policy_state():
+    from pathlib import Path
+    import json
+
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+        PlatformPresentationPolicyState,
+    )
+
+    bundle = json.loads(
+        Path(
+            "data/rvdb/rvdb.bundle.json"
+        ).read_text(
+            encoding="utf-8"
+        )
+    )
+
+    platform_ids = set()
+
+    def walk(value):
+        if isinstance(value, dict):
+            for key in (
+                "platform_id",
+                "id",
+            ):
+                candidate = value.get(key)
+
+                if (
+                    isinstance(candidate, str)
+                    and candidate.startswith(
+                        "platform."
+                    )
+                ):
+                    platform_ids.add(
+                        candidate
+                    )
+
+            for child in value.values():
+                walk(child)
+
+        elif isinstance(value, list):
+            for child in value:
+                walk(child)
+
+    walk(bundle)
+
+    assert (
+        set(
+            PlatformPresentationPolicyRegistry
+            .canonical_platform_ids()
+        )
+        == platform_ids
+    )
+
+    for platform_id in platform_ids:
+        assert (
+            PlatformPresentationPolicyRegistry
+            .state_for(platform_id)
+            in {
+                PlatformPresentationPolicyState.READY,
+                PlatformPresentationPolicyState.UNCONFIGURED,
+            }
+        )
+
+
+def test_only_validated_nes_and_snes_are_ready():
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+    )
+
+    assert set(
+        PlatformPresentationPolicyRegistry
+        .ready_platform_ids()
+    ) == {
+        "platform.nintendo.nes",
+        "platform.nintendo.snes",
+    }
+
+
+def test_remaining_canonical_platforms_are_explicitly_unconfigured():
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+    )
+
+    unconfigured = set(
+        PlatformPresentationPolicyRegistry
+        .unconfigured_platform_ids()
+    )
+
+    assert len(unconfigured) == 24
+
+    assert (
+        "platform.sega.genesis"
+        in unconfigured
+    )
+
+    assert (
+        "platform.nintendo.n64"
+        in unconfigured
+    )
+
+    assert (
+        "platform.arcade"
+        in unconfigured
+    )
+
+
+def test_unconfigured_platform_without_core_preserves_safe_none_fallback():
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+    )
+
+    for platform_id in (
+        PlatformPresentationPolicyRegistry
+        .unconfigured_platform_ids()
+    ):
+        assert (
+            PlatformPresentationPolicyRegistry
+            .resolve(
+                platform_id=platform_id,
+            )
+            is None
+        )
+
+
+def test_unconfigured_platform_cannot_borrow_known_core_policy():
+    import pytest
+
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+    )
+
+    for platform_id in (
+        PlatformPresentationPolicyRegistry
+        .unconfigured_platform_ids()
+    ):
+        for core_identity in (
+            "fceumm",
+            "snes9x",
+        ):
+            with pytest.raises(
+                ValueError
+            ):
+                (
+                    PlatformPresentationPolicyRegistry
+                    .resolve(
+                        platform_id=platform_id,
+                        core_identity=core_identity,
+                    )
+                )
+
+
+def test_unknown_platform_without_core_preserves_safe_none_fallback():
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+    )
+
+    assert (
+        PlatformPresentationPolicyRegistry
+        .resolve(
+            platform_id="platform.unknown.test",
+        )
+        is None
+    )
+
+
+def test_unknown_platform_cannot_borrow_known_core_policy():
+    import pytest
+
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+    )
+
+    with pytest.raises(ValueError):
+        (
+            PlatformPresentationPolicyRegistry
+            .resolve(
+                platform_id="platform.unknown.test",
+                core_identity="fceumm",
+            )
+        )
+
+    with pytest.raises(ValueError):
+        (
+            PlatformPresentationPolicyRegistry
+            .resolve(
+                platform_id="platform.unknown.test",
+                core_identity="snes9x",
+            )
+        )
+
+
+def test_ready_platform_rejects_foreign_core_policy():
+    import pytest
+
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+    )
+
+    with pytest.raises(ValueError):
+        (
+            PlatformPresentationPolicyRegistry
+            .resolve(
+                platform_id="platform.nintendo.nes",
+                core_identity="snes9x",
+            )
+        )
+
+    with pytest.raises(ValueError):
+        (
+            PlatformPresentationPolicyRegistry
+            .resolve(
+                platform_id="platform.nintendo.snes",
+                core_identity="fceumm",
+            )
+        )
+
+
+def test_core_only_resolution_remains_backward_compatible():
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+    )
+
+    assert (
+        PlatformPresentationPolicyRegistry
+        .resolve(
+            core_identity="fceumm",
+        )
+        .platform_id
+        == "platform.nintendo.nes"
+    )
+
+    assert (
+        PlatformPresentationPolicyRegistry
+        .resolve(
+            core_identity="snes9x",
+        )
+        .platform_id
+        == "platform.nintendo.snes"
+    )
+
+
+def test_non_string_platform_identity_uses_legacy_core_path():
+    from unittest.mock import Mock
+
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+    )
+
+    platform_id = Mock()
+
+    policy = (
+        PlatformPresentationPolicyRegistry
+        .resolve(
+            platform_id=platform_id,
+            core_identity="fceumm",
+        )
+    )
+
+    assert (
+        policy.platform_id
+        == "platform.nintendo.nes"
+    )
+
+
+def test_policy_registry_remains_tuple_backed():
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+    )
+
+    assert isinstance(
+        PlatformPresentationPolicyRegistry.POLICIES,
+        tuple,
+    )
+
+
+def test_policy_dataclass_remains_constructible_after_state_model():
+    from dataclasses import is_dataclass
+
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicy,
+    )
+
+    assert is_dataclass(
+        PlatformPresentationPolicy
+    )
+
+    policy = PlatformPresentationPolicy(
+        platform_id="platform.test",
+        core_identities=("test_core",),
+        core_options={},
+    )
+
+    assert (
+        policy.platform_id
+        == "platform.test"
+    )
+
+
+def test_policy_state_model_contains_no_physical_geometry():
+    from dataclasses import fields
+
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicy,
+    )
+
+    field_names = {
+        field.name
+        for field in fields(
+            PlatformPresentationPolicy
+        )
+    }
+
+    forbidden = {
+        "aspect_ratio_index",
+        "video_force_aspect",
+        "video_scale_integer",
+        "video_viewport_bias_x",
+        "video_viewport_bias_y",
+        "custom_viewport_x",
+        "custom_viewport_y",
+        "custom_viewport_width",
+        "custom_viewport_height",
+        "video_aspect_ratio",
+        "video_aspect_ratio_auto",
+        "video_crop_overscan",
+        "overlay",
+        "shader",
+    }
+
+    assert field_names.isdisjoint(
+        forbidden
+    )

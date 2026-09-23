@@ -3,6 +3,12 @@ import signal
 import subprocess
 
 from models.launch_profile import LaunchProfile
+from services.presentation.platform_policy import (
+    PlatformPresentationPolicyRegistry,
+)
+from services.presentation.production_package import (
+    ProductionPresentationPackageValidator,
+)
 
 from .archive_runtime import ArchiveRuntime
 from .cheat_runtime import CheatRuntimeConfig
@@ -165,6 +171,68 @@ class RetroArchLauncher:
                 }
 
             self._active_process = None
+
+        # Canonical RetroVault production presentation authority.
+        #
+        # Only an explicit canonical string platform identity can
+        # activate this boundary. Legacy callers retain their
+        # historical overlay/shader semantics unchanged.
+        platform_id = getattr(
+            profile,
+            "platform_id",
+            None,
+        )
+
+        canonical_platform_ids = set(
+            PlatformPresentationPolicyRegistry
+            .canonical_platform_ids()
+        )
+
+        is_canonical_platform = (
+            isinstance(platform_id, str)
+            and platform_id.strip()
+            in canonical_platform_ids
+        )
+
+        if is_canonical_platform:
+            platform_id = platform_id.strip()
+
+            overlay = getattr(
+                profile,
+                "overlay",
+                None,
+            )
+            shader = getattr(
+                profile,
+                "shader",
+                None,
+            )
+
+            has_overlay = (
+                isinstance(overlay, str)
+                and bool(overlay.strip())
+            )
+            has_shader = (
+                isinstance(shader, str)
+                and bool(shader.strip())
+            )
+
+            if has_overlay or has_shader:
+                try:
+                    ProductionPresentationPackageValidator.validate(
+                        platform_id=platform_id,
+                        core_identity=profile.core,
+                        overlay=overlay,
+                        shader=shader,
+                    )
+                except (
+                    OSError,
+                    ValueError,
+                ) as error:
+                    return {
+                        "success": False,
+                        "error": str(error),
+                    }
 
         try:
             runtime_rom = (
