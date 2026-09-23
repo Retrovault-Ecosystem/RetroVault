@@ -427,3 +427,118 @@ def test_native_nes_shader_runtime_descriptor_is_production_owned():
 
     assert "minimal" in text.lower()
     assert "no unwanted thick black inset" in text.lower()
+
+
+def test_native_nes_geometry_is_system_level_not_game_specific(
+    tmp_path,
+):
+    """
+    The human-approved NES geometry belongs to the native NES visual
+    package, not to an individual ROM/title.
+
+    Different NES games launched with the same production overlay must
+    therefore resolve the same RetroArch geometry and shader correction.
+    """
+    from pathlib import Path
+
+    from services.retroarch.overlay_runtime import (
+        OverlayRuntimeConfig,
+    )
+    from services.retroarch.shader_runtime import (
+        ShaderRuntimeConfig,
+    )
+
+    repository_root = Path(__file__).resolve().parents[1]
+
+    overlay = (
+        repository_root
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "RetroVault_NES_Classic.cfg"
+    )
+
+    assert overlay.is_file()
+
+    expected_runtime_lines = {
+        'aspect_ratio_index = "22"',
+        'video_force_aspect = "true"',
+        'custom_viewport_x = "0"',
+        'custom_viewport_y = "0"',
+        'custom_viewport_width = "1920"',
+        'custom_viewport_height = "1080"',
+    }
+
+    expected_shader_parameters = {
+        "HSM_NON_INTEGER_SCALE": "88.000000",
+        "HSM_SCREEN_POSITION_Y": "-3.000000",
+    }
+
+    # Deliberately use unrelated ROM identities. Geometry composition
+    # receives only the system-level overlay and therefore must remain
+    # invariant across titles.
+    games = (
+        tmp_path / "Alpha Game.nes",
+        tmp_path / "Beta Game.nes",
+        tmp_path / "Random Validation Title.nes",
+    )
+
+    runtime_payloads = []
+    shader_parameter_sets = []
+
+    runtime = OverlayRuntimeConfig(
+        tmp_path / "overlay-runtime"
+    )
+
+    for game in games:
+        game.write_bytes(b"NES")
+
+        generated = Path(
+            runtime.create(
+                str(overlay)
+            )
+        )
+
+        payload = generated.read_text(
+            encoding="utf-8"
+        )
+
+        for line in expected_runtime_lines:
+            assert line in payload
+
+        parameters = (
+            ShaderRuntimeConfig
+            .parameters_for_overlay(
+                str(overlay)
+            )
+        )
+
+        assert parameters == expected_shader_parameters
+
+        runtime_payloads.append(payload)
+        shader_parameter_sets.append(parameters)
+
+    assert len(set(runtime_payloads)) == 1
+
+    assert all(
+        parameters == expected_shader_parameters
+        for parameters in shader_parameter_sets
+    )
+
+    # Guard the architectural invariant directly: no ROM identity is
+    # embedded in or consulted by the geometry descriptors.
+    runtime_descriptor = overlay.with_suffix(
+        ".runtime.cfg"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    shader_descriptor = overlay.with_suffix(
+        ".shader.cfg"
+    ).read_text(
+        encoding="utf-8"
+    )
+
+    for game in games:
+        assert game.name not in runtime_descriptor
+        assert game.name not in shader_descriptor

@@ -235,3 +235,105 @@ Closure verification:
 - Inline-error/no-warning-popup contract: PASS.
 
 RVA1-C.16 is closed and protected.
+
+
+## RVA1-C.17-B.8 / A.10-A.39 — NES System-Level Geometry — COMPLETE
+
+Protected parent checkpoint:
+
+`cef6d6ddc15752e9493b98e018d726fec19197b2`
+
+A.10-A.39 closes the NES system-level presentation-geometry
+validation boundary.
+
+The human-approved A.35 NES geometry remains unchanged.
+
+### Production geometry ownership
+
+Read-only provenance and composition audits established that the
+approved NES presentation geometry is already owned by RetroVault's
+source-controlled native NES visual package:
+
+- `RetroVault_NES_Classic.cfg`
+- `RetroVault_NES_Classic.runtime.cfg`
+- `RetroVault_NES_Classic.shader.cfg`
+
+The deployed `/opt` NES package is byte-identical to the repository
+package for the overlay, runtime, and shader descriptors.
+
+Legacy external RetroArch state was not promoted into RetroVault.
+The inspected Flatpak live-proof configuration only activates the
+overlay, and the legacy Nestopia override predates this geometry
+boundary and does not supply the approved presentation correction.
+
+### Runtime composition contract
+
+Production launch composition consumes the native NES geometry
+automatically.
+
+`OverlayRuntimeConfig` resolves the sibling `.runtime.cfg` descriptor
+from the selected NES overlay and places its approved RetroArch
+geometry controls into RetroVault's transient `--appendconfig`.
+
+The protected NES runtime contract remains:
+
+- `aspect_ratio_index = "22"`
+- `video_force_aspect = "true"`
+- `custom_viewport_x = "0"`
+- `custom_viewport_y = "0"`
+- `custom_viewport_width = "1920"`
+- `custom_viewport_height = "1080"`
+
+`ShaderRuntimeConfig` independently resolves the sibling
+`.shader.cfg` descriptor and composes the approved shader correction
+into the transient shader preset used by the production launcher.
+
+The protected NES shader correction remains exactly:
+
+- `HSM_NON_INTEGER_SCALE = "88.000000"`
+- `HSM_SCREEN_POSITION_Y = "-3.000000"`
+
+No additional HSM geometry controls are introduced.
+
+### System-level invariant
+
+The NES geometry contract belongs to the native NES presentation
+package rather than to an individual ROM identity.
+
+A durable regression now verifies that multiple unrelated NES game
+identities using the same production NES overlay resolve identical
+runtime geometry and identical shader correction.
+
+This protects the intended system-level behavior against accidental
+future conversion into title-specific geometry and directly covers the
+random-title consistency concern that initiated this validation pass.
+
+Per-game presentation assignment remains supported by the general RVV
+architecture, but the approved NES Classic geometry itself contains no
+ROM/title-specific dependency.
+
+### A.39 validation
+
+A.39 validation established:
+
+- real production NES runtime-descriptor composition: PASS;
+- real production NES shader-descriptor parsing: PASS;
+- transient shader composition: PASS;
+- system-level multi-title geometry regression: PASS;
+- NES production-asset regression: 10 passed;
+- production-composition regression: 74 passed;
+- targeted NES / RetroArch / RVV regression: 709 passed;
+- complete RetroVault regression: 1435 passed;
+- Git diff integrity: PASS; and
+- protected parent integrity: PASS.
+
+No production geometry, artwork, shader values, RetroArch global
+configuration, core override, or external runtime state was modified
+during A.39.
+
+### Protected result
+
+The A.35 human-approved NES geometry is now durably protected as a
+source-controlled, system-level production contract.
+
+**RVA1-C.17-B.8 / A.10-A.39 is complete.**
