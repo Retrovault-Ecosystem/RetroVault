@@ -541,6 +541,57 @@ def test_retroarch_view_missing_frontend(
     )
 
 
+
+def test_n64_mupen64plus_next_real_bundle_authority():
+    service = RVDBService.from_bundle(
+        REAL_BUNDLE
+    )
+
+    platform = service.platform_view(
+        "platform.nintendo.n64"
+    )
+
+    assert platform is not None
+
+    supported_ids = tuple(
+        core.id
+        for core in platform.cores
+    )
+
+    assert supported_ids == (
+        "core.mupen64plus.next",
+    )
+
+    view = service.retroarch_view()
+
+    assert view is not None
+
+    n64_core = next(
+        core
+        for core in view.cores
+        if core.id
+        == "core.mupen64plus.next"
+    )
+
+    assert n64_core.name == (
+        "Mupen64Plus-Next"
+    )
+
+    assert n64_core.platforms == (
+        "Nintendo 64",
+    )
+
+    assert n64_core.playability == (
+        "playable",
+    )
+
+    assert n64_core.evidence_count == 3
+
+    assert n64_core.frontends == (
+        "RetroArch",
+    )
+
+
 def test_retroarch_view_real_bundle():
     service = RVDBService.from_bundle(
         REAL_BUNDLE
@@ -565,6 +616,7 @@ def test_retroarch_view_real_bundle():
         "bsnes",
         "Genesis Plus GX",
         "Mesen",
+        "Mupen64Plus-Next",
         "Snes9x",
     ]
 
