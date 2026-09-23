@@ -337,3 +337,201 @@ The A.35 human-approved NES geometry is now durably protected as a
 source-controlled, system-level production contract.
 
 **RVA1-C.17-B.8 / A.10-A.39 is complete.**
+
+## RVA1-C.17-B / A.3-L — Universal Presentation Authority Repair — COMPLETE
+
+Protected engineering checkpoint:
+
+`6ab5cf9c681984bb15a2d3418eb07ea1bb2ff009`
+
+Commit:
+
+`fix: enforce universal RetroVault presentation authority`
+
+A.3-L supersedes the earlier NES A.10-A.39 runtime geometry values after
+expanded production validation exposed launch-state inheritance,
+duplicate-presentation risk, source-edge cropping, shader-side geometry,
+archive-format coverage gaps, and RetroArch process-lifecycle ownership
+requirements.
+
+The historical A.10-A.39 section above remains preserved as development
+history. Its 1920x1080 viewport and 88% / -3 shader correction are not
+the current NES production contract.
+
+### Universal presentation-authority architecture
+
+RetroVault now establishes one launch-scoped presentation authority.
+
+Production launch composition:
+
+- clears inherited RetroArch overlay state before applying RetroVault's
+  selected overlay;
+- clears inherited shader state before applying RetroVault's selected
+  shader;
+- owns the final physical gameplay viewport through RetroVault's runtime
+  descriptor;
+- preserves emulator source content before final viewport composition;
+- prevents the CRT shader from becoming a second scale, crop, aspect, or
+  position authority;
+- keeps presentation geometry system-level rather than title-specific;
+  and
+- owns the complete RetroArch launch process group so wrapper, sandbox,
+  and emulator descendants are terminated and reaped together.
+
+This architecture is intended to be reusable across supported RetroVault
+platforms rather than implemented as per-game launch correction.
+
+### Current NES production geometry
+
+The protected NES runtime contract is:
+
+- `aspect_ratio_index = "22"`
+- `video_force_aspect = "true"`
+- `video_aspect_ratio = "-1.000000"`
+- `video_aspect_ratio_auto = "false"`
+- `video_crop_overscan = "false"`
+- `video_scale_integer = "false"`
+- `video_viewport_bias_x = "0.500000"`
+- `video_viewport_bias_y = "0.500000"`
+- `custom_viewport_x = "355"`
+- `custom_viewport_y = "100"`
+- `custom_viewport_width = "1206"`
+- `custom_viewport_height = "762"`
+
+The fixed 1206x762 viewport matches the transparent aperture in the
+RetroVault NES Classic 1920x1080 overlay.
+
+No per-title NES geometry is permitted by this production descriptor.
+
+### NES source preservation
+
+FCEUmm launch-scoped core options preserve legitimate source content on
+all four edges:
+
+- `fceumm_overscan_h_left = "0"`
+- `fceumm_overscan_h_right = "0"`
+- `fceumm_overscan_v_top = "0"`
+- `fceumm_overscan_v_bottom = "0"`
+
+Cropping is therefore not used to force individual games into the
+RetroVault aperture.
+
+Game-authored internal positioning or black regions remain legitimate
+game content and do not alter the system-level RetroVault viewport.
+
+### Geometry-neutral CRT contract
+
+RetroVault/RetroArch owns physical geometry.
+
+The NES runtime shader descriptor now uses:
+
+- `HSM_NON_INTEGER_SCALE = "100.000000"`
+- `HSM_SCREEN_POSITION_Y = "0.000000"`
+
+The persistent RetroVault NES CRT preset establishes the neutral
+baseline:
+
+- horizontal position = 0;
+- vertical position = 0;
+- zoom/crop = 0;
+- top/bottom/left/right crop = 0; and
+- non-integer scale = 100%.
+
+The obsolete shader-side geometry compensation is not part of the
+current production contract.
+
+### Single bezel / artwork authority
+
+The production NES package uses one RetroVault native overlay authority.
+
+Launch-scoped session isolation prevents stale global, legacy RetroPie,
+or per-game RetroArch overlay state from composing a second bezel over
+the selected RetroVault presentation.
+
+The CRT preset is screen-only treatment and does not provide a second
+bezel/artwork authority.
+
+The same single-authority contract is protected for the existing SNES
+production presentation without changing the previously human-approved
+SNES physical geometry.
+
+### Archive and launch coverage
+
+The production archive runtime now recognizes NES `.unf` / `.unif`
+content in addition to the established NES content formats.
+
+The GoodNES validation corpus established:
+
+- physical archives: 1971;
+- RetroVault-qualified archives: 1971;
+- failed archives: 0;
+- playable members inspected: 22094;
+- `.unf` playable members recognized: 155; and
+- RetroArch instances launched by the full-corpus static audit: 0.
+
+Full-corpus validation is intentionally static. RetroVault must not
+mass-launch the game corpus.
+
+Representative live validation is bounded to a maximum of one real
+emulator launch tree at a time.
+
+### Process-lifecycle safety
+
+Production RetroArch launches receive a dedicated process session/group.
+
+RetroVault shutdown signals the complete owned process group and
+synchronously reaps the launcher-owned process root.
+
+Live validation established that the shell wrapper, Flatpak/bwrap
+infrastructure, and actual `/app/bin/retroarch` process belong to one
+owned launch tree rather than independent emulator launches.
+
+The safety invariant for future live validation is:
+
+**maximum one real emulator instance / one production launch tree at a
+time.**
+
+### Production validation
+
+A.3-L established, among other protected evidence:
+
+- complete GoodNES archive qualification: 1971 / 1971;
+- representative 24-title production launcher corpus: PASS;
+- Touch Down Fever transient launch anomaly not reproduced across
+  subsequent controlled production launches;
+- launch-scoped overlay/shader isolation: PASS;
+- FCEUmm four-edge source preservation: PASS;
+- canonical NES viewport authority: PASS;
+- geometry-neutral CRT shader contract: PASS;
+- single RetroVault overlay authority: PASS;
+- `.unf` / `.unif` archive support: PASS;
+- dedicated RetroArch process-group ownership: PASS;
+- clean process-group termination and synchronous reap: PASS;
+- bounded native RetroArch screenshot generation: PASS;
+- native screenshot behavior classified as render-region capture rather
+  than complete compositor canvas;
+- static overlay aperture classification: exact 1206x762 transparent
+  aperture at X355 Y100;
+- critical A.3-L regression: 130 passed;
+- full pre-closure RetroVault regression: 1484 passed;
+- Python and Git integrity gates: PASS;
+- protected atomic commit and push: PASS;
+- local/origin synchronization: PASS;
+- clean worktree: PASS; and
+- final live RetroArch state: ZERO.
+
+### Protected result
+
+A.3-L replaces fragmented/inherited NES presentation behavior with a
+launch-scoped single-authority production contract.
+
+The repair is intentionally architectural: platform packages may supply
+their own historically appropriate geometry and presentation assets, but
+a game launch must not accumulate competing geometry, overlay, shader,
+or inherited RetroArch authorities.
+
+NES is the validated production proof of this contract.
+
+Existing human-approved SNES geometry remains protected and unchanged.
+
+**RVA1-C.17-B / A.3-L is complete and protected.**
