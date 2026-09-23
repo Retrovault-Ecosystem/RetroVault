@@ -19,6 +19,8 @@ class ArchiveRuntime:
 
     PLAYABLE_EXTENSIONS = {
         ".nes",
+        ".unf",
+        ".unif",
         ".sfc",
         ".smc",
         ".bin",

@@ -171,6 +171,193 @@ def test_unsupported_files_are_ignored(
     assert resolved.name == "Game.nes"
 
 
+@pytest.mark.parametrize(
+    "extension",
+    [
+        ".unf",
+        ".unif",
+    ],
+)
+def test_unif_family_archive_member_is_playable(
+    tmp_path,
+    extension,
+):
+    archive = _make_7z(
+        tmp_path,
+        "UNIF Game.7z",
+        [
+            (
+                f"UNIF Game (U) [!]{extension}",
+                b"UNIF-ROM",
+            ),
+        ],
+    )
+
+    runtime = ArchiveRuntime(
+        cache_root=(
+            tmp_path
+            / "cache"
+        )
+    )
+
+    members = runtime.playable_members(
+        archive
+    )
+
+    assert members == [
+        f"UNIF Game (U) [!]{extension}",
+    ]
+
+    resolved = Path(
+        runtime.resolve(
+            archive
+        )
+    )
+
+    assert resolved.is_file()
+    assert resolved.suffix == extension
+    assert (
+        resolved.read_bytes()
+        == b"UNIF-ROM"
+    )
+
+
+@pytest.mark.parametrize(
+    "extension",
+    [
+        ".unf",
+        ".unif",
+    ],
+)
+def test_unif_family_unsafe_member_is_rejected(
+    tmp_path,
+    extension,
+):
+    archive = (
+        tmp_path
+        / "Unsafe UNIF.7z"
+    )
+
+    archive.write_bytes(
+        b"archive"
+    )
+
+    runtime = ArchiveRuntime(
+        cache_root=(
+            tmp_path
+            / "cache"
+        ),
+        executable="7z",
+    )
+
+    members = [
+        f"../escape{extension}",
+        f"nested/Safe Game (U) [!]{extension}",
+    ]
+
+    with patch.object(
+        runtime,
+        "_list_members",
+        return_value=members,
+    ):
+        assert runtime.playable_members(
+            archive
+        ) == [
+            f"nested/Safe Game (U) [!]{extension}",
+        ]
+
+
+@pytest.mark.parametrize(
+    "extension",
+    [
+        ".unf",
+        ".unif",
+    ],
+)
+def test_preferred_member_supports_unif_family(
+    tmp_path,
+    extension,
+):
+    archive = (
+        tmp_path
+        / "UNIF Ranked Game.7z"
+    )
+
+    archive.write_bytes(
+        b"archive"
+    )
+
+    runtime = ArchiveRuntime(
+        cache_root=(
+            tmp_path
+            / "cache"
+        ),
+        executable="7z",
+    )
+
+    members = [
+        f"UNIF Ranked Game (U) [b1]{extension}",
+        f"UNIF Ranked Game (U) [!]{extension}",
+    ]
+
+    with patch.object(
+        runtime,
+        "_list_members",
+        return_value=members,
+    ):
+        assert (
+            runtime.preferred_member(
+                archive
+            )
+            == (
+                "UNIF Ranked Game "
+                f"(U) [!]{extension}"
+            )
+        )
+
+
+@pytest.mark.parametrize(
+    "extension",
+    [
+        ".unf",
+        ".unif",
+    ],
+)
+def test_preferred_from_members_supports_unif_family(
+    tmp_path,
+    extension,
+):
+    archive = (
+        tmp_path
+        / "UNIF Variant Game.7z"
+    )
+
+    archive.write_bytes(
+        b"archive"
+    )
+
+    runtime = ArchiveRuntime()
+
+    selected = runtime.preferred_from_members(
+        archive,
+        [
+            (
+                "UNIF Variant Game "
+                f"(U) [b1]{extension}"
+            ),
+            (
+                "UNIF Variant Game "
+                f"(U) [!]{extension}"
+            ),
+        ],
+    )
+
+    assert selected == (
+        "UNIF Variant Game "
+        f"(U) [!]{extension}"
+    )
+
+
 def test_archive_without_rom_is_rejected(
     tmp_path,
 ):

@@ -379,13 +379,27 @@ def test_native_nes_runtime_descriptor_is_production_owned():
     assert runtime_descriptor.read_text(
         encoding="utf-8"
     ) == (
+        '# RetroVault NES Classic\n'
+        '#\n'
+        '# Universal launch-scoped final geometry authority.\n'
+        '# No per-title geometry is permitted in this descriptor.\n'
+        '# FCEUmm preserves the complete source frame; this runtime owns\n'
+        '# the final RetroArch viewport presented inside the fixed bezel.\n'
+        '\n'
         'aspect_ratio_index = "22"\n'
         'video_force_aspect = "true"\n'
-        'custom_viewport_x = "0"\n'
-        'custom_viewport_y = "0"\n'
-        'custom_viewport_width = "1920"\n'
-        'custom_viewport_height = "1080"\n'
+        'video_aspect_ratio = "-1.000000"\n'
+        'video_aspect_ratio_auto = "false"\n'
+        'video_crop_overscan = "false"\n'
+        'video_scale_integer = "false"\n'
+        'video_viewport_bias_x = "0.500000"\n'
+        'video_viewport_bias_y = "0.500000"\n'
+        'custom_viewport_x = "355"\n'
+        'custom_viewport_y = "100"\n'
+        'custom_viewport_width = "1206"\n'
+        'custom_viewport_height = "762"\n'
     )
+
 
 
 def test_native_nes_shader_runtime_descriptor_is_production_owned():
@@ -406,11 +420,11 @@ def test_native_nes_shader_runtime_descriptor_is_production_owned():
     )
 
     assert (
-        'HSM_NON_INTEGER_SCALE = "88.000000"'
+        'HSM_NON_INTEGER_SCALE = "100.000000"'
         in text
     )
     assert (
-        'HSM_SCREEN_POSITION_Y = "-3.000000"'
+        'HSM_SCREEN_POSITION_Y = "0.000000"'
         in text
     )
 
@@ -463,15 +477,21 @@ def test_native_nes_geometry_is_system_level_not_game_specific(
     expected_runtime_lines = {
         'aspect_ratio_index = "22"',
         'video_force_aspect = "true"',
-        'custom_viewport_x = "0"',
-        'custom_viewport_y = "0"',
-        'custom_viewport_width = "1920"',
-        'custom_viewport_height = "1080"',
+        'video_aspect_ratio = "-1.000000"',
+        'video_aspect_ratio_auto = "false"',
+        'video_crop_overscan = "false"',
+        'video_scale_integer = "false"',
+        'video_viewport_bias_x = "0.500000"',
+        'video_viewport_bias_y = "0.500000"',
+        'custom_viewport_x = "355"',
+        'custom_viewport_y = "100"',
+        'custom_viewport_width = "1206"',
+        'custom_viewport_height = "762"',
     }
 
     expected_shader_parameters = {
-        "HSM_NON_INTEGER_SCALE": "88.000000",
-        "HSM_SCREEN_POSITION_Y": "-3.000000",
+        "HSM_NON_INTEGER_SCALE": "100.000000",
+        "HSM_SCREEN_POSITION_Y": "0.000000",
     }
 
     # Deliberately use unrelated ROM identities. Geometry composition
@@ -542,3 +562,32 @@ def test_native_nes_geometry_is_system_level_not_game_specific(
     for game in games:
         assert game.name not in runtime_descriptor
         assert game.name not in shader_descriptor
+
+def test_nes_classic_runtime_explicitly_owns_all_retroarch_geometry():
+    runtime_path = (
+        Path(__file__).resolve().parents[1]
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "RetroVault_NES_Classic.runtime.cfg"
+    )
+
+    text = runtime_path.read_text(encoding="utf-8")
+
+    required = (
+        'aspect_ratio_index = "22"',
+        'video_force_aspect = "true"',
+        'video_aspect_ratio = "-1.000000"',
+        'video_aspect_ratio_auto = "false"',
+        'video_crop_overscan = "false"',
+        'video_scale_integer = "false"',
+        'video_viewport_bias_x = "0.500000"',
+        'video_viewport_bias_y = "0.500000"',
+        'custom_viewport_x = "355"',
+        'custom_viewport_y = "100"',
+        'custom_viewport_width = "1206"',
+        'custom_viewport_height = "762"',
+    )
+
+    for line in required:
+        assert line in text

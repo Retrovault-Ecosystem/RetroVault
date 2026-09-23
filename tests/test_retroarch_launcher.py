@@ -9,7 +9,9 @@ from services.retroarch.launcher import (
 
 
 def test_launcher_builds_exact_core_rom_command():
-    launcher = RetroArchLauncher()
+    launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
+    )
 
     profile = LaunchProfile(
         game="Test Game",
@@ -32,7 +34,8 @@ def test_launcher_builds_exact_core_rom_command():
     ]
 
     popen.assert_called_once_with(
-        expected
+        expected,
+        start_new_session=True,
     )
 
     assert result == {
@@ -42,7 +45,9 @@ def test_launcher_builds_exact_core_rom_command():
 
 
 def test_launcher_appends_config_after_rom():
-    launcher = RetroArchLauncher()
+    launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
+    )
 
     profile = LaunchProfile(
         game="Configured Game",
@@ -68,7 +73,8 @@ def test_launcher_appends_config_after_rom():
     ]
 
     popen.assert_called_once_with(
-        expected
+        expected,
+        start_new_session=True,
     )
 
     assert result == {
@@ -78,7 +84,9 @@ def test_launcher_appends_config_after_rom():
 
 
 def test_launcher_reports_process_spawn_failure():
-    launcher = RetroArchLauncher()
+    launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
+    )
 
     profile = LaunchProfile(
         game="Broken Game",
@@ -102,7 +110,8 @@ def test_launcher_reports_process_spawn_failure():
             "-L",
             "/cores/fceumm_libretro.so",
             "/roms/broken.nes",
-        ]
+        ],
+        start_new_session=True,
     )
 
     assert result == {
@@ -112,7 +121,9 @@ def test_launcher_reports_process_spawn_failure():
 
 
 def test_launcher_appends_shader_after_rom():
-    launcher = RetroArchLauncher()
+    launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
+    )
 
     profile = LaunchProfile(
         game="Shader Game",
@@ -138,7 +149,8 @@ def test_launcher_appends_shader_after_rom():
     ]
 
     popen.assert_called_once_with(
-        expected
+        expected,
+        start_new_session=True,
     )
 
     assert result == {
@@ -148,7 +160,9 @@ def test_launcher_appends_shader_after_rom():
 
 
 def test_launcher_composes_config_and_shader():
-    launcher = RetroArchLauncher()
+    launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
+    )
 
     profile = LaunchProfile(
         game="Presented Game",
@@ -177,13 +191,28 @@ def test_launcher_composes_config_and_shader():
     ]
 
     popen.assert_called_once_with(
-        expected
+        expected,
+        start_new_session=True,
     )
 
     assert result == {
         "success": True,
         "command": expected,
     }
+
+
+class FakeSessionConfig:
+    """
+    Preserve the pre-A.2 command expectations in tests that are not
+    testing universal session isolation.
+
+    Returning an empty path suppresses the session appendconfig for
+    those focused unit tests. Dedicated A.2 tests below verify the
+    production session contract explicitly.
+    """
+
+    def create(self, core_options_path=None):
+        return ""
 
 
 class FakeOverlayRuntime:
@@ -209,6 +238,7 @@ def test_launcher_appends_overlay_runtime_config():
     runtime = FakeOverlayRuntime()
 
     launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
         overlay_runtime=runtime
     )
 
@@ -240,7 +270,8 @@ def test_launcher_appends_overlay_runtime_config():
     ]
 
     popen.assert_called_once_with(
-        expected
+        expected,
+        start_new_session=True,
     )
 
     assert result == {
@@ -255,6 +286,7 @@ def test_launcher_composes_config_overlay_and_shader():
     )
 
     launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
         overlay_runtime=runtime
     )
 
@@ -288,7 +320,8 @@ def test_launcher_composes_config_overlay_and_shader():
     ]
 
     popen.assert_called_once_with(
-        expected
+        expected,
+        start_new_session=True,
     )
 
     assert result == {
@@ -308,6 +341,7 @@ def test_launcher_reports_overlay_runtime_failure():
             )
 
     launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
         overlay_runtime=(
             BrokenOverlayRuntime()
         )
@@ -381,6 +415,7 @@ def test_launcher_shader_without_runtime_parameters_passes_through():
     shader_runtime = FakeShaderRuntime()
 
     launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
         shader_runtime=shader_runtime
     )
 
@@ -411,7 +446,8 @@ def test_launcher_shader_without_runtime_parameters_passes_through():
     assert shader_runtime.resolve_calls == []
 
     popen.assert_called_once_with(
-        expected
+        expected,
+        start_new_session=True,
     )
 
     assert result == {
@@ -435,6 +471,7 @@ def test_launcher_wraps_selected_shader_when_overlay_has_parameters():
     )
 
     launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
         overlay_runtime=overlay_runtime,
         shader_runtime=shader_runtime,
     )
@@ -479,7 +516,8 @@ def test_launcher_wraps_selected_shader_when_overlay_has_parameters():
     ]
 
     popen.assert_called_once_with(
-        expected
+        expected,
+        start_new_session=True,
     )
 
     assert result == {
@@ -496,6 +534,7 @@ def test_launcher_does_not_synthesize_shader_for_overlay_only():
     )
 
     launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
         shader_runtime=shader_runtime
     )
 
@@ -540,6 +579,7 @@ def test_launcher_reports_shader_runtime_failure():
             return shader
 
     launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
         shader_runtime=BrokenShaderRuntime()
     )
 
@@ -573,6 +613,7 @@ def test_launcher_passes_explicit_archive_member_to_runtime():
     )
 
     launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
         archive_runtime=archive_runtime,
     )
 
@@ -615,6 +656,7 @@ def test_launcher_preserves_automatic_archive_selection_by_default():
     )
 
     launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
         archive_runtime=archive_runtime,
     )
 
@@ -674,6 +716,7 @@ def test_launcher_appends_ephemeral_cheat_runtime(
     cheat_runtime = FakeCheatRuntime()
 
     launcher = RetroArchLauncher(
+        session_config=FakeSessionConfig(),
         archive_runtime=FakeArchiveRuntime(),
         cheat_runtime=cheat_runtime,
     )
@@ -805,3 +848,346 @@ def test_cheat_runtime_uses_game_specific_database_contract(
             encoding="utf-8"
         )
     )
+
+
+def test_launcher_applies_clean_session_before_presentation(
+    monkeypatch,
+    tmp_path,
+):
+    """
+    Every RetroVault-controlled launch receives the same clean
+    presentation baseline before RetroVault overlay/shader state.
+
+    This is content- and platform-independent.
+    """
+    from models.launch_profile import LaunchProfile
+    from services.retroarch.launcher import RetroArchLauncher
+
+    calls = []
+
+    class SessionConfig:
+        def create(self, core_options_path=None):
+            calls.append(
+                "session"
+            )
+            return "/tmp/session.cfg"
+
+    class OverlayRuntime:
+        def create(
+            self,
+            overlay,
+        ):
+            calls.append(
+                "overlay"
+            )
+            return "/tmp/overlay.cfg"
+
+    class ShaderRuntime:
+        @staticmethod
+        def parameters_for_overlay(
+            overlay,
+        ):
+            calls.append(
+                "shader-parameters"
+            )
+            return {}
+
+    class ArchiveRuntime:
+        @staticmethod
+        def resolve(
+            rom,
+            member=None,
+        ):
+            calls.append(
+                "content"
+            )
+            return rom
+
+    class Process:
+        @staticmethod
+        def poll():
+            return None
+
+    captured = {}
+
+    def popen(command, **kwargs):
+        assert kwargs == {
+            "start_new_session": True,
+        }
+        captured["command"] = command
+        return Process()
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.subprocess.Popen",
+        popen,
+    )
+
+    rom = tmp_path / "game.rom"
+    rom.write_bytes(b"ROM")
+
+    core = tmp_path / "core_libretro.so"
+    core.write_bytes(b"CORE")
+
+    overlay = tmp_path / "platform.cfg"
+    overlay.write_text(
+        "overlays = \"1\"\n",
+        encoding="utf-8",
+    )
+
+    launcher = RetroArchLauncher(
+        session_config=SessionConfig(),
+        overlay_runtime=OverlayRuntime(),
+        shader_runtime=ShaderRuntime(),
+        archive_runtime=ArchiveRuntime(),
+    )
+
+    profile = LaunchProfile(
+        game="Universal Test",
+        rom=str(rom),
+        core=str(core),
+        overlay=str(overlay),
+        shader="",
+    )
+
+    result = launcher.launch(
+        profile
+    )
+
+    assert result["success"] is True
+
+    command = captured["command"]
+
+    session_index = command.index(
+        "/tmp/session.cfg"
+    )
+
+    overlay_index = command.index(
+        "/tmp/overlay.cfg"
+    )
+
+    assert session_index < overlay_index
+
+    assert calls[:3] == [
+        "content",
+        "session",
+        "overlay",
+    ]
+
+
+def test_launcher_clean_session_is_game_name_independent(
+    monkeypatch,
+    tmp_path,
+):
+    """
+    Different game identities must pass through the same universal
+    RetroVault session-isolation boundary.
+    """
+    from models.launch_profile import LaunchProfile
+    from services.retroarch.launcher import RetroArchLauncher
+
+    generated = []
+
+    class SessionConfig:
+        def create(self, core_options_path=None):
+            generated.append(
+                "session"
+            )
+            return "/tmp/session.cfg"
+
+    class ArchiveRuntime:
+        @staticmethod
+        def resolve(
+            rom,
+            member=None,
+        ):
+            return rom
+
+    class Process:
+        @staticmethod
+        def poll():
+            return 0
+
+    commands = []
+
+    def popen(command, **kwargs):
+        assert kwargs == {
+            "start_new_session": True,
+        }
+        commands.append(
+            command
+        )
+        return Process()
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.subprocess.Popen",
+        popen,
+    )
+
+    core = tmp_path / "core_libretro.so"
+    core.write_bytes(b"CORE")
+
+    launcher = RetroArchLauncher(
+        session_config=SessionConfig(),
+        archive_runtime=ArchiveRuntime(),
+    )
+
+    for name in (
+        "Alpha Game",
+        "Beta Game",
+        "Completely Different Platform Game",
+    ):
+        rom = (
+            tmp_path
+            / f"{name}.rom"
+        )
+
+        rom.write_bytes(b"ROM")
+
+        profile = LaunchProfile(
+            game=name,
+            rom=str(rom),
+            core=str(core),
+        )
+
+        result = launcher.launch(
+            profile
+        )
+
+        assert result["success"] is True
+
+        launcher.clear_exited_process()
+
+    assert generated == [
+        "session",
+        "session",
+        "session",
+    ]
+
+    for command in commands:
+        index = command.index(
+            "--appendconfig"
+        )
+
+        assert command[
+            index + 1
+        ] == "/tmp/session.cfg"
+
+
+def test_launch_injects_core_visible_area_policy_before_process(
+    monkeypatch,
+    tmp_path,
+):
+    from pathlib import Path
+    from unittest.mock import Mock
+
+    from services.retroarch.core_options_runtime import (
+        CoreOptionsRuntimeConfig,
+    )
+    from services.retroarch.session_config import (
+        RetroArchSessionConfig,
+    )
+
+    created = {}
+
+    class Process:
+        def poll(self):
+            return None
+
+    def fake_popen(command, **kwargs):
+        assert kwargs == {
+            "start_new_session": True,
+        }
+        created["command"] = command
+        return Process()
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.subprocess.Popen",
+        fake_popen,
+    )
+
+    core_options = CoreOptionsRuntimeConfig(
+        directory=(
+            tmp_path
+            / "core-options"
+        )
+    )
+
+    sessions = RetroArchSessionConfig(
+        directory=(
+            tmp_path
+            / "sessions"
+        )
+    )
+
+    launcher = RetroArchLauncher(
+        core_options_runtime=core_options,
+        session_config=sessions,
+    )
+
+    profile = Mock()
+    profile.core = "/cores/fceumm_libretro.so"
+    profile.rom = "/games/example.nes"
+    profile.source = ""
+    profile.config = ""
+    profile.overlay = ""
+    profile.cheat_file = ""
+    profile.shader = ""
+
+    result = launcher.launch(
+        profile
+    )
+
+    assert result["success"] is True
+
+    command = created[
+        "command"
+    ]
+
+    index = command.index(
+        "--appendconfig"
+    )
+
+    session_path = Path(
+        command[
+            index + 1
+        ]
+    )
+
+    payload = session_path.read_text(
+        encoding="utf-8"
+    )
+
+    prefix = (
+        'core_options_path = "'
+    )
+
+    option_line = next(
+        line
+        for line in payload.splitlines()
+        if line.startswith(prefix)
+    )
+
+    options_path = Path(
+        option_line[
+            len(prefix):-1
+        ]
+    )
+
+    assert options_path.is_file()
+
+    assert options_path.read_text(
+        encoding="utf-8"
+    ) == (
+        'fceumm_overscan_h_left = "0"\n'
+        'fceumm_overscan_h_right = "0"\n'
+        'fceumm_overscan_v_top = "0"\n'
+        'fceumm_overscan_v_bottom = "0"\n'
+    )
+
+    assert (
+        'global_core_options = "true"'
+        in payload
+    )
+
+    core_options.cleanup()
+    sessions.cleanup()

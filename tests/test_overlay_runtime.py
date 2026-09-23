@@ -39,6 +39,8 @@ def test_runtime_config_contains_overlay_directives(
     ) == (
         f'input_overlay = "{overlay.resolve()}"\n'
         'input_overlay_enable = "true"\n'
+        'input_overlay_opacity = "1.000000"\n'
+        'input_overlay_scale = "1.000000"\n'
     )
 
     runtime.cleanup()
@@ -225,6 +227,8 @@ def test_runtime_config_merges_optional_runtime_descriptor(
     ) == (
         f'input_overlay = "{overlay.resolve()}"\n'
         'input_overlay_enable = "true"\n'
+        'input_overlay_opacity = "1.000000"\n'
+        'input_overlay_scale = "1.000000"\n'
         'aspect_ratio_index = "22"\n'
         'video_force_aspect = "true"\n'
         'custom_viewport_x = "0"\n'
@@ -257,6 +261,8 @@ def test_runtime_config_without_descriptor_is_unchanged(
     ) == (
         f'input_overlay = "{overlay.resolve()}"\n'
         'input_overlay_enable = "true"\n'
+        'input_overlay_opacity = "1.000000"\n'
+        'input_overlay_scale = "1.000000"\n'
     )
 
 
@@ -353,3 +359,61 @@ def test_runtime_descriptor_accepts_production_viewport_controls(
         'custom_viewport_width = "1044"\n'
         'custom_viewport_height = "783"\n'
     )
+
+def test_overlay_runtime_propagates_complete_geometry_authority(tmp_path):
+    from services.retroarch.overlay_runtime import OverlayRuntimeConfig
+
+    overlay = tmp_path / "RetroVault_Test.cfg"
+    runtime = tmp_path / "RetroVault_Test.runtime.cfg"
+
+    overlay.write_text(
+        'overlays = 1\n'
+        'overlay0_overlay = "test.png"\n',
+        encoding="utf-8",
+    )
+
+    runtime.write_text(
+        'aspect_ratio_index = "22"\n'
+        'video_force_aspect = "true"\n'
+        'video_aspect_ratio = "-1.000000"\n'
+        'video_aspect_ratio_auto = "false"\n'
+        'video_crop_overscan = "false"\n'
+        'video_scale_integer = "false"\n'
+        'video_viewport_bias_x = "0.500000"\n'
+        'video_viewport_bias_y = "0.500000"\n'
+        'custom_viewport_x = "355"\n'
+        'custom_viewport_y = "100"\n'
+        'custom_viewport_width = "1206"\n'
+        'custom_viewport_height = "762"\n',
+        encoding="utf-8",
+    )
+
+    generated = Path(
+        OverlayRuntimeConfig(
+            tmp_path / "generated"
+        ).create(
+            str(overlay)
+        )
+    )
+
+    text = generated.read_text(
+        encoding="utf-8"
+    )
+
+    required = (
+        'aspect_ratio_index = "22"',
+        'video_force_aspect = "true"',
+        'video_aspect_ratio = "-1.000000"',
+        'video_aspect_ratio_auto = "false"',
+        'video_crop_overscan = "false"',
+        'video_scale_integer = "false"',
+        'video_viewport_bias_x = "0.500000"',
+        'video_viewport_bias_y = "0.500000"',
+        'custom_viewport_x = "355"',
+        'custom_viewport_y = "100"',
+        'custom_viewport_width = "1206"',
+        'custom_viewport_height = "762"',
+    )
+
+    for line in required:
+        assert line in text

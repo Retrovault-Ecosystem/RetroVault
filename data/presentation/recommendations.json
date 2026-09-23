@@ -2,19 +2,19 @@
   "version": 1,
   "systems": {
     "platform.nintendo.nes": {
-      "shader": "retro-vault://shaders/Mega_Bezel_Packs/Orionsangel-Original-Console-main/Presets/Standard/Nintendo_NES/Nintendo_NES-[STD].slangp",
-      "overlay": "retro-vault://overlays/RetroVault_DuckTales_2_USA.cfg",
+      "shader": "retro-vault://shaders/retrovault/nes/classic/RetroVault_NES_Classic_CRT.slangp",
+      "overlay": "retro-vault://overlays/retrovault/nes/classic/RetroVault_NES_Classic.cfg",
       "artwork": ""
     },
     "platform.nintendo.snes": {
-      "shader": "retro-vault://shaders/Mega_Bezel_Packs/Orionsangel-Original-Console-main/Presets/Standard/Nintendo_SNES/Nintendo_SNES-[STD].slangp",
+      "shader": "retro-vault://shaders/retrovault/snes/classic/RetroVault_SNES_Classic_CRT.slangp",
       "overlay": "retro-vault://overlays/retrovault/snes/classic/RetroVault_SNES_Classic.cfg",
       "artwork": ""
     }
   },
   "games": {
     "game.super_metroid": {
-      "shader": "retro-vault://shaders/Mega_Bezel_Packs/HSM_Mega_Bezel_Examples/Presets/Orionsangel_Console/SuperMetroid__STD.slangp",
+      "shader": "",
       "overlay": "",
       "artwork": ""
     }

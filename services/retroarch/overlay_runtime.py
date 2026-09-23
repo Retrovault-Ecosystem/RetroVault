@@ -39,17 +39,7 @@ class OverlayRuntimeConfig:
     Only explicitly supported runtime keys are accepted.
     """
 
-    RUNTIME_KEYS = (
-        "aspect_ratio_index",
-        "video_force_aspect",
-        "video_scale_integer",
-        "video_viewport_bias_x",
-        "video_viewport_bias_y",
-        "custom_viewport_x",
-        "custom_viewport_y",
-        "custom_viewport_width",
-        "custom_viewport_height",
-    )
+    RUNTIME_KEYS = ('aspect_ratio_index', 'video_force_aspect', 'video_scale_integer', 'video_viewport_bias_x', 'video_viewport_bias_y', 'custom_viewport_x', 'custom_viewport_y', 'custom_viewport_width', 'custom_viewport_height', 'video_aspect_ratio', 'video_aspect_ratio_auto', 'video_crop_overscan')
 
     def __init__(
         self,
@@ -194,6 +184,8 @@ class OverlayRuntimeConfig:
         payload = (
             f'input_overlay = "{escaped}"\n'
             'input_overlay_enable = "true"\n'
+            'input_overlay_opacity = "1.000000"\n'
+            'input_overlay_scale = "1.000000"\n'
             + runtime_payload
         )
 

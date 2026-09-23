@@ -1,10 +1,14 @@
+import os
+import signal
 import subprocess
 
 from models.launch_profile import LaunchProfile
 
 from .archive_runtime import ArchiveRuntime
 from .cheat_runtime import CheatRuntimeConfig
+from .core_options_runtime import CoreOptionsRuntimeConfig
 from .overlay_runtime import OverlayRuntimeConfig
+from .session_config import RetroArchSessionConfig
 from .shader_runtime import ShaderRuntimeConfig
 
 
@@ -16,6 +20,8 @@ class RetroArchLauncher:
         shader_runtime=None,
         archive_runtime=None,
         cheat_runtime=None,
+        session_config=None,
+        core_options_runtime=None,
     ):
         self.command = "retroarch"
 
@@ -37,6 +43,16 @@ class RetroArchLauncher:
         self.cheat_runtime = (
             cheat_runtime
             or CheatRuntimeConfig()
+        )
+
+        self.session_config = (
+            session_config
+            or RetroArchSessionConfig()
+        )
+
+        self.core_options_runtime = (
+            core_options_runtime
+            or CoreOptionsRuntimeConfig()
         )
 
         self._active_process = None
@@ -81,20 +97,57 @@ class RetroArchLauncher:
 
     def stop(self) -> bool:
         """
-        Request termination of the currently owned RetroArch process.
+        Terminate the complete process group owned by the active
+        RetroArch launch and synchronously reap the Popen root.
 
-        Process ownership is retained until poll() confirms that the
-        process has actually exited. This keeps lifecycle completion
-        authoritative and prevents premature session release.
+        The process-group signal terminates wrapper/sandbox/emulator
+        descendants. wait() then reaps the launcher-owned root so a
+        terminated child cannot remain observable as a zombie.
         """
 
-        if self._active_process is None:
+        process = self._active_process
+
+        if process is None:
             return False
 
-        if self._active_process.poll() is not None:
+        if process.poll() is not None:
             return False
 
-        self._active_process.terminate()
+        try:
+            process_group = os.getpgid(
+                process.pid
+            )
+        except (
+            ProcessLookupError,
+            OSError,
+        ):
+            return False
+
+        try:
+            os.killpg(
+                process_group,
+                signal.SIGTERM,
+            )
+        except ProcessLookupError:
+            return False
+
+        try:
+            process.wait(
+                timeout=5.0
+            )
+        except subprocess.TimeoutExpired:
+            try:
+                os.killpg(
+                    process_group,
+                    signal.SIGKILL,
+                )
+            except ProcessLookupError:
+                pass
+
+            process.wait(
+                timeout=5.0
+            )
+
         return True
 
 
@@ -139,6 +192,37 @@ class RetroArchLauncher:
             profile.core,
             runtime_rom,
         ]
+
+        try:
+            core_options_config = (
+                self.core_options_runtime.create(
+                    profile.core
+                )
+            )
+
+            session_config = (
+                self.session_config.create(
+                    core_options_path=(
+                        core_options_config
+                    )
+                )
+            )
+        except (
+            OSError,
+            ValueError,
+        ) as error:
+            return {
+                "success": False,
+                "error": str(error),
+            }
+
+        if session_config:
+            command.extend(
+                [
+                    "--appendconfig",
+                    session_config,
+                ]
+            )
 
         if profile.config:
             command.extend(
@@ -233,7 +317,8 @@ class RetroArchLauncher:
 
         try:
             process = subprocess.Popen(
-                command
+                command,
+                start_new_session=True,
             )
 
             self._active_process = process

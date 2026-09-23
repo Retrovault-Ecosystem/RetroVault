@@ -1,12 +1,23 @@
 CORE_MAP = {
-
     "Nintendo Entertainment System":
+        "fceumm_libretro.so",
+
+    "NES":
         "fceumm_libretro.so",
 
     "Super Nintendo":
         "snes9x_libretro.so",
 
+    "Super Nintendo Entertainment System":
+        "snes9x_libretro.so",
+
+    "SNES":
+        "snes9x_libretro.so",
+
     "Sega Genesis":
+        "genesis_plus_gx_libretro.so",
+
+    "Genesis":
         "genesis_plus_gx_libretro.so",
 
     "Nintendo 64":
@@ -14,13 +25,10 @@ CORE_MAP = {
 
     "Arcade":
         "mame_libretro.so",
-
 }
 
 
-
 class CoreMapper:
-
 
     def get_core(self, platform):
 

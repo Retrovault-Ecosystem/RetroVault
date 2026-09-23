@@ -253,19 +253,18 @@ def test_current_production_manifest_remains_compatible():
         .load()
     )
 
+    # A production system recommendation remains present.
     assert catalog.recommend(
         NES
     ) != PresentationProfile()
 
+    # An explicitly empty game recommendation is valid:
+    # effective presentation inherits the system authority.
     super_metroid = catalog.recommend_game(
         SUPER_METROID
     )
 
-    assert super_metroid != PresentationProfile()
-
-    assert super_metroid.shader.endswith(
-        "SuperMetroid__STD.slangp"
-    )
+    assert super_metroid == PresentationProfile()
 
     assert catalog.recommend_game(
         "game.unknown"

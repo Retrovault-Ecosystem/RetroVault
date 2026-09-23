@@ -13,20 +13,9 @@ SUPER_METROID = "game.super_metroid"
 
 SNES_REFERENCE = (
     "retro-vault://shaders/"
-    "Mega_Bezel_Packs/"
-    "Orionsangel-Original-Console-main/"
-    "Presets/Standard/Nintendo_SNES/"
-    "Nintendo_SNES-[STD].slangp"
+    "retrovault/snes/classic/"
+    "RetroVault_SNES_Classic_CRT.slangp"
 )
-
-SUPER_METROID_REFERENCE = (
-    "retro-vault://shaders/"
-    "Mega_Bezel_Packs/"
-    "HSM_Mega_Bezel_Examples/"
-    "Presets/Orionsangel_Console/"
-    "SuperMetroid__STD.slangp"
-)
-
 
 SNES_OVERLAY_REFERENCE = (
     "retro-vault://overlays/"
@@ -92,7 +81,7 @@ def test_production_manifest_contains_snes_system_recommendation():
     assert profile.artwork == ""
 
 
-def test_production_manifest_contains_super_metroid_recommendation():
+def test_super_metroid_has_no_independent_presentation_authority():
     catalog = (
         PresentationRecommendationManifest()
         .load()
@@ -102,47 +91,45 @@ def test_production_manifest_contains_super_metroid_recommendation():
         SUPER_METROID
     )
 
-    assert (
-        profile.shader
-        == SUPER_METROID_REFERENCE
-    )
-
+    assert profile.shader == ""
     assert profile.overlay == ""
     assert profile.artwork == ""
 
 
-def test_snes_system_recommendation_resolves_to_local_asset():
+def test_snes_system_recommendation_resolves_to_native_crt():
     profile = production_resolver().resolve(
         SNES
     )
 
     assert profile.shader.endswith(
-        "/Nintendo_SNES/"
-        "Nintendo_SNES-[STD].slangp"
+        "/retrovault/snes/classic/"
+        "RetroVault_SNES_Classic_CRT.slangp"
     )
 
     assert profile.overlay.endswith(
         "/retrovault/snes/classic/"
         "RetroVault_SNES_Classic.cfg"
     )
+
     assert profile.artwork == ""
 
 
-def test_super_metroid_overrides_snes_shader_by_game_identity():
+def test_super_metroid_inherits_snes_system_presentation():
     profile = production_resolver().resolve(
         SNES,
         SUPER_METROID,
     )
 
     assert profile.shader.endswith(
-        "/Orionsangel_Console/"
-        "SuperMetroid__STD.slangp"
+        "/retrovault/snes/classic/"
+        "RetroVault_SNES_Classic_CRT.slangp"
     )
 
     assert profile.overlay.endswith(
         "/retrovault/snes/classic/"
         "RetroVault_SNES_Classic.cfg"
     )
+
     assert profile.artwork == ""
 
 
@@ -153,12 +140,13 @@ def test_unknown_snes_game_preserves_system_recommendation():
     )
 
     assert profile.shader.endswith(
-        "/Nintendo_SNES/"
-        "Nintendo_SNES-[STD].slangp"
+        "/retrovault/snes/classic/"
+        "RetroVault_SNES_Classic_CRT.slangp"
     )
 
     assert profile.overlay.endswith(
         "/retrovault/snes/classic/"
         "RetroVault_SNES_Classic.cfg"
     )
+
     assert profile.artwork == ""

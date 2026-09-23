@@ -11,15 +11,14 @@ PLATFORM_ID = "platform.nintendo.nes"
 
 SHADER_REFERENCE = (
     "retro-vault://shaders/"
-    "Mega_Bezel_Packs/"
-    "Orionsangel-Original-Console-main/"
-    "Presets/Standard/Nintendo_NES/"
-    "Nintendo_NES-[STD].slangp"
+    "retrovault/nes/classic/"
+    "RetroVault_NES_Classic_CRT.slangp"
 )
 
 OVERLAY_REFERENCE = (
     "retro-vault://overlays/"
-    "RetroVault_DuckTales_2_USA.cfg"
+    "retrovault/nes/classic/"
+    "RetroVault_NES_Classic.cfg"
 )
 
 
@@ -53,17 +52,18 @@ def test_controlled_nes_recommendation_resolves_exact_assets(
 
     shader = (
         shader_root
-        / "Mega_Bezel_Packs"
-        / "Orionsangel-Original-Console-main"
-        / "Presets"
-        / "Standard"
-        / "Nintendo_NES"
-        / "Nintendo_NES-[STD].slangp"
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "RetroVault_NES_Classic_CRT.slangp"
     )
 
     overlay = (
         overlay_root
-        / "RetroVault_DuckTales_2_USA.cfg"
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "RetroVault_NES_Classic.cfg"
     )
 
     shader.parent.mkdir(
