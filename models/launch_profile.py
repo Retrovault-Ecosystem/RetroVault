@@ -22,3 +22,5 @@ class LaunchProfile:
     archive_member: str = ""
 
     cheat_file: str = ""
+
+    platform_id: str = ""

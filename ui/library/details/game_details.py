@@ -1531,6 +1531,15 @@ class GameDetails(QWidget):
 
         )
 
+        profile.platform_id = str(
+            getattr(
+                launch_game,
+                "rvdb_platform_id",
+                "",
+            )
+            or ""
+        ).strip()
+
 
 
         validator = LaunchValidator(

@@ -166,9 +166,11 @@ class CoreOptionsRuntimeConfig:
     def create(
         self,
         core,
+        platform_id=None,
     ):
         policy = self.policy_for(
-            core
+            core,
+            platform_id=platform_id,
         )
 
         if not policy:

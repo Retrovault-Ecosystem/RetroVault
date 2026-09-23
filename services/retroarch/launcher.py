@@ -196,7 +196,15 @@ class RetroArchLauncher:
         try:
             core_options_config = (
                 self.core_options_runtime.create(
-                    profile.core
+                    profile.core,
+                    platform_id=(
+                        getattr(
+                            profile,
+                            "platform_id",
+                            "",
+                        )
+                        or None
+                    ),
                 )
             )
 

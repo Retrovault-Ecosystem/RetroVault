@@ -1191,3 +1191,135 @@ def test_launch_injects_core_visible_area_policy_before_process(
 
     core_options.cleanup()
     sessions.cleanup()
+
+
+def test_launcher_forwards_platform_identity_to_core_options(
+    monkeypatch,
+):
+    from models.launch_profile import LaunchProfile
+    from services.retroarch.launcher import RetroArchLauncher
+
+    observed = {}
+
+    class ArchiveRuntimeStub:
+        def resolve(
+            self,
+            rom,
+            member=None,
+        ):
+            return rom
+
+    class CoreOptionsRuntimeStub:
+        def create(
+            self,
+            core,
+            platform_id=None,
+        ):
+            observed["core"] = core
+            observed["platform_id"] = platform_id
+            return None
+
+    class SessionConfigStub:
+        def create(
+            self,
+            core_options_path=None,
+        ):
+            return None
+
+    class ProcessStub:
+        pid = 43210
+
+        def poll(self):
+            return None
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.subprocess.Popen",
+        lambda *args, **kwargs: ProcessStub(),
+    )
+
+    launcher = RetroArchLauncher(
+        archive_runtime=ArchiveRuntimeStub(),
+        core_options_runtime=CoreOptionsRuntimeStub(),
+        session_config=SessionConfigStub(),
+    )
+
+    profile = LaunchProfile(
+        game="Platform Binding Test",
+        rom="/roms/game.nes",
+        core="/cores/fceumm_libretro.so",
+        platform_id="platform.nintendo.nes",
+    )
+
+    result = launcher.launch(
+        profile
+    )
+
+    assert result["success"] is True
+
+    assert observed == {
+        "core": "/cores/fceumm_libretro.so",
+        "platform_id": "platform.nintendo.nes",
+    }
+
+
+def test_launcher_maps_empty_platform_identity_to_legacy_none(
+    monkeypatch,
+):
+    from models.launch_profile import LaunchProfile
+    from services.retroarch.launcher import RetroArchLauncher
+
+    observed = {}
+
+    class ArchiveRuntimeStub:
+        def resolve(
+            self,
+            rom,
+            member=None,
+        ):
+            return rom
+
+    class CoreOptionsRuntimeStub:
+        def create(
+            self,
+            core,
+            platform_id=None,
+        ):
+            observed["platform_id"] = platform_id
+            return None
+
+    class SessionConfigStub:
+        def create(
+            self,
+            core_options_path=None,
+        ):
+            return None
+
+    class ProcessStub:
+        pid = 43211
+
+        def poll(self):
+            return None
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.subprocess.Popen",
+        lambda *args, **kwargs: ProcessStub(),
+    )
+
+    launcher = RetroArchLauncher(
+        archive_runtime=ArchiveRuntimeStub(),
+        core_options_runtime=CoreOptionsRuntimeStub(),
+        session_config=SessionConfigStub(),
+    )
+
+    profile = LaunchProfile(
+        game="Legacy Binding Test",
+        rom="/roms/game.nes",
+        core="/cores/fceumm_libretro.so",
+    )
+
+    result = launcher.launch(
+        profile
+    )
+
+    assert result["success"] is True
+    assert observed["platform_id"] is None
