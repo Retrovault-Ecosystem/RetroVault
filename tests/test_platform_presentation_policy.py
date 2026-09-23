@@ -577,3 +577,126 @@ def test_policy_state_model_contains_no_physical_geometry():
     assert field_names.isdisjoint(
         forbidden
     )
+
+
+def test_canonical_core_compatibility_is_independent_of_presentation_readiness():
+    registry = PlatformPresentationPolicyRegistry
+
+    assert registry.compatible_core_identities(
+        "platform.nintendo.nes"
+    ) == (
+        "fceumm",
+    )
+
+    assert registry.compatible_core_identities(
+        "platform.nintendo.snes"
+    ) == (
+        "snes9x",
+    )
+
+    assert registry.compatible_core_identities(
+        "platform.sega.genesis"
+    ) == (
+        "genesis_plus_gx",
+    )
+
+    assert registry.compatible_core_identities(
+        "platform.nintendo.n64"
+    ) == (
+        "mupen64plus_next",
+    )
+
+    assert registry.compatible_core_identities(
+        "platform.arcade"
+    ) == (
+        "mame",
+    )
+
+    # Genesis/N64/Arcade remain presentation-UNCONFIGURED even though
+    # their current Library launch core compatibility is known.
+    for platform_id in (
+        "platform.sega.genesis",
+        "platform.nintendo.n64",
+        "platform.arcade",
+    ):
+        assert registry.for_platform(
+            platform_id
+        ) is None
+
+
+def test_canonical_core_compatibility_normalizes_library_core_paths():
+    registry = PlatformPresentationPolicyRegistry
+
+    assert registry.is_core_compatible(
+        "platform.nintendo.nes",
+        "fceumm",
+    )
+
+    assert registry.is_core_compatible(
+        "platform.nintendo.nes",
+        "fceumm_libretro.so",
+    )
+
+    assert registry.is_core_compatible(
+        "platform.nintendo.nes",
+        "/opt/retropie/libretrocores/"
+        "lr-fceumm/fceumm_libretro.so",
+    )
+
+    assert registry.is_core_compatible(
+        "platform.nintendo.snes",
+        "snes9x_libretro.so",
+    )
+
+    assert not registry.is_core_compatible(
+        "platform.nintendo.nes",
+        "snes9x_libretro.so",
+    )
+
+
+def test_unknown_platform_or_core_never_becomes_implicit_compatibility():
+    registry = PlatformPresentationPolicyRegistry
+
+    assert registry.compatible_core_identities(
+        "platform.unknown"
+    ) == ()
+
+    assert registry.compatible_core_identities(
+        None
+    ) == ()
+
+    assert not registry.is_core_compatible(
+        "platform.unknown",
+        "fceumm",
+    )
+
+    assert not registry.is_core_compatible(
+        "platform.nintendo.nes",
+        "",
+    )
+
+    assert not registry.is_core_compatible(
+        "platform.nintendo.nes",
+        object(),
+    )
+
+
+def test_every_ready_policy_uses_canonical_core_compatibility():
+    registry = PlatformPresentationPolicyRegistry
+
+    for platform_id in (
+        registry.ready_platform_ids()
+    ):
+        policy = registry.for_platform(
+            platform_id
+        )
+
+        assert policy is not None
+
+        assert tuple(
+            policy.core_identities
+        ) == tuple(
+            registry.compatible_core_identities(
+                platform_id
+            )
+        )

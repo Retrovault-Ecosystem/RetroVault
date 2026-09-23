@@ -295,3 +295,215 @@ def test_package_validator_does_not_own_physical_geometry():
     assert fields.isdisjoint(
         forbidden
     )
+
+
+def test_ready_production_manifests_declare_exact_canonical_platform_identity():
+    import json
+    from pathlib import Path
+
+    cases = (
+        (
+            Path(
+                "retrovault/nes/classic/"
+                "RetroVault_NES_Classic.production.json"
+            ),
+            "platform.nintendo.nes",
+        ),
+        (
+            Path(
+                "retrovault/snes/classic/"
+                "RetroVault_SNES_Classic.production.json"
+            ),
+            "platform.nintendo.snes",
+        ),
+    )
+
+    for manifest, expected in cases:
+        data = json.loads(
+            manifest.read_text(
+                encoding="utf-8"
+            )
+        )
+
+        assert data["platform_id"] == expected
+
+
+def _copy_nes_semantic_package(
+    destination,
+):
+    import shutil
+    from pathlib import Path
+
+    source = Path(
+        "retrovault/nes/classic"
+    )
+
+    destination.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    names = (
+        "RetroVault_NES_Classic.cfg",
+        "RetroVault_NES_Classic_CRT.slangp",
+        "RetroVault_NES_Classic.runtime.cfg",
+        "RetroVault_NES_Classic.production.json",
+    )
+
+    for name in names:
+        shutil.copy2(
+            source / name,
+            destination / name,
+        )
+
+    return (
+        destination
+        / "RetroVault_NES_Classic.cfg",
+        destination
+        / "RetroVault_NES_Classic_CRT.slangp",
+        destination
+        / "RetroVault_NES_Classic.production.json",
+    )
+
+
+def test_production_package_identity_is_manifest_semantic_not_directory_token(
+    tmp_path,
+):
+    package_dir = (
+        tmp_path
+        / "alpha"
+        / "beta"
+        / "gamma"
+    )
+
+    overlay, shader, _ = (
+        _copy_nes_semantic_package(
+            package_dir
+        )
+    )
+
+    package = (
+        ProductionPresentationPackageValidator
+        .validate(
+            platform_id="platform.nintendo.nes",
+            core_identity="fceumm",
+            overlay=str(overlay),
+            shader=str(shader),
+        )
+    )
+
+    assert package is not None
+    assert (
+        package.platform_id
+        == "platform.nintendo.nes"
+    )
+
+
+def test_production_package_rejects_foreign_manifest_platform_identity(
+    tmp_path,
+):
+    import json
+    import pytest
+
+    overlay, shader, manifest = (
+        _copy_nes_semantic_package(
+            tmp_path / "foreign"
+        )
+    )
+
+    data = json.loads(
+        manifest.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    data["platform_id"] = (
+        "platform.nintendo.snes"
+    )
+
+    manifest.write_text(
+        json.dumps(
+            data,
+            indent=2,
+        ) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="platform identity",
+    ):
+        ProductionPresentationPackageValidator.validate(
+            platform_id="platform.nintendo.nes",
+            core_identity="fceumm",
+            overlay=str(overlay),
+            shader=str(shader),
+        )
+
+
+def test_production_package_rejects_missing_manifest_platform_identity(
+    tmp_path,
+):
+    import json
+    import pytest
+
+    overlay, shader, manifest = (
+        _copy_nes_semantic_package(
+            tmp_path / "missing"
+        )
+    )
+
+    data = json.loads(
+        manifest.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    data.pop("platform_id", None)
+
+    manifest.write_text(
+        json.dumps(
+            data,
+            indent=2,
+        ) + "\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="canonical platform identity",
+    ):
+        ProductionPresentationPackageValidator.validate(
+            platform_id="platform.nintendo.nes",
+            core_identity="fceumm",
+            overlay=str(overlay),
+            shader=str(shader),
+        )
+
+
+def test_production_package_rejects_invalid_manifest_json(
+    tmp_path,
+):
+    import pytest
+
+    overlay, shader, manifest = (
+        _copy_nes_semantic_package(
+            tmp_path / "invalid"
+        )
+    )
+
+    manifest.write_text(
+        "{not-json\n",
+        encoding="utf-8",
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="unreadable or invalid",
+    ):
+        ProductionPresentationPackageValidator.validate(
+            platform_id="platform.nintendo.nes",
+            core_identity="fceumm",
+            overlay=str(overlay),
+            shader=str(shader),
+        )

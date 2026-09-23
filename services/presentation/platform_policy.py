@@ -155,7 +155,40 @@ class PlatformPresentationPolicy:
         )
 
 
+# Canonical platform/core compatibility authority.
+#
+# This map describes platform/core compatibility independently from
+# presentation readiness. A platform may have a known launch core
+# while still being UNCONFIGURED for RetroVault production visuals.
+#
+# Values use normalized Libretro core identities, not filesystem
+# filenames. Library compatibility adapters may translate these
+# identities to historical *_libretro.so values.
+#
+# Only compatibility already established by the current production
+# Library is declared here. Unsupported/unknown canonical platforms
+# remain explicit canonical identities without an invented core.
+PLATFORM_CORE_COMPATIBILITY = {
+    "platform.arcade": (
+        "mame",
+    ),
+    "platform.nintendo.n64": (
+        "mupen64plus_next",
+    ),
+    "platform.nintendo.nes": (
+        "fceumm",
+    ),
+    "platform.nintendo.snes": (
+        "snes9x",
+    ),
+    "platform.sega.genesis": (
+        "genesis_plus_gx",
+    ),
+}
+
+
 class PlatformPresentationPolicyRegistry:
+    PLATFORM_CORE_COMPATIBILITY = PLATFORM_CORE_COMPATIBILITY
     # Explicit readiness state for every canonical RVDB platform.
     # Physical viewport geometry remains package-owned.
     PLATFORM_STATES = {
@@ -237,7 +270,9 @@ class PlatformPresentationPolicyRegistry:
         PlatformPresentationPolicy(
             platform_id="platform.nintendo.nes",
             core_identities=(
-                "fceumm",
+                PLATFORM_CORE_COMPATIBILITY[
+                    "platform.nintendo.nes"
+                ]
             ),
             core_options={
                 "fceumm_overscan_h_left": "0",
@@ -249,11 +284,103 @@ class PlatformPresentationPolicyRegistry:
         PlatformPresentationPolicy(
             platform_id="platform.nintendo.snes",
             core_identities=(
-                "snes9x",
+                PLATFORM_CORE_COMPATIBILITY[
+                    "platform.nintendo.snes"
+                ]
             ),
             core_options={},
         ),
     )
+
+    @classmethod
+    def compatible_core_identities(
+        cls,
+        platform_id,
+    ):
+        """
+        Return canonical normalized core identities known to be
+        compatible with one canonical RVDB platform.
+
+        Presentation readiness is intentionally independent. An
+        UNCONFIGURED platform may still have a known launch core.
+        """
+
+        if not isinstance(
+            platform_id,
+            str,
+        ):
+            return ()
+
+        platform_id = platform_id.strip()
+
+        if (
+            platform_id
+            not in cls.PLATFORM_STATES
+        ):
+            return ()
+
+        return tuple(
+            PLATFORM_CORE_COMPATIBILITY.get(
+                platform_id,
+                (),
+            )
+        )
+
+    @classmethod
+    def is_core_compatible(
+        cls,
+        platform_id,
+        core_identity,
+    ):
+        """
+        Return True only when an explicit canonical platform/core
+        pair is known compatible.
+
+        Unknown platforms, unknown cores, and non-string identities
+        never become implicit compatibility policy.
+        """
+
+        if not isinstance(
+            core_identity,
+            str,
+        ):
+            return False
+
+        core_identity = (
+            core_identity
+            .strip()
+            .casefold()
+        )
+
+        if not core_identity:
+            return False
+
+        # Accept the Library's historical Libretro filename form,
+        # absolute core paths, and normalized policy identities.
+        core_name = (
+            core_identity
+            .replace("\\", "/")
+            .rsplit("/", 1)[-1]
+        )
+
+        if core_name.endswith(
+            "_libretro.so"
+        ):
+            core_name = core_name[
+                :-len("_libretro.so")
+            ]
+        elif core_name.endswith(
+            ".so"
+        ):
+            core_name = core_name[
+                :-len(".so")
+            ]
+
+        return core_name in (
+            cls.compatible_core_identities(
+                platform_id
+            )
+        )
 
     @classmethod
     def all(

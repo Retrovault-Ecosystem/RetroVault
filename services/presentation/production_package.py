@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -171,26 +172,61 @@ class ProductionPresentationPackageValidator:
                 f"manifest: {production_manifest}"
             )
 
-        # The package path itself must carry the canonical platform
-        # identity. This is generic: platform.nintendo.nes -> nes,
-        # platform.sega.genesis -> genesis, etc. No launcher branch is
-        # added for any individual system.
-        platform_token = (
-            platform_id
-            .rsplit(".", 1)[-1]
-            .strip()
-            .lower()
+        # Production package identity is semantic, not positional.
+        # The manifest must explicitly declare the exact canonical
+        # RVDB platform ID asserted by the launch boundary.
+        try:
+            manifest_data = json.loads(
+                production_manifest.read_text(
+                    encoding="utf-8"
+                )
+            )
+        except (
+            OSError,
+            UnicodeError,
+            json.JSONDecodeError,
+        ) as exc:
+            raise ValueError(
+                "RetroVault production presentation manifest "
+                "is unreadable or invalid."
+            ) from exc
+
+        if not isinstance(
+            manifest_data,
+            dict,
+        ):
+            raise ValueError(
+                "RetroVault production presentation manifest "
+                "must contain a JSON object."
+            )
+
+        manifest_platform_id = (
+            manifest_data.get(
+                "platform_id"
+            )
         )
 
-        path_parts = {
-            part.lower()
-            for part in overlay_path.parts
-        }
-
-        if platform_token not in path_parts:
+        if not isinstance(
+            manifest_platform_id,
+            str,
+        ):
             raise ValueError(
-                "Production package does not match canonical "
-                f"platform identity: {platform_id}"
+                "RetroVault production presentation manifest "
+                "does not declare canonical platform identity."
+            )
+
+        manifest_platform_id = (
+            manifest_platform_id.strip()
+        )
+
+        if (
+            manifest_platform_id
+            != platform_id
+        ):
+            raise ValueError(
+                "RetroVault production presentation manifest "
+                "platform identity does not match the launch "
+                "platform."
             )
 
         return ProductionPresentationPackage(
