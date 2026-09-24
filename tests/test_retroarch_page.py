@@ -224,7 +224,7 @@ def test_retroarch_page_real_rvdb_contract(
 
     app.processEvents()
 
-    assert page.core_list.count() == 5
+    assert page.core_list.count() == 6
 
     names = {
         page.core_list.item(
@@ -238,6 +238,7 @@ def test_retroarch_page_real_rvdb_contract(
     assert names == {
         "Bsnes",
         "Genesis Plus GX",
+        "MAME",
         "Mesen",
         "Mupen64Plus-Next",
         "Snes9x",

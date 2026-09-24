@@ -615,6 +615,7 @@ def test_retroarch_view_real_bundle():
     ] == [
         "bsnes",
         "Genesis Plus GX",
+        "MAME",
         "Mesen",
         "Mupen64Plus-Next",
         "Snes9x",
