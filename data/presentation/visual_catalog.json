@@ -18,6 +18,15 @@
       "reference": "retro-vault://overlays/retrovault/snes/classic/RetroVault_SNES_Classic.cfg",
       "author": "RetroVault",
       "attribution": "Original RetroVault bezel composition. Platform names and trademarks are the property of their respective owners."
+    },
+    {
+      "id": "rvv.shader.genesis.classic.crt",
+      "display_name": "Sega Genesis — RetroVault Classic CRT",
+      "asset_type": "shader",
+      "source": "rvv_native",
+      "reference": "retro-vault://shaders/genesis/classic/RetroVault_Genesis_Classic_CRT.slangp",
+      "author": "RetroVault",
+      "attribution": "Original RetroVault CRT shader."
     }
   ]
 }
