@@ -3,6 +3,11 @@ from types import MappingProxyType
 from typing import Mapping
 from enum import Enum
 
+from services.presentation.master_profile import (
+    MasterPresentationClass,
+    MasterPresentationProfileRegistry,
+)
+
 
 
 class PlatformPresentationPolicyState(str, Enum):
@@ -44,6 +49,9 @@ class PlatformPresentationPolicy:
     platform_id: str
     core_identities: tuple[str, ...]
     core_options: Mapping[str, str]
+    master_presentation_class: (
+        MasterPresentationClass | None
+    ) = None
 
     def __post_init__(
         self,
@@ -152,6 +160,47 @@ class PlatformPresentationPolicy:
             MappingProxyType(
                 normalized_options
             ),
+        )
+
+        master_presentation_class = (
+            self.master_presentation_class
+        )
+
+        if (
+            master_presentation_class
+            is not None
+            and not isinstance(
+                master_presentation_class,
+                MasterPresentationClass,
+            )
+        ):
+            try:
+                master_presentation_class = (
+                    MasterPresentationClass(
+                        master_presentation_class
+                    )
+                )
+            except (
+                TypeError,
+                ValueError,
+            ) as exc:
+                raise ValueError(
+                    "Master presentation class must "
+                    "be a known reusable profile."
+                ) from exc
+
+        if master_presentation_class is not None:
+            (
+                MasterPresentationProfileRegistry
+                .require(
+                    master_presentation_class
+                )
+            )
+
+        object.__setattr__(
+            self,
+            "master_presentation_class",
+            master_presentation_class,
         )
 
 
@@ -289,6 +338,9 @@ class PlatformPresentationPolicyRegistry:
                 "fceumm_overscan_v_top": "0",
                 "fceumm_overscan_v_bottom": "0",
             },
+            master_presentation_class=(
+                MasterPresentationClass.CLASSIC_4_3
+            ),
         ),
         PlatformPresentationPolicy(
             platform_id="platform.nintendo.snes",
@@ -298,8 +350,65 @@ class PlatformPresentationPolicyRegistry:
                 ]
             ),
             core_options={},
+            master_presentation_class=(
+                MasterPresentationClass.CLASSIC_4_3
+            ),
         ),
     )
+
+    @classmethod
+    def master_presentation_class_for(
+        cls,
+        platform_id,
+    ):
+        """
+        Return the reusable Master Presentation class explicitly
+        assigned to one production-ready platform policy.
+
+        Presentation class assignment is intentionally distinct from
+        physical production geometry. Existing platform packages remain
+        authoritative for deployed viewport coordinates until a later
+        qualified migration boundary.
+
+        UNCONFIGURED, unknown, handheld, dual-screen, and other
+        not-yet-qualified platforms return None rather than borrowing
+        an inappropriate presentation class.
+        """
+        policy = cls.for_platform(
+            platform_id
+        )
+
+        if policy is None:
+            return None
+
+        return policy.master_presentation_class
+
+    @classmethod
+    def master_presentation_profile_for(
+        cls,
+        platform_id,
+    ):
+        """
+        Resolve one platform's reusable Master Presentation profile.
+
+        Returns None when no explicit reusable presentation class has
+        been qualified for the platform.
+        """
+        profile_class = (
+            cls.master_presentation_class_for(
+                platform_id
+            )
+        )
+
+        if profile_class is None:
+            return None
+
+        return (
+            MasterPresentationProfileRegistry
+            .require(
+                profile_class
+            )
+        )
 
     @classmethod
     def compatible_core_identities(
