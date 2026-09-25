@@ -196,3 +196,204 @@ def test_genesis_specification_contains_no_title_or_rom_identity():
 
     for token in forbidden:
         assert token not in serialized
+
+
+
+def _load_specification():
+    import json
+    from pathlib import Path
+
+    return json.loads(
+        Path(
+            "data/presentation/specifications/"
+            "rvv_genesis_classic.json"
+        ).read_text(encoding="utf-8")
+    )
+
+
+def test_genesis_has_preproduction_master_presentation_qualification():
+    from services.presentation.master_profile import (
+        MasterPresentationClass,
+        MasterPresentationProfileRegistry,
+        MasterPresentationQualification,
+        PresentationFitPolicy,
+        master_presentation_qualification,
+    )
+
+    data = _load_specification()
+
+    qualification = data[
+        "master_presentation_qualification"
+    ]
+
+    assert qualification["status"] == (
+        "preproduction_qualified"
+    )
+    assert qualification["master_presentation_class"] == (
+        "classic_4_3"
+    )
+    assert qualification["resolved_display_aspect"] == {
+        "width": 4,
+        "height": 3,
+    }
+    assert qualification["fit_policy"] == "contain"
+
+    profile_class = MasterPresentationClass(
+        qualification["master_presentation_class"]
+    )
+
+    assert (
+        master_presentation_qualification(profile_class)
+        is MasterPresentationQualification.QUALIFIED
+    )
+
+    profile = MasterPresentationProfileRegistry.require(
+        profile_class
+    )
+
+    assert (
+        profile.fit_policy
+        is PresentationFitPolicy.CONTAIN
+    )
+
+    geometry = profile.contain_aspect(
+        qualification["resolved_display_aspect"]["width"],
+        qualification["resolved_display_aspect"]["height"],
+    )
+
+    assert qualification["master_canvas"] == {
+        "width": profile.canvas_width,
+        "height": profile.canvas_height,
+    }
+
+    assert qualification["master_safe_envelope"] == {
+        "x": geometry.x,
+        "y": geometry.y,
+        "width": geometry.width,
+        "height": geometry.height,
+    }
+
+    assert (
+        geometry.x,
+        geometry.y,
+        geometry.width,
+        geometry.height,
+    ) == (
+        240,
+        0,
+        1440,
+        1080,
+    )
+
+
+def test_genesis_preproduction_qualification_does_not_activate_policy():
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+        PlatformPresentationPolicyState,
+    )
+
+    data = _load_specification()
+    platform_id = data["platform_id"]
+
+    qualification = data[
+        "master_presentation_qualification"
+    ]
+
+    assert (
+        qualification["production_policy_activation"]
+        is False
+    )
+    assert (
+        qualification["physical_runtime_geometry_qualified"]
+        is False
+    )
+
+    assert (
+        PlatformPresentationPolicyRegistry.state_for(
+            platform_id
+        )
+        is PlatformPresentationPolicyState.UNCONFIGURED
+    )
+
+    assert (
+        PlatformPresentationPolicyRegistry.for_platform(
+            platform_id
+        )
+        is None
+    )
+
+    assert (
+        PlatformPresentationPolicyRegistry.for_core(
+            "genesis_plus_gx"
+        )
+        is None
+    )
+
+    assert (
+        PlatformPresentationPolicyRegistry
+        .master_presentation_class_for(platform_id)
+        is None
+    )
+
+    assert platform_id not in (
+        PlatformPresentationPolicyRegistry
+        .ready_platform_ids()
+    )
+
+
+def test_genesis_preproduction_qualification_keeps_physical_geometry_unqualified():
+    data = _load_specification()
+
+    qualification = data[
+        "master_presentation_qualification"
+    ]
+    geometry = data["geometry"]
+    state = data["production_state"]
+
+    assert (
+        qualification["physical_runtime_geometry_qualified"]
+        is False
+    )
+
+    assert geometry["status"] == "unqualified"
+
+    for key in (
+        "canvas",
+        "aperture",
+        "viewport",
+        "aspect_ratio_index",
+        "integer_scaling",
+        "viewport_bias_x",
+        "viewport_bias_y",
+        "crop_overscan",
+    ):
+        assert geometry[key] is None
+
+    assert (
+        state["presentation_policy_state"]
+        == "unconfigured"
+    )
+    assert state["production_package_complete"] is False
+    assert state["production_ready"] is False
+    assert state["live_calibration_complete"] is False
+
+
+def test_genesis_master_qualification_contains_no_game_identity():
+    import json
+
+    data = _load_specification()
+
+    payload = json.dumps(
+        data["master_presentation_qualification"],
+        sort_keys=True,
+    ).casefold()
+
+    forbidden = (
+        "game_id",
+        "rom_filename",
+        "archive_filename",
+        "title_specific_geometry",
+    )
+
+    for identity in forbidden:
+        assert identity not in payload

@@ -33,6 +33,36 @@
     "physical_geometry_owner": "platform_package",
     "shader_may_own_physical_geometry": false
   },
+  "master_presentation_qualification": {
+    "status": "preproduction_qualified",
+    "master_presentation_class": "classic_4_3",
+    "resolved_display_aspect": {
+      "width": 4,
+      "height": 3
+    },
+    "fit_policy": "contain",
+    "master_canvas": {
+      "width": 1920,
+      "height": 1080
+    },
+    "master_safe_envelope": {
+      "x": 240,
+      "y": 0,
+      "width": 1440,
+      "height": 1080
+    },
+    "authority": "master_presentation_profile",
+    "production_policy_activation": false,
+    "physical_runtime_geometry_qualified": false,
+    "notes": [
+      "This qualification records Genesis compatibility with the reusable CLASSIC_4_3 display contract.",
+      "It does not make Genesis a READY production presentation policy.",
+      "The 1440x1080 Master safe envelope is a reusable containment envelope, not a forced emulator framebuffer size.",
+      "Concrete Genesis RetroArch viewport coordinates remain package-owned and unqualified until the physical geometry/runtime validation boundary.",
+      "Artwork must adapt to technically correct content; game content must not be cropped, stretched, or distorted merely to fill artwork.",
+      "No title, ROM, archive, or per-game geometry identity participates in this qualification."
+    ]
+  },
   "geometry": {
     "status": "unqualified",
     "canvas": null,
