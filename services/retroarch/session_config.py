@@ -42,11 +42,33 @@ class RetroArchSessionConfig:
     RetroVault overlay/shader runtime services.
     """
 
+    # Begin every RetroVault-controlled launch from RetroArch's
+    # automatic/core-driven aspect state rather than inheriting a
+    # persistent custom viewport from an unrelated prior session.
+    #
+    # Platform package runtime descriptors are appended after this
+    # baseline and therefore remain authoritative when a platform
+    # intentionally supplies calibrated fixed geometry (NES/SNES).
+    #
+    # Dynamic platforms may omit custom viewport keys and retain
+    # libretro core SET_GEOMETRY/display-aspect authority.
     BASELINE = (
         'input_overlay_enable = "false"\n'
         'input_overlay = ""\n'
         'video_shader_enable = "false"\n'
         'video_shader = ""\n'
+        'aspect_ratio_index = "0"\n'
+        'video_force_aspect = "true"\n'
+        'video_aspect_ratio = "-1.000000"\n'
+        'video_aspect_ratio_auto = "true"\n'
+        'video_scale_integer = "false"\n'
+        'video_viewport_bias_x = "0.500000"\n'
+        'video_viewport_bias_y = "0.500000"\n'
+        'custom_viewport_x = "0"\n'
+        'custom_viewport_y = "0"\n'
+        'custom_viewport_width = "0"\n'
+        'custom_viewport_height = "0"\n'
+        'video_crop_overscan = "false"\n'
     )
 
     def __init__(

@@ -304,6 +304,11 @@ class NativeVisualDeploymentService:
             .with_suffix(".shader.cfg")
         )
 
+        production_manifest = (
+            source_descriptor
+            .with_suffix(".production.json")
+        )
+
         source_files = [
             source_descriptor,
             source_image,
@@ -347,6 +352,26 @@ class NativeVisualDeploymentService:
 
             source_files.append(
                 shader_descriptor
+            )
+
+        if production_manifest.exists():
+            if not production_manifest.is_file():
+                raise ValueError(
+                    "Native RVV production manifest "
+                    "must be a regular file."
+                )
+
+            self._assert_within(
+                production_manifest.resolve(),
+                source_package,
+                message=(
+                    "Native RVV production manifest "
+                    "escaped its production package."
+                ),
+            )
+
+            source_files.append(
+                production_manifest
             )
 
         destination_descriptor = (

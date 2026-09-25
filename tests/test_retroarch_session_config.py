@@ -95,25 +95,44 @@ def test_session_config_does_not_modify_external_config(
     ) == original
 
 
-def test_session_baseline_does_not_own_platform_geometry():
+def test_session_baseline_neutralizes_inherited_geometry_without_owning_platform_geometry():
     baseline = RetroArchSessionConfig.BASELINE
 
-    forbidden = (
-        "aspect_ratio_index",
-        "video_force_aspect",
-        "video_scale_integer",
-        "video_viewport_bias_x",
-        "video_viewport_bias_y",
-        "custom_viewport_x",
-        "custom_viewport_y",
-        "custom_viewport_width",
-        "custom_viewport_height",
+    # A.7 establishes a reusable session-level neutralization boundary.
+    # These values clear inherited RetroArch geometry before any
+    # platform package is appended; they are not platform calibration.
+    expected = (
+        'aspect_ratio_index = "0"',
+        'video_force_aspect = "true"',
+        'video_aspect_ratio = "-1.000000"',
+        'video_aspect_ratio_auto = "true"',
+        'video_scale_integer = "false"',
+        'video_viewport_bias_x = "0.500000"',
+        'video_viewport_bias_y = "0.500000"',
+        'custom_viewport_x = "0"',
+        'custom_viewport_y = "0"',
+        'custom_viewport_width = "0"',
+        'custom_viewport_height = "0"',
+        'video_crop_overscan = "false"',
     )
 
-    for directive in forbidden:
+    for directive in expected:
+        assert directive in baseline
+
+    # The baseline must remain generic. Calibrated physical geometry
+    # belongs to the later platform package runtime descriptor.
+    forbidden_calibration_values = (
+        'custom_viewport_x = "355"',
+        'custom_viewport_y = "100"',
+        'custom_viewport_width = "1206"',
+        'custom_viewport_height = "762"',
+        'custom_viewport_width = "1044"',
+        'custom_viewport_height = "783"',
+        'video_viewport_bias_y = "0.239057239"',
+    )
+
+    for directive in forbidden_calibration_values:
         assert directive not in baseline
-
-
 def test_session_baseline_neutralizes_external_presentation_authority():
     baseline = RetroArchSessionConfig.BASELINE
 
@@ -128,15 +147,25 @@ def test_session_baseline_neutralizes_external_presentation_authority():
         assert baseline.count(directive) == 1
 
 
-def test_session_baseline_has_single_responsibility():
+def test_session_baseline_has_session_isolation_responsibility():
     assert RetroArchSessionConfig.BASELINE == (
         'input_overlay_enable = "false"\n'
         'input_overlay = ""\n'
         'video_shader_enable = "false"\n'
         'video_shader = ""\n'
+        'aspect_ratio_index = "0"\n'
+        'video_force_aspect = "true"\n'
+        'video_aspect_ratio = "-1.000000"\n'
+        'video_aspect_ratio_auto = "true"\n'
+        'video_scale_integer = "false"\n'
+        'video_viewport_bias_x = "0.500000"\n'
+        'video_viewport_bias_y = "0.500000"\n'
+        'custom_viewport_x = "0"\n'
+        'custom_viewport_y = "0"\n'
+        'custom_viewport_width = "0"\n'
+        'custom_viewport_height = "0"\n'
+        'video_crop_overscan = "false"\n'
     )
-
-
 def test_session_can_own_transient_core_options_path(
     tmp_path,
 ):
@@ -188,20 +217,37 @@ def test_session_can_own_transient_core_options_path(
     runtime.cleanup()
 
 
-def test_session_baseline_still_contains_no_geometry():
-    geometry_keys = (
-        "aspect_ratio_index",
-        "video_force_aspect",
-        "video_scale_integer",
-        "video_viewport_bias_x",
-        "video_viewport_bias_y",
-        "custom_viewport_x",
-        "custom_viewport_y",
-        "custom_viewport_width",
-        "custom_viewport_height",
+def test_session_baseline_contains_only_neutral_geometry_not_platform_calibration():
+    baseline = RetroArchSessionConfig.BASELINE
+
+    neutral_geometry = (
+        'aspect_ratio_index = "0"',
+        'video_aspect_ratio = "-1.000000"',
+        'video_aspect_ratio_auto = "true"',
+        'custom_viewport_x = "0"',
+        'custom_viewport_y = "0"',
+        'custom_viewport_width = "0"',
+        'custom_viewport_height = "0"',
+        'video_viewport_bias_x = "0.500000"',
+        'video_viewport_bias_y = "0.500000"',
     )
 
-    assert all(
-        key not in RetroArchSessionConfig.BASELINE
-        for key in geometry_keys
+    for directive in neutral_geometry:
+        assert directive in baseline
+
+    # Known calibrated NES/SNES values must never migrate into the
+    # generic session-isolation baseline.
+    platform_specific = (
+        'aspect_ratio_index = "22"',
+        'aspect_ratio_index = "23"',
+        'custom_viewport_x = "355"',
+        'custom_viewport_y = "100"',
+        'custom_viewport_width = "1206"',
+        'custom_viewport_height = "762"',
+        'custom_viewport_width = "1044"',
+        'custom_viewport_height = "783"',
+        'video_viewport_bias_y = "0.239057239"',
     )
+
+    for directive in platform_specific:
+        assert directive not in baseline

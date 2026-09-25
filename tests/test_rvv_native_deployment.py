@@ -670,7 +670,15 @@ def test_production_catalog_asset_has_deployable_plan():
 
     assert len(
         plan.source_files
-    ) == 4
+    ) == 5
+
+    assert (
+        root
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "RetroVault_NES_Classic.production.json"
+    ) in plan.source_files
 
     assert {
         source.name
@@ -680,6 +688,7 @@ def test_production_catalog_asset_has_deployable_plan():
         "RetroVault_NES_Classic_1080p.png",
         "RetroVault_NES_Classic.runtime.cfg",
         "RetroVault_NES_Classic.shader.cfg",
+        "RetroVault_NES_Classic.production.json",
     }
 
     assert all(
