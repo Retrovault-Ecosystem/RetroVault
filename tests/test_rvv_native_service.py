@@ -534,3 +534,389 @@ def test_overlay_root_reloads_configuration(
     assert service.overlay_root() == (
         second.resolve()
     )
+
+
+def _shader_repository(
+    tmp_path,
+):
+    repository = (
+        tmp_path
+        / "shader-repository"
+    )
+
+    package = (
+        repository
+        / "retrovault"
+        / "audit"
+    )
+
+    package.mkdir(
+        parents=True
+    )
+
+    (
+        package
+        / "Classic.slangp"
+    ).write_text(
+        'shaders = "1"\n'
+        'shader0 = "Pass.slang"\n',
+        encoding="utf-8",
+    )
+
+    (
+        package
+        / "Pass.slang"
+    ).write_text(
+        "#version 450\n"
+        "void main() {}\n",
+        encoding="utf-8",
+    )
+
+    return repository
+
+
+def _shader_manifest(
+    tmp_path,
+):
+    manifest = (
+        tmp_path
+        / "shader-visual-catalog.json"
+    )
+
+    manifest.write_text(
+        json.dumps(
+            {
+                "version": 1,
+                "assets": [
+                    {
+                        "id": (
+                            "rvv.shader.audit.classic"
+                        ),
+                        "display_name": (
+                            "RetroVault Audit CRT"
+                        ),
+                        "asset_type": "shader",
+                        "source": "rvv_native",
+                        "reference": (
+                            "retro-vault://shaders/"
+                            "audit/Classic.slangp"
+                        ),
+                        "author": "RetroVault",
+                        "attribution": "",
+                    }
+                ],
+            },
+            indent=2,
+        ),
+        encoding="utf-8",
+    )
+
+    return manifest
+
+
+def _shader_service(
+    tmp_path,
+    shader_root,
+):
+    from services.presentation.visual_manifest import (
+        VisualAssetCatalogManifest,
+    )
+
+    overlay_root = (
+        tmp_path
+        / "unused-overlays"
+    )
+
+    return NativeVisualService(
+        repository_root=(
+            _shader_repository(
+                tmp_path
+            )
+        ),
+        config_loader=(
+            _config_loader(
+                tmp_path,
+                overlay_root,
+            )
+        ),
+        catalog_manifest=(
+            VisualAssetCatalogManifest(
+                _shader_manifest(
+                    tmp_path
+                )
+            )
+        ),
+    )
+
+
+def test_native_assets_include_cataloged_native_shader(
+    tmp_path,
+):
+    shader_root = Path("/shaders")
+
+    service = _shader_service(
+        tmp_path,
+        shader_root,
+    )
+
+    assets = service.native_assets()
+
+    assert len(assets) == 1
+    assert (
+        assets[0].id
+        == "rvv.shader.audit.classic"
+    )
+
+
+def test_shader_status_uses_configured_shader_root(
+    tmp_path,
+):
+    shader_root = (
+        tmp_path
+        / "configured-shaders"
+    )
+
+    service = _shader_service(
+        tmp_path,
+        shader_root,
+    )
+
+    # Existing test config helper writes /shaders.
+    # Give this test a dedicated effective config.
+    default = (
+        tmp_path
+        / "shader-retroarch.yaml"
+    )
+
+    runtime = (
+        tmp_path
+        / "shader-user.yaml"
+    )
+
+    default.write_text(
+        yaml.safe_dump(
+            {
+                "retroarch": {
+                    "executable": "/usr/bin/retroarch",
+                    "cores": {
+                        "directory": "/cores",
+                    },
+                },
+                "paths": {
+                    "overlays": {
+                        "directory": str(
+                            tmp_path
+                            / "unused-overlays"
+                        ),
+                    },
+                    "shaders": {
+                        "directory": str(
+                            shader_root
+                        ),
+                    },
+                    "artwork": {
+                        "directory": str(
+                            tmp_path
+                            / "artwork"
+                        ),
+                    },
+                },
+                "library": {
+                    "sources": [],
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    service.config_loader = ConfigLoader(
+        default_file=default,
+        runtime_file=runtime,
+    )
+
+    result = service.status(
+        "rvv.shader.audit.classic"
+    )
+
+    assert result.status is (
+        NativeVisualInstallStatus.NOT_INSTALLED
+    )
+
+    assert (
+        result.deployment.shader_root
+        == shader_root.resolve()
+    )
+
+
+def test_application_service_installs_native_shader(
+    tmp_path,
+):
+    shader_root = (
+        tmp_path
+        / "configured-shaders"
+    )
+
+    service = _shader_service(
+        tmp_path,
+        shader_root,
+    )
+
+    default = (
+        tmp_path
+        / "shader-install-retroarch.yaml"
+    )
+
+    runtime = (
+        tmp_path
+        / "shader-install-user.yaml"
+    )
+
+    default.write_text(
+        yaml.safe_dump(
+            {
+                "retroarch": {
+                    "executable": "/usr/bin/retroarch",
+                    "cores": {
+                        "directory": "/cores",
+                    },
+                },
+                "paths": {
+                    "overlays": {
+                        "directory": str(
+                            tmp_path
+                            / "unused-overlays"
+                        ),
+                    },
+                    "shaders": {
+                        "directory": str(
+                            shader_root
+                        ),
+                    },
+                    "artwork": {
+                        "directory": str(
+                            tmp_path
+                            / "artwork"
+                        ),
+                    },
+                },
+                "library": {
+                    "sources": [],
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    service.config_loader = ConfigLoader(
+        default_file=default,
+        runtime_file=runtime,
+    )
+
+    result = service.install(
+        "rvv.shader.audit.classic"
+    )
+
+    assert result.status is (
+        NativeVisualInstallStatus.CURRENT
+    )
+
+    assert (
+        shader_root
+        / "audit"
+        / "Classic.slangp"
+    ).is_file()
+
+    assert (
+        shader_root
+        / "audit"
+        / "Pass.slang"
+    ).is_file()
+
+
+def test_modified_native_shader_is_outdated(
+    tmp_path,
+):
+    shader_root = (
+        tmp_path
+        / "configured-shaders"
+    )
+
+    service = _shader_service(
+        tmp_path,
+        shader_root,
+    )
+
+    default = (
+        tmp_path
+        / "shader-outdated-retroarch.yaml"
+    )
+
+    runtime = (
+        tmp_path
+        / "shader-outdated-user.yaml"
+    )
+
+    default.write_text(
+        yaml.safe_dump(
+            {
+                "retroarch": {
+                    "executable": "/usr/bin/retroarch",
+                    "cores": {
+                        "directory": "/cores",
+                    },
+                },
+                "paths": {
+                    "overlays": {
+                        "directory": str(
+                            tmp_path
+                            / "unused-overlays"
+                        ),
+                    },
+                    "shaders": {
+                        "directory": str(
+                            shader_root
+                        ),
+                    },
+                    "artwork": {
+                        "directory": str(
+                            tmp_path
+                            / "artwork"
+                        ),
+                    },
+                },
+                "library": {
+                    "sources": [],
+                },
+            },
+            sort_keys=False,
+        ),
+        encoding="utf-8",
+    )
+
+    service.config_loader = ConfigLoader(
+        default_file=default,
+        runtime_file=runtime,
+    )
+
+    service.install(
+        "rvv.shader.audit.classic"
+    )
+
+    (
+        shader_root
+        / "audit"
+        / "Pass.slang"
+    ).write_text(
+        "modified\n",
+        encoding="utf-8",
+    )
+
+    result = service.status(
+        "rvv.shader.audit.classic"
+    )
+
+    assert result.status is (
+        NativeVisualInstallStatus.OUTDATED
+    )

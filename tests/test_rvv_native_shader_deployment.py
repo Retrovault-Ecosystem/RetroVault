@@ -271,3 +271,307 @@ def test_shader_deployment_is_idempotent(
     }
 
     assert second_bytes == first_bytes
+
+
+def _synthetic_shader_service(
+    tmp_path,
+    *,
+    parent_text,
+    child_text=None,
+    shader_text=None,
+):
+    repository = (
+        tmp_path
+        / "repository"
+    )
+
+    package = (
+        repository
+        / "retrovault"
+        / "audit"
+    )
+
+    package.mkdir(
+        parents=True
+    )
+
+    (
+        package
+        / "parent.slangp"
+    ).write_text(
+        parent_text,
+        encoding="utf-8",
+    )
+
+    if child_text is not None:
+        (
+            package
+            / "child.slangp"
+        ).write_text(
+            child_text,
+            encoding="utf-8",
+        )
+
+    if shader_text is not None:
+        (
+            package
+            / "pass.slang"
+        ).write_text(
+            shader_text,
+            encoding="utf-8",
+        )
+
+    asset = VisualAsset(
+        id="rvv.shader.audit",
+        display_name="Audit Shader",
+        asset_type=VisualAssetType.SHADER,
+        source=VisualAssetSource.RVV_NATIVE,
+        reference=(
+            "retro-vault://shaders/"
+            "audit/parent.slangp"
+        ),
+        author="RetroVault",
+    )
+
+    service = NativeShaderDeploymentService(
+        repository_root=repository,
+        shader_root=(
+            tmp_path
+            / "installed-shaders"
+        ),
+    )
+
+    return service, asset
+
+
+def test_shader_plan_recursively_preserves_reference_directive(
+    tmp_path,
+):
+    service, asset = (
+        _synthetic_shader_service(
+            tmp_path,
+            parent_text=(
+                '#reference "child.slangp"\n'
+            ),
+            child_text=(
+                'shaders = "1"\n'
+                'shader0 = "pass.slang"\n'
+            ),
+            shader_text=(
+                "#version 450\n"
+                "void main() {}\n"
+            ),
+        )
+    )
+
+    plan = service.plan(
+        asset
+    )
+
+    assert set(
+        plan.relative_files
+    ) == {
+        Path("audit/parent.slangp"),
+        Path("audit/child.slangp"),
+        Path("audit/pass.slang"),
+    }
+
+
+def test_shader_plan_rejects_runtime_token_dependency(
+    tmp_path,
+):
+    service, asset = (
+        _synthetic_shader_service(
+            tmp_path,
+            parent_text=(
+                'shader0 = "$PRESET$/pass.slang"\n'
+            ),
+        )
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="statically resolvable",
+    ):
+        service.plan(
+            asset
+        )
+
+
+def test_shader_deployment_does_not_clone_unrelated_shader_tree(
+    tmp_path,
+    monkeypatch,
+):
+    service, asset = (
+        _synthetic_shader_service(
+            tmp_path,
+            parent_text=(
+                'shader0 = "pass.slang"\n'
+            ),
+            shader_text=(
+                "#version 450\n"
+                "void main() {}\n"
+            ),
+        )
+    )
+
+    unrelated = (
+        service.shader_root
+        / "large-existing-pack"
+        / "keep.slang"
+    )
+
+    unrelated.parent.mkdir(
+        parents=True
+    )
+
+    unrelated.write_text(
+        "keep\n",
+        encoding="utf-8",
+    )
+
+    def reject_copytree(
+        *args,
+        **kwargs,
+    ):
+        raise AssertionError(
+            "Whole-tree copy is forbidden."
+        )
+
+    monkeypatch.setattr(
+        "services.presentation."
+        "native_shader_deployment."
+        "shutil.copytree",
+        reject_copytree,
+    )
+
+    service.deploy(
+        asset
+    )
+
+    assert unrelated.read_text(
+        encoding="utf-8"
+    ) == "keep\n"
+
+
+def test_shader_deployment_rolls_back_only_touched_targets(
+    tmp_path,
+    monkeypatch,
+):
+    service, asset = (
+        _synthetic_shader_service(
+            tmp_path,
+            parent_text=(
+                'shader0 = "pass.slang"\n'
+            ),
+            shader_text=(
+                "#version 450\n"
+                "void main() {}\n"
+            ),
+        )
+    )
+
+    plan = service.plan(
+        asset
+    )
+
+    old_bytes = {}
+
+    for relative in plan.relative_files:
+        destination = (
+            service.shader_root
+            / relative
+        )
+
+        destination.parent.mkdir(
+            parents=True,
+            exist_ok=True,
+        )
+
+        payload = (
+            b"old-"
+            + relative.as_posix().encode(
+                "utf-8"
+            )
+        )
+
+        destination.write_bytes(
+            payload
+        )
+
+        old_bytes[
+            relative
+        ] = payload
+
+    unrelated = (
+        service.shader_root
+        / "unrelated"
+        / "keep.slang"
+    )
+
+    unrelated.parent.mkdir(
+        parents=True
+    )
+
+    unrelated.write_bytes(
+        b"unrelated"
+    )
+
+    real_replace = (
+        __import__("os").replace
+    )
+
+    calls = {
+        "count": 0,
+    }
+
+    def failing_replace(
+        source,
+        destination,
+    ):
+        source_path = Path(
+            source
+        )
+
+        if (
+            ".retrovault-shader-staging-"
+            in source_path.as_posix()
+        ):
+            calls["count"] += 1
+
+            if calls["count"] == 2:
+                raise OSError(
+                    "injected deployment failure"
+                )
+
+        return real_replace(
+            source,
+            destination,
+        )
+
+    monkeypatch.setattr(
+        "services.presentation."
+        "native_shader_deployment."
+        "os.replace",
+        failing_replace,
+    )
+
+    with pytest.raises(
+        OSError,
+        match="injected deployment failure",
+    ):
+        service.deploy(
+            asset
+        )
+
+    for relative, payload in (
+        old_bytes.items()
+    ):
+        assert (
+            service.shader_root
+            / relative
+        ).read_bytes() == payload
+
+    assert unrelated.read_bytes() == (
+        b"unrelated"
+    )

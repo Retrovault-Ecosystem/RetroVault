@@ -8,6 +8,10 @@ from .native_deployment import (
     NativeVisualDeployment,
     NativeVisualDeploymentService,
 )
+from .native_shader_deployment import (
+    NativeShaderDeployment,
+    NativeShaderDeploymentService,
+)
 from .visual_catalog import (
     VisualAsset,
     VisualAssetCatalog,
@@ -33,7 +37,10 @@ class NativeVisualStatus:
 
     asset: VisualAsset
     status: NativeVisualInstallStatus
-    deployment: NativeVisualDeployment
+    deployment: (
+        NativeVisualDeployment
+        | NativeShaderDeployment
+    )
 
 
 class NativeVisualService:
@@ -87,9 +94,17 @@ class NativeVisualService:
                 "contain a mapping."
             )
 
+        return config
+
+    def _configured_visual_root(
+        self,
+        kind,
+    ):
+        config = self._load_config()
+
         try:
-            overlay_directory = (
-                config["paths"]["overlays"]["directory"]
+            directory = (
+                config["paths"][kind]["directory"]
             )
         except (
             KeyError,
@@ -97,29 +112,35 @@ class NativeVisualService:
         ) as exc:
             raise ValueError(
                 "RetroVault configuration does not "
-                "define paths.overlays.directory."
+                f"define paths.{kind}.directory."
             ) from exc
 
         if (
             not isinstance(
-                overlay_directory,
+                directory,
                 str,
             )
-            or not overlay_directory.strip()
+            or not directory.strip()
         ):
             raise ValueError(
-                "RetroVault configured overlay "
-                "directory must be a non-empty string."
+                "RetroVault configured "
+                f"{kind} directory must be "
+                "a non-empty string."
             )
 
-        return config
+        return Path(
+            directory
+        ).expanduser().resolve()
 
     def overlay_root(self):
-        config = self._load_config()
+        return self._configured_visual_root(
+            "overlays"
+        )
 
-        return Path(
-            config["paths"]["overlays"]["directory"]
-        ).expanduser().resolve()
+    def shader_root(self):
+        return self._configured_visual_root(
+            "shaders"
+        )
 
     def catalog(self) -> VisualAssetCatalog:
         return self.catalog_manifest.load()
@@ -131,7 +152,10 @@ class NativeVisualService:
                 VisualAssetSource.RVV_NATIVE
             )
             if asset.asset_type
-            is VisualAssetType.OVERLAY
+            in {
+                VisualAssetType.OVERLAY,
+                VisualAssetType.SHADER,
+            }
         )
 
     def require_native_asset(
@@ -150,54 +174,106 @@ class NativeVisualService:
                 "Visual asset is not RVV-native."
             )
 
-        if (
-            asset.asset_type
-            is not VisualAssetType.OVERLAY
-        ):
+        if asset.asset_type not in {
+            VisualAssetType.OVERLAY,
+            VisualAssetType.SHADER,
+        }:
             raise ValueError(
                 "Native RVV application service "
-                "currently supports overlays only."
+                "supports overlay and shader "
+                "assets only."
             )
 
         return asset
 
-    def _deployment_service(self):
-        return NativeVisualDeploymentService(
-            repository_root=self.repository_root,
-            overlay_root=self.overlay_root(),
+    def _deployment_service(
+        self,
+        asset,
+    ):
+        if (
+            asset.asset_type
+            is VisualAssetType.OVERLAY
+        ):
+            return NativeVisualDeploymentService(
+                repository_root=self.repository_root,
+                overlay_root=self.overlay_root(),
+            )
+
+        if (
+            asset.asset_type
+            is VisualAssetType.SHADER
+        ):
+            return NativeShaderDeploymentService(
+                repository_root=self.repository_root,
+                shader_root=self.shader_root(),
+            )
+
+        raise ValueError(
+            "Unsupported RVV-native visual "
+            "asset type."
         )
 
     @staticmethod
     def _is_current(
         deployment,
     ):
-        destination = (
-            deployment.destination_directory
-        )
-
-        if not destination.is_dir():
-            return False
-
-        expected_names = {
-            source.name
-            for source in deployment.source_files
-        }
-
-        actual_names = {
-            path.name
-            for path in destination.iterdir()
-            if path.is_file()
-        }
-
-        if actual_names != expected_names:
-            return False
-
-        for source in deployment.source_files:
-            deployed = (
-                destination
-                / source.name
+        if isinstance(
+            deployment,
+            NativeVisualDeployment,
+        ):
+            destination = (
+                deployment.destination_directory
             )
 
+            if not destination.is_dir():
+                return False
+
+            expected_names = {
+                source.name
+                for source
+                in deployment.source_files
+            }
+
+            actual_names = {
+                path.name
+                for path
+                in destination.iterdir()
+                if path.is_file()
+            }
+
+            if actual_names != expected_names:
+                return False
+
+            pairs = (
+                (
+                    source,
+                    destination / source.name,
+                )
+                for source
+                in deployment.source_files
+            )
+
+        elif isinstance(
+            deployment,
+            NativeShaderDeployment,
+        ):
+            pairs = zip(
+                deployment.source_files,
+                (
+                    deployment.shader_root
+                    / relative
+                    for relative
+                    in deployment.relative_files
+                ),
+            )
+
+        else:
+            raise TypeError(
+                "Unknown native RVV deployment "
+                "type."
+            )
+
+        for source, deployed in pairs:
             if not deployed.is_file():
                 return False
 
@@ -221,15 +297,41 @@ class NativeVisualService:
         )
 
         deployment = (
-            self._deployment_service().plan(
+            self._deployment_service(
+                asset
+            ).plan(
                 asset
             )
         )
 
-        if not (
-            deployment.destination_directory
-            .exists()
+        if isinstance(
+            deployment,
+            NativeVisualDeployment,
         ):
+            exists = (
+                deployment
+                .destination_directory
+                .exists()
+            )
+        elif isinstance(
+            deployment,
+            NativeShaderDeployment,
+        ):
+            exists = any(
+                (
+                    deployment.shader_root
+                    / relative
+                ).exists()
+                for relative
+                in deployment.relative_files
+            )
+        else:
+            raise TypeError(
+                "Unknown native RVV deployment "
+                "type."
+            )
+
+        if not exists:
             state = (
                 NativeVisualInstallStatus
                 .NOT_INSTALLED
@@ -261,7 +363,9 @@ class NativeVisualService:
             asset_id
         )
 
-        self._deployment_service().deploy(
+        self._deployment_service(
+            asset
+        ).deploy(
             asset
         )
 

@@ -28,9 +28,20 @@ _DEPENDENCY_EXTENSIONS = (
     | _SHADER_EXTENSIONS
 )
 
-_SHADER_REFERENCE = re.compile(
-    r'^\s*shader\d+\s*=\s*"([^"]+)"\s*$',
-    flags=re.MULTILINE,
+_SHADER_ASSIGNMENT_REFERENCE = re.compile(
+    r"""^\s*shader\d+\s*=\s*["']([^"']+)["']\s*$""",
+    flags=(
+        re.MULTILINE
+        | re.IGNORECASE
+    ),
+)
+
+_REFERENCE_DIRECTIVE = re.compile(
+    r"""^\s*#reference\s+(?:"([^"]+)"|'([^']+)'|(\S+))\s*$""",
+    flags=(
+        re.MULTILINE
+        | re.IGNORECASE
+    ),
 )
 
 
@@ -277,12 +288,43 @@ class NativeShaderDeploymentService:
 
         references = []
 
-        for match in _SHADER_REFERENCE.finditer(
-            text
-        ):
-            value = (
-                match.group(1)
-                .replace("\\\\", "/")
+        for line in text.splitlines():
+            stripped = line.strip()
+
+            if not stripped:
+                continue
+
+            reference_match = (
+                _REFERENCE_DIRECTIVE.match(
+                    line
+                )
+            )
+
+            if reference_match:
+                value = next(
+                    item
+                    for item
+                    in reference_match.groups()
+                    if item is not None
+                )
+            else:
+                shader_match = (
+                    _SHADER_ASSIGNMENT_REFERENCE
+                    .match(
+                        line
+                    )
+                )
+
+                if not shader_match:
+                    continue
+
+                value = (
+                    shader_match.group(1)
+                )
+
+            value = value.replace(
+                "\\\\",
+                "/",
             )
 
             if (
@@ -291,13 +333,19 @@ class NativeShaderDeploymentService:
                     value
                 )
             ):
-                continue
+                raise ValueError(
+                    "RVV-native shader dependencies "
+                    "must be statically resolvable; "
+                    f"runtime token found: {value}"
+                )
 
             references.append(
                 value
             )
 
-        return tuple(references)
+        return tuple(
+            references
+        )
 
     def _resolve_dependency(
         self,
@@ -501,6 +549,22 @@ class NativeShaderDeploymentService:
                 path
             )
 
+    @staticmethod
+    def _remove_empty_parents(
+        path,
+        *,
+        stop,
+    ):
+        current = path
+
+        while current != stop:
+            try:
+                current.rmdir()
+            except OSError:
+                break
+
+            current = current.parent
+
     def deploy(
         self,
         asset,
@@ -516,14 +580,16 @@ class NativeShaderDeploymentService:
             exist_ok=True,
         )
 
+        token = asset.id.replace(
+            "/",
+            "_",
+        )
+
         staging = (
             parent
             / (
                 ".retrovault-shader-staging-"
-                + asset.id.replace(
-                    "/",
-                    "_",
-                )
+                + token
             )
         )
 
@@ -531,10 +597,7 @@ class NativeShaderDeploymentService:
             parent
             / (
                 ".retrovault-shader-backup-"
-                + asset.id.replace(
-                    "/",
-                    "_",
-                )
+                + token
             )
         )
 
@@ -549,13 +612,11 @@ class NativeShaderDeploymentService:
             parents=True
         )
 
-        moved_existing = False
+        existing = set()
+        installed = []
 
         try:
-            for (
-                source,
-                relative,
-            ) in zip(
+            for source, relative in zip(
                 plan.source_files,
                 plan.relative_files,
             ):
@@ -564,10 +625,7 @@ class NativeShaderDeploymentService:
                     staging / relative,
                 )
 
-            for (
-                source,
-                relative,
-            ) in zip(
+            for source, relative in zip(
                 plan.source_files,
                 plan.relative_files,
             ):
@@ -591,25 +649,18 @@ class NativeShaderDeploymentService:
                         "Configured shader root "
                         "must be a directory."
                     )
-
-                shutil.copytree(
-                    self.shader_root,
-                    backup,
+            else:
+                self.shader_root.mkdir(
+                    parents=True,
+                    exist_ok=True,
                 )
 
-                moved_existing = True
-
-            self.shader_root.mkdir(
+            backup.mkdir(
                 parents=True,
                 exist_ok=True,
             )
 
             for relative in plan.relative_files:
-                staged = (
-                    staging
-                    / relative
-                )
-
                 destination = (
                     self.shader_root
                     / relative
@@ -625,20 +676,54 @@ class NativeShaderDeploymentService:
                     ),
                 )
 
+                if destination.exists():
+                    if not destination.is_file():
+                        raise ValueError(
+                            "Native RVV shader "
+                            "destination must be "
+                            "a regular file."
+                        )
+
+                    existing.add(
+                        relative
+                    )
+
+                    backup_file = (
+                        backup
+                        / relative
+                    )
+
+                    self._copy_to_staging(
+                        destination,
+                        backup_file,
+                    )
+
                 destination.parent.mkdir(
                     parents=True,
                     exist_ok=True,
                 )
+
+            for relative in plan.relative_files:
+                staged = (
+                    staging
+                    / relative
+                )
+
+                destination = (
+                    self.shader_root
+                    / relative
+                ).resolve()
 
                 os.replace(
                     staged,
                     destination,
                 )
 
-            for (
-                source,
-                relative,
-            ) in zip(
+                installed.append(
+                    relative
+                )
+
+            for source, relative in zip(
                 plan.source_files,
                 plan.relative_files,
             ):
@@ -658,57 +743,45 @@ class NativeShaderDeploymentService:
                     )
 
         except Exception:
-            try:
-                if moved_existing:
-                    self._remove_tree(
-                        self.shader_root
+            for relative in reversed(
+                installed
+            ):
+                destination = (
+                    self.shader_root
+                    / relative
+                )
+
+                if relative in existing:
+                    backup_file = (
+                        backup
+                        / relative
                     )
 
-                    shutil.copytree(
-                        backup,
-                        self.shader_root,
-                    )
-                else:
-                    for relative in (
-                        plan.relative_files
-                    ):
-                        destination = (
-                            self.shader_root
-                            / relative
+                    if backup_file.is_file():
+                        destination.parent.mkdir(
+                            parents=True,
+                            exist_ok=True,
                         )
 
-                        if destination.is_file():
-                            destination.unlink()
+                        os.replace(
+                            backup_file,
+                            destination,
+                        )
+                else:
+                    if destination.is_file():
+                        destination.unlink()
 
-                    for directory in sorted(
-                        {
-                            (
-                                self.shader_root
-                                / relative
-                            ).parent
-                            for relative
-                            in plan.relative_files
-                        },
-                        key=lambda path: len(
-                            path.parts
-                        ),
-                        reverse=True,
-                    ):
-                        if (
-                            directory != self.shader_root
-                            and directory.is_dir()
-                        ):
-                            try:
-                                directory.rmdir()
-                            except OSError:
-                                pass
-            finally:
-                self._remove_tree(
-                    staging
-                )
-                self._remove_tree(
-                    backup
-                )
+                    self._remove_empty_parents(
+                        destination.parent,
+                        stop=self.shader_root,
+                    )
+
+            self._remove_tree(
+                staging
+            )
+            self._remove_tree(
+                backup
+            )
 
             raise
 
