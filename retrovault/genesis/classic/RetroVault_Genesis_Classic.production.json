@@ -1,0 +1,25 @@
+{
+  "schema_version": 1,
+  "platform_id": "platform.sega.genesis",
+  "core_identity": "genesis_plus_gx",
+  "master_presentation_class": "classic_4_3",
+  "fit_policy": "contain",
+  "source_geometry_authority": "libretro_core",
+  "source_display_aspect_authority": "libretro_core",
+  "physical_geometry_authority": "platform_package",
+  "dynamic_geometry": {
+    "preserve_core_set_geometry": true,
+    "per_game_geometry": false,
+    "per_raster_geometry": false,
+    "force_framebuffer_to_master_envelope": false
+  },
+  "source_preservation": {
+    "crop_policy": "no_unvalidated_crop",
+    "preserve_all_edges": true
+  },
+  "production_state": {
+    "policy_activation": false,
+    "production_ready": false,
+    "live_validation_required": true
+  }
+}
