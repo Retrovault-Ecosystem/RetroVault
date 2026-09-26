@@ -60,7 +60,7 @@ def test_production_visual_catalog_manifest_loads():
 
     assets = catalog.all()
 
-    assert len(assets) == 3
+    assert len(assets) == 5
 
     assert {
         asset.id
@@ -68,6 +68,8 @@ def test_production_visual_catalog_manifest_loads():
     } == {
         "rvv.overlay.nes.classic",
         "rvv.overlay.snes.classic",
+        "rvv.shader.nes.classic.crt",
+        "rvv.shader.snes.classic.crt",
         "rvv.shader.genesis.classic.crt",
     }
 

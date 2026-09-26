@@ -11,6 +11,7 @@ from services.retroarch.launcher import (
 def test_launcher_builds_exact_core_rom_command():
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
     )
 
     profile = LaunchProfile(
@@ -47,6 +48,7 @@ def test_launcher_builds_exact_core_rom_command():
 def test_launcher_appends_config_after_rom():
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
     )
 
     profile = LaunchProfile(
@@ -86,6 +88,7 @@ def test_launcher_appends_config_after_rom():
 def test_launcher_reports_process_spawn_failure():
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
     )
 
     profile = LaunchProfile(
@@ -123,6 +126,7 @@ def test_launcher_reports_process_spawn_failure():
 def test_launcher_appends_shader_after_rom():
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
     )
 
     profile = LaunchProfile(
@@ -162,6 +166,7 @@ def test_launcher_appends_shader_after_rom():
 def test_launcher_composes_config_and_shader():
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
     )
 
     profile = LaunchProfile(
@@ -199,6 +204,19 @@ def test_launcher_composes_config_and_shader():
         "success": True,
         "command": expected,
     }
+
+
+class FakePrimaryConfigRuntime:
+    """
+    Preserve historical launcher command expectations in tests that are
+    not specifically exercising early primary-config runtime authority.
+
+    Dedicated tests inject their own PrimaryRuntime and verify the new
+    production --config contract explicitly.
+    """
+
+    def create(self, *, overlay=None):
+        return None
 
 
 class FakeSessionConfig:
@@ -239,6 +257,7 @@ def test_launcher_appends_overlay_runtime_config():
 
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
         overlay_runtime=runtime
     )
 
@@ -287,6 +306,7 @@ def test_launcher_composes_config_overlay_and_shader():
 
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
         overlay_runtime=runtime
     )
 
@@ -342,6 +362,7 @@ def test_launcher_reports_overlay_runtime_failure():
 
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
         overlay_runtime=(
             BrokenOverlayRuntime()
         )
@@ -416,6 +437,7 @@ def test_launcher_shader_without_runtime_parameters_passes_through():
 
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
         shader_runtime=shader_runtime
     )
 
@@ -472,6 +494,7 @@ def test_launcher_wraps_selected_shader_when_overlay_has_parameters():
 
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
         overlay_runtime=overlay_runtime,
         shader_runtime=shader_runtime,
     )
@@ -535,6 +558,7 @@ def test_launcher_does_not_synthesize_shader_for_overlay_only():
 
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
         shader_runtime=shader_runtime
     )
 
@@ -580,6 +604,7 @@ def test_launcher_reports_shader_runtime_failure():
 
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
         shader_runtime=BrokenShaderRuntime()
     )
 
@@ -614,6 +639,7 @@ def test_launcher_passes_explicit_archive_member_to_runtime():
 
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
         archive_runtime=archive_runtime,
     )
 
@@ -657,6 +683,7 @@ def test_launcher_preserves_automatic_archive_selection_by_default():
 
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
         archive_runtime=archive_runtime,
     )
 
@@ -717,6 +744,7 @@ def test_launcher_appends_ephemeral_cheat_runtime(
 
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
         archive_runtime=FakeArchiveRuntime(),
         cheat_runtime=cheat_runtime,
     )
@@ -1238,6 +1266,9 @@ def test_launcher_forwards_platform_identity_to_core_options(
     )
 
     launcher = RetroArchLauncher(
+        display_aspect_probe=A7StartupDisplayAspectProbe(),
+        content_display_aspect_probe=A7ContentLoadedDisplayAspectProbe(),
+        contain_runtime=A7StartupContainRuntime(),
         archive_runtime=ArchiveRuntimeStub(),
         core_options_runtime=CoreOptionsRuntimeStub(),
         session_config=SessionConfigStub(),
@@ -1591,6 +1622,9 @@ def test_a3n3b4_canonical_identity_without_assets_preserves_core_policy_path(
     )
 
     launcher = RetroArchLauncher(
+        display_aspect_probe=A7StartupDisplayAspectProbe(),
+        content_display_aspect_probe=A7ContentLoadedDisplayAspectProbe(),
+        contain_runtime=A7StartupContainRuntime(),
         core_options_runtime=CoreOptions(),
         session_config=SessionConfig(),
     )
@@ -1614,59 +1648,69 @@ def test_a3n3b4_canonical_identity_without_assets_preserves_core_policy_path(
     assert len(popen_calls) == 1
 
 
-def test_a3n3b4_ready_partial_package_fails_before_archive(
+def test_a3n3b4_ready_partial_launchprofile_package_does_not_override_canonical_ready_authority(
     monkeypatch,
 ):
-    from pathlib import Path
-
     from models.launch_profile import LaunchProfile
-    from services.retroarch.launcher import (
-        RetroArchLauncher,
+    from services.retroarch.launcher import RetroArchLauncher
+
+    observed = {}
+
+    class CanonicalPackage:
+        overlay = "/canonical/nes/RetroVault_NES_Classic.cfg"
+        shader = "/canonical/nes/RetroVault_NES_Classic_CRT.slangp"
+
+    def resolve(**kwargs):
+        observed.update(kwargs)
+        return CanonicalPackage()
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher."
+        "CanonicalProductionPackageResolver.resolve",
+        resolve,
     )
 
-    root = Path(__file__).resolve().parents[1]
-
-    overlay = (
-        root
-        / "retrovault"
-        / "nes"
-        / "classic"
-        / "RetroVault_NES_Classic.cfg"
-    )
-
-    calls = []
+    archive_calls = []
 
     class ArchiveRuntime:
-        def resolve(
-            self,
-            *args,
-            **kwargs,
-        ):
-            calls.append("archive")
-            raise AssertionError(
-                "archive resolution must not occur"
-            )
+        def resolve(self, rom, *, member=None):
+            archive_calls.append((rom, member))
+            return rom
+
+    class StopBeforeRuntime:
+        def create(self, *args, **kwargs):
+            raise ValueError("test stop after canonical authority")
+
+        def cleanup(self, *args, **kwargs):
+            return None
 
     launcher = RetroArchLauncher(
         archive_runtime=ArchiveRuntime(),
+        primary_config_runtime=StopBeforeRuntime(),
     )
 
     profile = LaunchProfile(
         game="Canonical Partial",
         rom="/roms/game.nes",
         core="fceumm",
-        overlay=str(overlay),
+        overlay="/legacy/content-specific.cfg",
         shader="",
         platform_id="platform.nintendo.nes",
     )
 
-    result = launcher.launch(
-        profile
-    )
+    result = launcher.launch(profile)
 
-    assert result["success"] is False
-    assert "missing its production shader" in result["error"]
-    assert calls == []
+    assert observed == {
+        "platform_id": "platform.nintendo.nes",
+        "core_identity": "fceumm",
+    }
+    assert archive_calls == [
+        ("/roms/game.nes", None),
+    ]
+    assert result == {
+        "success": False,
+        "error": "test stop after canonical authority",
+    }
 
 
 def test_a3n3b4_unconfigured_cannot_borrow_ready_package_before_archive(
@@ -1732,66 +1776,69 @@ def test_a3n3b4_unconfigured_cannot_borrow_ready_package_before_archive(
     assert calls == []
 
 
-def test_a3n3b4_ready_platform_cannot_borrow_foreign_package_before_archive(
+def test_a3n3b4_ready_platform_ignores_foreign_launchprofile_package_metadata(
     monkeypatch,
 ):
-    from pathlib import Path
-
     from models.launch_profile import LaunchProfile
-    from services.retroarch.launcher import (
-        RetroArchLauncher,
+    from services.retroarch.launcher import RetroArchLauncher
+
+    observed = {}
+
+    class CanonicalPackage:
+        overlay = "/canonical/nes/RetroVault_NES_Classic.cfg"
+        shader = "/canonical/nes/RetroVault_NES_Classic_CRT.slangp"
+
+    def resolve(**kwargs):
+        observed.update(kwargs)
+        return CanonicalPackage()
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher."
+        "CanonicalProductionPackageResolver.resolve",
+        resolve,
     )
 
-    root = Path(__file__).resolve().parents[1]
-
-    overlay = (
-        root
-        / "retrovault"
-        / "snes"
-        / "classic"
-        / "RetroVault_SNES_Classic.cfg"
-    )
-
-    shader = (
-        root
-        / "retrovault"
-        / "snes"
-        / "classic"
-        / "RetroVault_SNES_Classic_CRT.slangp"
-    )
-
-    calls = []
+    archive_calls = []
 
     class ArchiveRuntime:
-        def resolve(
-            self,
-            *args,
-            **kwargs,
-        ):
-            calls.append("archive")
-            raise AssertionError(
-                "archive resolution must not occur"
-            )
+        def resolve(self, rom, *, member=None):
+            archive_calls.append((rom, member))
+            return rom
+
+    class StopBeforeRuntime:
+        def create(self, *args, **kwargs):
+            raise ValueError("test stop after canonical authority")
+
+        def cleanup(self, *args, **kwargs):
+            return None
 
     launcher = RetroArchLauncher(
         archive_runtime=ArchiveRuntime(),
+        primary_config_runtime=StopBeforeRuntime(),
     )
 
     profile = LaunchProfile(
-        game="NES Foreign Package",
+        game="NES Foreign Legacy Metadata",
         rom="/roms/game.nes",
         core="fceumm",
-        overlay=str(overlay),
-        shader=str(shader),
+        overlay="/legacy/snes/RetroVault_SNES_Classic.cfg",
+        shader="/legacy/snes/RetroVault_SNES_Classic_CRT.slangp",
         platform_id="platform.nintendo.nes",
     )
 
-    result = launcher.launch(
-        profile
-    )
+    result = launcher.launch(profile)
 
-    assert result["success"] is False
-    assert calls == []
+    assert observed == {
+        "platform_id": "platform.nintendo.nes",
+        "core_identity": "fceumm",
+    }
+    assert archive_calls == [
+        ("/roms/game.nes", None),
+    ]
+    assert result == {
+        "success": False,
+        "error": "test stop after canonical authority",
+    }
 
 
 def test_a3n3b4_ready_platform_foreign_core_fails_before_archive(
@@ -1959,6 +2006,9 @@ def test_a3n3b4_valid_nes_package_passes_gate_before_archive(
     )
 
     launcher = RetroArchLauncher(
+        display_aspect_probe=A7StartupDisplayAspectProbe(),
+        content_display_aspect_probe=A7ContentLoadedDisplayAspectProbe(),
+        contain_runtime=A7StartupContainRuntime(),
         archive_runtime=ArchiveRuntime(),
         core_options_runtime=CoreOptions(),
         session_config=SessionConfig(),
@@ -2079,6 +2129,9 @@ def test_a3n3b4_valid_snes_package_passes_gate_before_archive(
     )
 
     launcher = RetroArchLauncher(
+        display_aspect_probe=A7StartupDisplayAspectProbe(),
+        content_display_aspect_probe=A7ContentLoadedDisplayAspectProbe(),
+        contain_runtime=A7StartupContainRuntime(),
         archive_runtime=ArchiveRuntime(),
         core_options_runtime=CoreOptions(),
         session_config=SessionConfig(),
@@ -2101,3 +2154,676 @@ def test_a3n3b4_valid_snes_package_passes_gate_before_archive(
 
     assert result["success"] is True
     assert len(popen_calls) == 1
+
+
+def test_ready_nes_production_package_accepts_absolute_core_path(
+    monkeypatch,
+):
+    from pathlib import Path
+
+    from models.launch_profile import LaunchProfile
+    from services.retroarch.launcher import (
+        RetroArchLauncher,
+    )
+
+    root = Path(__file__).resolve().parents[1]
+
+    overlay = (
+        root
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "RetroVault_NES_Classic.cfg"
+    )
+
+    shader = (
+        root
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "RetroVault_NES_Classic_CRT.slangp"
+    )
+
+    executable_core = (
+        "/opt/retropie/libretrocores/lr-fceumm/"
+        "fceumm_libretro.so"
+    )
+
+    class ArchiveRuntime:
+        def resolve(
+            self,
+            rom,
+            member=None,
+        ):
+            return rom
+
+    class CoreOptions:
+        def create(
+            self,
+            core,
+            platform_id=None,
+        ):
+            assert core == executable_core
+            assert (
+                platform_id
+                == "platform.nintendo.nes"
+            )
+            return None
+
+    class SessionConfig:
+        def create(
+            self,
+            core_options_path=None,
+        ):
+            return None
+
+    class OverlayRuntime:
+        def create(
+            self,
+            value,
+        ):
+            return "/tmp/overlay-runtime.cfg"
+
+    class ShaderRuntime:
+        def parameters_for_overlay(
+            self,
+            value,
+        ):
+            return {}
+
+        def resolve(
+            self,
+            shader,
+            parameters,
+        ):
+            raise AssertionError(
+                "Shader resolution should not be required."
+            )
+
+    class Process:
+        def poll(self):
+            return None
+
+    popen_calls = []
+
+    def fake_popen(
+        command,
+        **kwargs,
+    ):
+        popen_calls.append(
+            (
+                command,
+                kwargs,
+            )
+        )
+        return Process()
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.subprocess.Popen",
+        fake_popen,
+    )
+
+    launcher = RetroArchLauncher(
+        display_aspect_probe=A7StartupDisplayAspectProbe(),
+        content_display_aspect_probe=A7ContentLoadedDisplayAspectProbe(),
+        contain_runtime=A7StartupContainRuntime(),
+        archive_runtime=ArchiveRuntime(),
+        core_options_runtime=CoreOptions(),
+        session_config=SessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
+        overlay_runtime=OverlayRuntime(),
+        shader_runtime=ShaderRuntime(),
+    )
+
+    profile = LaunchProfile(
+        game="NES Absolute Core",
+        rom="/roms/game.nes",
+        core=executable_core,
+        overlay=str(overlay),
+        shader=str(shader),
+        platform_id="platform.nintendo.nes",
+    )
+
+    result = launcher.launch(
+        profile
+    )
+
+    assert result["success"] is True
+    assert len(popen_calls) == 1
+
+    command = popen_calls[0][0]
+
+    assert command[:4] == [
+        "retroarch",
+        "-L",
+        executable_core,
+        "/roms/game.nes",
+    ]
+
+
+def test_ready_snes_production_package_accepts_absolute_core_path(
+    monkeypatch,
+):
+    from pathlib import Path
+
+    from models.launch_profile import LaunchProfile
+    from services.retroarch.launcher import (
+        RetroArchLauncher,
+    )
+
+    root = Path(__file__).resolve().parents[1]
+
+    overlay = (
+        root
+        / "retrovault"
+        / "snes"
+        / "classic"
+        / "RetroVault_SNES_Classic.cfg"
+    )
+
+    shader = (
+        root
+        / "retrovault"
+        / "snes"
+        / "classic"
+        / "RetroVault_SNES_Classic_CRT.slangp"
+    )
+
+    executable_core = (
+        "/opt/retropie/libretrocores/lr-snes9x/"
+        "snes9x_libretro.so"
+    )
+
+    class ArchiveRuntime:
+        def resolve(
+            self,
+            rom,
+            member=None,
+        ):
+            return rom
+
+    class CoreOptions:
+        def create(
+            self,
+            core,
+            platform_id=None,
+        ):
+            assert core == executable_core
+            assert (
+                platform_id
+                == "platform.nintendo.snes"
+            )
+            return None
+
+    class SessionConfig:
+        def create(
+            self,
+            core_options_path=None,
+        ):
+            return None
+
+    class OverlayRuntime:
+        def create(
+            self,
+            value,
+        ):
+            return "/tmp/overlay-runtime.cfg"
+
+    class ShaderRuntime:
+        def parameters_for_overlay(
+            self,
+            value,
+        ):
+            return {}
+
+        def resolve(
+            self,
+            shader,
+            parameters,
+        ):
+            raise AssertionError(
+                "Shader resolution should not be required."
+            )
+
+    class Process:
+        def poll(self):
+            return None
+
+    popen_calls = []
+
+    def fake_popen(
+        command,
+        **kwargs,
+    ):
+        popen_calls.append(
+            (
+                command,
+                kwargs,
+            )
+        )
+        return Process()
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.subprocess.Popen",
+        fake_popen,
+    )
+
+    launcher = RetroArchLauncher(
+        display_aspect_probe=A7StartupDisplayAspectProbe(),
+        content_display_aspect_probe=A7ContentLoadedDisplayAspectProbe(),
+        contain_runtime=A7StartupContainRuntime(),
+        archive_runtime=ArchiveRuntime(),
+        core_options_runtime=CoreOptions(),
+        session_config=SessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
+        overlay_runtime=OverlayRuntime(),
+        shader_runtime=ShaderRuntime(),
+    )
+
+    profile = LaunchProfile(
+        game="SNES Absolute Core",
+        rom="/roms/game.sfc",
+        core=executable_core,
+        overlay=str(overlay),
+        shader=str(shader),
+        platform_id="platform.nintendo.snes",
+    )
+
+    result = launcher.launch(
+        profile
+    )
+
+    assert result["success"] is True
+    assert len(popen_calls) == 1
+
+    command = popen_calls[0][0]
+
+    assert command[:4] == [
+        "retroarch",
+        "-L",
+        executable_core,
+        "/roms/game.sfc",
+    ]
+
+
+def test_wayland_primary_runtime_precedes_core_and_append_configs(
+    monkeypatch,
+):
+    from models.launch_profile import LaunchProfile
+    from services.retroarch.launcher import (
+        RetroArchLauncher,
+    )
+
+    class PrimaryRuntime:
+        def create(self, *, overlay=None):
+            return "/runtime/primary.cfg"
+
+    class SessionConfig:
+        def create(
+            self,
+            core_options_path=None,
+        ):
+            return "/runtime/session.cfg"
+
+    class Process:
+        def poll(self):
+            return None
+
+    popen_calls = []
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.subprocess.Popen",
+        lambda command, **kwargs: (
+            popen_calls.append(
+                (
+                    command,
+                    kwargs,
+                )
+            )
+            or Process()
+        ),
+    )
+
+    launcher = RetroArchLauncher(
+        primary_config_runtime=PrimaryRuntime(),
+        session_config=SessionConfig(),
+    )
+
+    profile = LaunchProfile(
+        game="Primary Runtime",
+        rom="/roms/game.bin",
+        core="/cores/example_libretro.so",
+    )
+
+    result = launcher.launch(
+        profile
+    )
+
+    assert result["success"] is True
+    assert len(popen_calls) == 1
+
+    command = popen_calls[0][0]
+
+    assert command[:7] == [
+        "retroarch",
+        "--config",
+        "/runtime/primary.cfg",
+        "-L",
+        "/cores/example_libretro.so",
+        "/roms/game.bin",
+        "--appendconfig",
+    ]
+
+    assert (
+        command[7]
+        == "/runtime/session.cfg"
+    )
+
+
+def test_launchprofile_config_preserves_existing_config_semantics_with_primary_runtime(
+    monkeypatch,
+):
+    from models.launch_profile import LaunchProfile
+    from services.retroarch.launcher import (
+        RetroArchLauncher,
+    )
+
+    class PrimaryRuntime:
+        def create(self, *, overlay=None):
+            return "/runtime/primary.cfg"
+
+    class SessionConfig:
+        def create(
+            self,
+            core_options_path=None,
+        ):
+            return "/runtime/session.cfg"
+
+    class Process:
+        def poll(self):
+            return None
+
+    popen_calls = []
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.subprocess.Popen",
+        lambda command, **kwargs: (
+            popen_calls.append(
+                (
+                    command,
+                    kwargs,
+                )
+            )
+            or Process()
+        ),
+    )
+
+    launcher = RetroArchLauncher(
+        primary_config_runtime=PrimaryRuntime(),
+        session_config=SessionConfig(),
+    )
+
+    profile = LaunchProfile(
+        game="Explicit Config",
+        rom="/roms/game.bin",
+        core="/cores/example_libretro.so",
+        config="/user/extra.cfg",
+    )
+
+    result = launcher.launch(
+        profile
+    )
+
+    assert result["success"] is True
+
+    command = popen_calls[0][0]
+
+    # The transient primary configuration must be selected first so
+    # early video initialization sees GLCore.
+    assert command[:6] == [
+        "retroarch",
+        "--config",
+        "/runtime/primary.cfg",
+        "-L",
+        "/cores/example_libretro.so",
+        "/roms/game.bin",
+    ]
+
+    # Preserve the launcher's pre-existing LaunchProfile.config
+    # contract. It remains --config; this repair must not silently
+    # reinterpret it as --appendconfig.
+    assert [
+        "--config",
+        "/user/extra.cfg",
+    ] == command[
+        command.index(
+            "/user/extra.cfg"
+        ) - 1:
+        command.index(
+            "/user/extra.cfg"
+        ) + 1
+    ]
+
+    assert [
+        "--appendconfig",
+        "/runtime/session.cfg",
+    ] == command[
+        command.index(
+            "/runtime/session.cfg"
+        ) - 1:
+        command.index(
+            "/runtime/session.cfg"
+        ) + 1
+    ]
+
+
+def test_primary_runtime_failure_is_fail_closed_before_popen(
+    monkeypatch,
+):
+    from models.launch_profile import LaunchProfile
+    from services.retroarch.launcher import (
+        RetroArchLauncher,
+    )
+
+    class PrimaryRuntime:
+        def create(self, *, overlay=None):
+            raise ValueError(
+                "primary runtime unavailable"
+            )
+
+    popen_calls = []
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.subprocess.Popen",
+        lambda *args, **kwargs: (
+            popen_calls.append(
+                (
+                    args,
+                    kwargs,
+                )
+            )
+        ),
+    )
+
+    launcher = RetroArchLauncher(
+        primary_config_runtime=PrimaryRuntime(),
+    )
+
+    profile = LaunchProfile(
+        game="Primary Failure",
+        rom="/roms/game.bin",
+        core="/cores/example_libretro.so",
+    )
+
+    result = launcher.launch(
+        profile
+    )
+
+    assert result["success"] is False
+    assert (
+        result["error"]
+        == "primary runtime unavailable"
+    )
+    assert popen_calls == []
+
+
+class A7StartupDisplayAspect:
+    width = 1.306
+    height = 1.0
+
+    @property
+    def ratio(self):
+        return self.width / self.height
+
+
+class A7StartupDisplayAspectProbe:
+    def __init__(self):
+        self.cores = []
+
+    def acquire(self, core):
+        self.cores.append(core)
+        return A7StartupDisplayAspect()
+
+
+class A7ContentLoadedDisplayAspectProbe:
+    def __init__(self, ratio=4 / 3):
+        self.ratio = ratio
+        self.calls = []
+
+    def acquire(
+        self,
+        *,
+        command,
+        core,
+        content,
+        prefix_args=(),
+        append_configs=(),
+        shader=None,
+    ):
+        from services.retroarch.display_aspect import (
+            CoreDisplayAspect,
+        )
+
+        self.calls.append(
+            {
+                "command": command,
+                "core": core,
+                "content": content,
+                "prefix_args": tuple(prefix_args),
+                "append_configs": tuple(append_configs),
+                "shader": shader,
+            }
+        )
+
+        return CoreDisplayAspect(
+            width=self.ratio,
+            height=1.0,
+        )
+
+
+class A7StartupContainRuntime:
+    def __init__(self):
+        self.calls = []
+
+    def create_for_aspect(
+        self,
+        *,
+        profile,
+        display_aspect,
+    ):
+        self.calls.append(
+            {
+                "profile": profile,
+                "display_aspect": display_aspect,
+            }
+        )
+
+        return "/tmp/retrovault-a7-startup-contain.cfg"
+
+    def cleanup(self, path=None):
+        return None
+
+
+def test_a7_startup_dependencies_are_injectable():
+    from services.retroarch.launcher import RetroArchLauncher
+
+    probe = A7StartupDisplayAspectProbe()
+    contain = A7StartupContainRuntime()
+
+    launcher = RetroArchLauncher(
+        display_aspect_probe=probe,
+        contain_runtime=contain,
+    )
+
+    assert launcher.display_aspect_probe is probe
+    assert launcher.contain_runtime is contain
+
+
+def test_a7_startup_contain_is_created_before_process_start():
+    import inspect
+
+    from services.retroarch.launcher import RetroArchLauncher
+
+    source = inspect.getsource(
+        RetroArchLauncher.launch
+    )
+
+    assert (
+        source.index("create_for_aspect")
+        < source.index("subprocess.Popen")
+    )
+
+
+def test_a7_startup_contain_is_final_geometry_append():
+    import inspect
+
+    from services.retroarch.launcher import RetroArchLauncher
+
+    source = inspect.getsource(
+        RetroArchLauncher.launch
+    )
+
+    assert (
+        source.index("self.overlay_runtime.create")
+        < source.index("create_for_aspect")
+    )
+
+
+def test_a7_launcher_has_no_content_specific_geometry():
+    from pathlib import Path
+
+    source = Path(
+        "services/retroarch/launcher.py"
+    ).read_text(
+        encoding="utf-8"
+    ).casefold()
+
+    for forbidden in (
+        "duck tales",
+        "ducktales",
+        "street fighter",
+        "super mario",
+        "sonic the hedgehog",
+    ):
+        assert forbidden not in source
+
+
+def test_ready_platform_launch_does_not_require_content_named_runtime_descriptor():
+    """
+    READY production presentation is platform-authoritative.
+
+    A historical content-specific overlay path must not become the package
+    identity used by production-package validation.  The launcher must
+    resolve the canonical platform production package instead of deriving
+    a sibling runtime descriptor from per-content artwork metadata.
+    """
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+    )
+
+    ready = set(
+        PlatformPresentationPolicyRegistry.ready_platform_ids()
+    )
+
+    assert "platform.nintendo.nes" in ready
+    assert "platform.nintendo.snes" in ready

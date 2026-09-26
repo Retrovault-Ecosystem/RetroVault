@@ -507,3 +507,332 @@ def test_production_package_rejects_invalid_manifest_json(
             overlay=str(overlay),
             shader=str(shader),
         )
+
+
+def _copy_split_nes_semantic_package(
+    tmp_path,
+):
+    import shutil
+    from pathlib import Path
+
+    source = Path(
+        "retrovault/nes/classic"
+    )
+
+    overlay_dir = (
+        tmp_path
+        / "overlays"
+        / "retrovault"
+        / "nes"
+        / "classic"
+    )
+
+    shader_dir = (
+        tmp_path
+        / "shaders"
+        / "retrovault"
+        / "nes"
+        / "classic"
+    )
+
+    overlay_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    shader_dir.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    for name in (
+        "RetroVault_NES_Classic.cfg",
+        "RetroVault_NES_Classic.runtime.cfg",
+        "RetroVault_NES_Classic.production.json",
+    ):
+        shutil.copy2(
+            source / name,
+            overlay_dir / name,
+        )
+
+    shutil.copy2(
+        source
+        / "RetroVault_NES_Classic_CRT.slangp",
+        shader_dir
+        / "RetroVault_NES_Classic_CRT.slangp",
+    )
+
+    return (
+        overlay_dir
+        / "RetroVault_NES_Classic.cfg",
+        shader_dir
+        / "RetroVault_NES_Classic_CRT.slangp",
+    )
+
+
+def test_ready_package_accepts_semantically_matching_split_asset_roots(
+    tmp_path,
+):
+    overlay, shader = (
+        _copy_split_nes_semantic_package(
+            tmp_path
+        )
+    )
+
+    assert overlay.parent != shader.parent
+
+    package = (
+        ProductionPresentationPackageValidator
+        .validate(
+            platform_id="platform.nintendo.nes",
+            core_identity="fceumm",
+            overlay=str(overlay),
+            shader=str(shader),
+        )
+    )
+
+    assert isinstance(
+        package,
+        ProductionPresentationPackage,
+    )
+
+    assert package.overlay == str(
+        overlay.resolve()
+    )
+
+    assert package.shader == str(
+        shader.resolve()
+    )
+
+
+def test_split_root_package_still_rejects_foreign_shader(
+    tmp_path,
+):
+    import shutil
+    from pathlib import Path
+
+    overlay, _ = (
+        _copy_split_nes_semantic_package(
+            tmp_path
+        )
+    )
+
+    foreign_shader = (
+        tmp_path
+        / "shaders"
+        / "retrovault"
+        / "snes"
+        / "classic"
+        / "RetroVault_SNES_Classic_CRT.slangp"
+    )
+
+    foreign_shader.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    shutil.copy2(
+        Path(
+            "retrovault/snes/classic/"
+            "RetroVault_SNES_Classic_CRT.slangp"
+        ),
+        foreign_shader,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="same package",
+    ):
+        (
+            ProductionPresentationPackageValidator
+            .validate(
+                platform_id="platform.nintendo.nes",
+                core_identity="fceumm",
+                overlay=str(overlay),
+                shader=str(foreign_shader),
+            )
+        )
+
+
+def test_manifest_declared_shader_identity_is_authoritative_across_roots(
+    tmp_path,
+):
+    import json
+
+    overlay, shader = (
+        _copy_split_nes_semantic_package(
+            tmp_path
+        )
+    )
+
+    manifest = overlay.with_name(
+        "RetroVault_NES_Classic.production.json"
+    )
+
+    data = json.loads(
+        manifest.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    data["production_assets"] = {
+        "crt_preset": (
+            "RetroVault_NES_Classic_CRT.slangp"
+        )
+    }
+
+    manifest.write_text(
+        json.dumps(
+            data,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    package = (
+        ProductionPresentationPackageValidator
+        .validate(
+            platform_id="platform.nintendo.nes",
+            core_identity="fceumm",
+            overlay=str(overlay),
+            shader=str(shader),
+        )
+    )
+
+    assert package is not None
+
+
+def test_manifest_declared_shader_rejects_wrong_existing_preset(
+    tmp_path,
+):
+    import json
+    import shutil
+    from pathlib import Path
+
+    overlay, _ = (
+        _copy_split_nes_semantic_package(
+            tmp_path
+        )
+    )
+
+    manifest = overlay.with_name(
+        "RetroVault_NES_Classic.production.json"
+    )
+
+    data = json.loads(
+        manifest.read_text(
+            encoding="utf-8"
+        )
+    )
+
+    data["production_assets"] = {
+        "crt_preset": (
+            "RetroVault_NES_Classic_CRT.slangp"
+        )
+    }
+
+    manifest.write_text(
+        json.dumps(
+            data,
+            indent=2,
+        )
+        + "\n",
+        encoding="utf-8",
+    )
+
+    wrong_shader = (
+        tmp_path
+        / "shaders"
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "Wrong_CRT.slangp"
+    )
+
+    wrong_shader.parent.mkdir(
+        parents=True,
+        exist_ok=True,
+    )
+
+    shutil.copy2(
+        Path(
+            "retrovault/nes/classic/"
+            "RetroVault_NES_Classic_CRT.slangp"
+        ),
+        wrong_shader,
+    )
+
+    with pytest.raises(
+        ValueError,
+        match="same package",
+    ):
+        (
+            ProductionPresentationPackageValidator
+            .validate(
+                platform_id="platform.nintendo.nes",
+                core_identity="fceumm",
+                overlay=str(overlay),
+                shader=str(wrong_shader),
+            )
+        )
+
+
+def test_validated_nes_package_exposes_semantic_fixed_glass():
+    from pathlib import Path
+
+    from services.presentation.production_package import (
+        ProductionPresentationPackage,
+    )
+
+    root = Path(__file__).resolve().parents[1]
+
+    package = ProductionPresentationPackage(
+        platform_id="platform.nintendo.nes",
+        overlay=str(
+            root
+            / "retrovault"
+            / "nes"
+            / "classic"
+            / "RetroVault_NES_Classic.cfg"
+        ),
+        shader=str(
+            root
+            / "retrovault"
+            / "nes"
+            / "classic"
+            / "RetroVault_NES_Classic_CRT.slangp"
+        ),
+        runtime_descriptor=str(
+            root
+            / "retrovault"
+            / "nes"
+            / "classic"
+            / "RetroVault_NES_Classic.runtime.cfg"
+        ),
+        production_manifest=str(
+            root
+            / "retrovault"
+            / "nes"
+            / "classic"
+            / "RetroVault_NES_Classic.production.json"
+        ),
+    )
+
+    glass = package.fixed_glass()
+
+    assert (
+        glass.canvas_width,
+        glass.canvas_height,
+        glass.x,
+        glass.y,
+        glass.width,
+        glass.height,
+    ) == (
+        1920,
+        1080,
+        355,
+        100,
+        1206,
+        762,
+    )

@@ -3,11 +3,30 @@ import signal
 import subprocess
 
 from models.launch_profile import LaunchProfile
+from services.retroarch.core_identity import (
+    canonical_libretro_core_identity,
+)
+from services.retroarch.primary_config_runtime import PrimaryConfigRuntime
 from services.presentation.platform_policy import (
     PlatformPresentationPolicyRegistry,
 )
 from services.presentation.production_package import (
     ProductionPresentationPackageValidator,
+)
+from services.presentation.production_package_resolver import (
+    CanonicalProductionPackageResolver,
+)
+from services.retroarch.contain_runtime import (
+    ContainRuntimeConfig,
+)
+from services.retroarch.core_display_aspect import (
+    LibretroDisplayAspectProbe,
+)
+from services.retroarch.content_display_aspect_probe import (
+    ContentLoadedDisplayAspectProbe,
+)
+from services.retroarch.display_aspect import (
+    CoreDisplayAspect,
 )
 
 from .archive_runtime import ArchiveRuntime
@@ -27,7 +46,11 @@ class RetroArchLauncher:
         archive_runtime=None,
         cheat_runtime=None,
         session_config=None,
+        primary_config_runtime=None,
         core_options_runtime=None,
+        display_aspect_probe=None,
+        content_display_aspect_probe=None,
+        contain_runtime=None,
     ):
         self.command = "retroarch"
 
@@ -51,6 +74,12 @@ class RetroArchLauncher:
             or CheatRuntimeConfig()
         )
 
+        self.primary_config_runtime = (
+            primary_config_runtime
+            if primary_config_runtime is not None
+            else PrimaryConfigRuntime()
+        )
+
         self.session_config = (
             session_config
             or RetroArchSessionConfig()
@@ -61,13 +90,58 @@ class RetroArchLauncher:
             or CoreOptionsRuntimeConfig()
         )
 
+        self.display_aspect_probe = (
+            display_aspect_probe
+            if display_aspect_probe is not None
+            else LibretroDisplayAspectProbe()
+        )
+
+        self.content_display_aspect_probe = (
+            content_display_aspect_probe
+            if content_display_aspect_probe is not None
+            else ContentLoadedDisplayAspectProbe()
+        )
+
+        self.contain_runtime = (
+            contain_runtime
+            if contain_runtime is not None
+            else ContainRuntimeConfig()
+        )
+
         self._active_process = None
+        self._active_primary_config = None
+        self._active_contain_config = None
 
     @property
     def active_process(self):
         """Return the currently owned RetroArch process handle."""
 
         return self._active_process
+
+    def _cleanup_active_transients(self):
+        primary_cleanup = getattr(
+            self.primary_config_runtime,
+            "cleanup",
+            None,
+        )
+
+        if callable(primary_cleanup):
+            primary_cleanup(
+                self._active_primary_config
+            )
+
+        self._active_primary_config = None
+
+        contain_cleanup = getattr(
+            self.contain_runtime,
+            "cleanup",
+            None,
+        )
+
+        if callable(contain_cleanup):
+            contain_cleanup()
+
+        self._active_contain_config = None
 
     def process_running(self) -> bool:
         """
@@ -98,6 +172,7 @@ class RetroArchLauncher:
 
         process = self._active_process
         self._active_process = None
+        self._cleanup_active_transients()
 
         return process
 
@@ -154,6 +229,8 @@ class RetroArchLauncher:
                 timeout=5.0
             )
 
+        self._cleanup_active_transients()
+
         return True
 
 
@@ -174,9 +251,10 @@ class RetroArchLauncher:
 
         # Canonical RetroVault production presentation authority.
         #
-        # Only an explicit canonical string platform identity can
-        # activate this boundary. Legacy callers retain their
-        # historical overlay/shader semantics unchanged.
+        # READY canonical platforms select their deployed package from
+        # platform authority, never from legacy per-content overlay/shader
+        # metadata carried by LaunchProfile. Non-canonical/legacy callers
+        # retain their historical LaunchProfile presentation semantics.
         platform_id = getattr(
             profile,
             "platform_id",
@@ -194,45 +272,30 @@ class RetroArchLauncher:
             in canonical_platform_ids
         )
 
+        production_package = None
+
         if is_canonical_platform:
             platform_id = platform_id.strip()
 
-            overlay = getattr(
-                profile,
-                "overlay",
-                None,
-            )
-            shader = getattr(
-                profile,
-                "shader",
-                None,
-            )
-
-            has_overlay = (
-                isinstance(overlay, str)
-                and bool(overlay.strip())
-            )
-            has_shader = (
-                isinstance(shader, str)
-                and bool(shader.strip())
-            )
-
-            if has_overlay or has_shader:
-                try:
-                    ProductionPresentationPackageValidator.validate(
+            try:
+                production_package = (
+                    CanonicalProductionPackageResolver.resolve(
                         platform_id=platform_id,
-                        core_identity=profile.core,
-                        overlay=overlay,
-                        shader=shader,
+                        core_identity=(
+                            canonical_libretro_core_identity(
+                                profile.core
+                            )
+                        ),
                     )
-                except (
-                    OSError,
-                    ValueError,
-                ) as error:
-                    return {
-                        "success": False,
-                        "error": str(error),
-                    }
+                )
+            except (
+                OSError,
+                ValueError,
+            ) as error:
+                return {
+                    "success": False,
+                    "error": str(error),
+                }
 
         try:
             runtime_rom = (
@@ -254,12 +317,41 @@ class RetroArchLauncher:
                 "error": str(error),
             }
 
+        primary_config = None
+
+        try:
+            primary_config = (
+                self.primary_config_runtime.create(
+                    overlay=(
+                        production_package.overlay
+                        if production_package is not None
+                        else None
+                    ),
+                )
+            )
+        except (OSError, ValueError) as exc:
+            return {
+                "success": False,
+                "error": str(exc),
+            }
+
         command = [
             self.command,
+        ]
+
+        if primary_config:
+            command.extend(
+                [
+                    "--config",
+                    primary_config,
+                ]
+            )
+
+        command.extend([
             "-L",
             profile.core,
             runtime_rom,
-        ]
+        ])
 
         try:
             core_options_config = (
@@ -308,11 +400,23 @@ class RetroArchLauncher:
                 ]
             )
 
-        if profile.overlay:
+        launch_overlay = (
+            production_package.overlay
+            if production_package is not None
+            else profile.overlay
+        )
+
+        launch_shader = (
+            production_package.shader
+            if production_package is not None
+            else profile.shader
+        )
+
+        if launch_overlay:
             try:
                 append_config = (
                     self.overlay_runtime.create(
-                        profile.overlay
+                        launch_overlay
                     )
                 )
             except (
@@ -330,6 +434,121 @@ class RetroArchLauncher:
                     append_config,
                 ]
             )
+
+        startup_contain_config = None
+
+        if production_package is not None:
+            try:
+                glass = production_package.fixed_glass()
+
+                platform_profile = (
+                    PlatformPresentationPolicyRegistry
+                    .master_presentation_profile_for(
+                        platform_id
+                    )
+                )
+
+                glass_profile = glass.as_master_profile(
+                    profile_class=platform_profile.profile_class,
+                )
+
+                display_aspect = (
+                    CoreDisplayAspect.from_launch_profile(
+                        profile
+                    )
+                )
+
+                if display_aspect is None:
+                    probe_prefix_args = []
+
+                    if primary_config:
+                        probe_prefix_args.extend(
+                            [
+                                "--config",
+                                primary_config,
+                            ]
+                        )
+
+                    probe_append_configs = []
+
+                    if session_config:
+                        probe_append_configs.append(
+                            session_config
+                        )
+
+                    if launch_overlay:
+                        probe_append_configs.append(
+                            append_config
+                        )
+
+                    runtime_shader = launch_shader or None
+
+                    if launch_shader:
+                        parameters = (
+                            self.shader_runtime
+                            .parameters_for_overlay(
+                                launch_overlay
+                            )
+                        )
+
+                        if parameters:
+                            runtime_shader = (
+                                self.shader_runtime.resolve(
+                                    launch_shader,
+                                    parameters,
+                                )
+                            )
+
+                    display_aspect = (
+                        self.content_display_aspect_probe.acquire(
+                            command=self.command,
+                            core=profile.core,
+                            content=runtime_rom,
+                            prefix_args=tuple(
+                                probe_prefix_args
+                            ),
+                            append_configs=tuple(
+                                probe_append_configs
+                            ),
+                            shader=runtime_shader,
+                        )
+                    )
+
+                startup_contain_config = (
+                    self.contain_runtime.create_for_aspect(
+                        profile=glass_profile,
+                        display_aspect=display_aspect,
+                    )
+                )
+            except (
+                OSError,
+                TypeError,
+                ValueError,
+            ) as error:
+                primary_cleanup = getattr(
+                    self.primary_config_runtime,
+                    "cleanup",
+                    None,
+                )
+
+                if callable(primary_cleanup):
+                    primary_cleanup(
+                        primary_config
+                    )
+
+                contain_cleanup = getattr(
+                    self.contain_runtime,
+                    "cleanup",
+                    None,
+                )
+
+                if callable(contain_cleanup):
+                    contain_cleanup()
+
+                return {
+                    "success": False,
+                    "error": str(error),
+                }
 
         if profile.cheat_file:
             try:
@@ -356,21 +575,29 @@ class RetroArchLauncher:
                 ]
             )
 
-        if profile.shader:
-            runtime_shader = profile.shader
+        if startup_contain_config:
+            command.extend(
+                [
+                    "--appendconfig",
+                    startup_contain_config,
+                ]
+            )
+
+        if launch_shader:
+            runtime_shader = launch_shader
 
             try:
                 parameters = (
                     self.shader_runtime
                     .parameters_for_overlay(
-                        profile.overlay
+                        launch_overlay
                     )
                 )
 
                 if parameters:
                     runtime_shader = (
                         self.shader_runtime.resolve(
-                            profile.shader,
+                            launch_shader,
                             parameters,
                         )
                     )
@@ -398,6 +625,8 @@ class RetroArchLauncher:
             )
 
             self._active_process = process
+            self._active_primary_config = primary_config
+            self._active_contain_config = startup_contain_config
 
             return {
                 "success": True,
@@ -405,7 +634,29 @@ class RetroArchLauncher:
             }
 
         except Exception as error:
+            primary_cleanup = getattr(
+                self.primary_config_runtime,
+                "cleanup",
+                None,
+            )
+
+            if callable(primary_cleanup):
+                primary_cleanup(
+                    primary_config
+                )
+
+            contain_cleanup = getattr(
+                self.contain_runtime,
+                "cleanup",
+                None,
+            )
+
+            if callable(contain_cleanup):
+                contain_cleanup()
+
             self._active_process = None
+            self._active_primary_config = None
+            self._active_contain_config = None
 
             return {
                 "success": False,

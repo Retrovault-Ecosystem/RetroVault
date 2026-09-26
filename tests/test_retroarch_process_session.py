@@ -7,6 +7,13 @@ from services.retroarch.launcher import (
 
 
 
+class FakePrimaryConfigRuntime:
+    """Suppress host-dependent primary runtime in focused process tests."""
+
+    def create(self, *, overlay=None, presentation_config=None):
+        return None
+
+
 class FakeSessionConfig:
     """
     This test module verifies process-handle/session lifecycle,
@@ -41,6 +48,7 @@ def test_launcher_starts_without_owned_process():
 def test_successful_launch_retains_exact_popen_handle():
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
     )
     profile = make_profile()
 
@@ -309,6 +317,7 @@ def test_stop_does_not_terminate_already_exited_process():
 def test_launch_starts_retroarch_in_its_own_process_session():
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
+        primary_config_runtime=FakePrimaryConfigRuntime(),
     )
     profile = make_profile()
 

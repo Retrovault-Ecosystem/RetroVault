@@ -261,6 +261,7 @@ class NativeVisualService:
                 deployment.source_files,
                 (
                     deployment.shader_root
+                    / "retrovault"
                     / relative
                     for relative
                     in deployment.relative_files
@@ -320,6 +321,7 @@ class NativeVisualService:
             exists = any(
                 (
                     deployment.shader_root
+                    / "retrovault"
                     / relative
                 ).exists()
                 for relative

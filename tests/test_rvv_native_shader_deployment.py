@@ -174,6 +174,7 @@ def test_shader_deployment_copies_preset_and_dependency(
     ):
         destination = (
             plan.shader_root
+            / "retrovault"
             / relative
         )
 
@@ -185,6 +186,7 @@ def test_shader_deployment_copies_preset_and_dependency(
 
     deployed_preset = (
         plan.shader_root
+        / "retrovault"
         / plan.relative_preset
     )
 
@@ -253,6 +255,7 @@ def test_shader_deployment_is_idempotent(
     first_bytes = {
         relative: (
             first.shader_root
+            / "retrovault"
             / relative
         ).read_bytes()
         for relative in first.relative_files
@@ -265,6 +268,7 @@ def test_shader_deployment_is_idempotent(
     second_bytes = {
         relative: (
             second.shader_root
+            / "retrovault"
             / relative
         ).read_bytes()
         for relative in second.relative_files
@@ -575,3 +579,298 @@ def test_shader_deployment_rolls_back_only_touched_targets(
     assert unrelated.read_bytes() == (
         b"unrelated"
     )
+
+
+def test_shader_plan_accepts_external_dependency_bounded_by_shader_root(
+    tmp_path,
+):
+    repository_root = tmp_path / "repo"
+    package_root = repository_root / "retrovault"
+    shader_root = tmp_path / "shaders"
+
+    preset = (
+        package_root
+        / "nes"
+        / "classic"
+        / "preset.slangp"
+    )
+    preset.parent.mkdir(parents=True)
+
+    external = (
+        shader_root
+        / "shaders_slang"
+        / "base.slangp"
+    )
+    external.parent.mkdir(parents=True)
+    external.write_text(
+        'shaders = "0"\n',
+        encoding="utf-8",
+    )
+
+    preset.write_text(
+        '#reference "../../../shaders_slang/base.slangp"\n',
+        encoding="utf-8",
+    )
+
+    asset = VisualAsset(
+        id="rvv.shader.external.bounded",
+        display_name="Bounded External",
+        asset_type=VisualAssetType.SHADER,
+        source=VisualAssetSource.RVV_NATIVE,
+        reference=(
+            "retro-vault://shaders/"
+            "nes/classic/preset.slangp"
+        ),
+        author="RetroVault",
+        attribution="RetroVault",
+    )
+
+    service = NativeShaderDeploymentService(
+        repository_root=repository_root,
+        shader_root=shader_root,
+    )
+
+    plan = service.plan(asset)
+
+    assert plan.source_files == (
+        preset.resolve(),
+    )
+    assert plan.relative_files == (
+        Path("nes/classic/preset.slangp"),
+    )
+
+
+def test_shader_plan_rejects_external_dependency_escape_from_shader_root(
+    tmp_path,
+):
+    repository_root = tmp_path / "repo"
+    package_root = repository_root / "retrovault"
+    shader_root = tmp_path / "shaders"
+
+    preset = (
+        package_root
+        / "nes"
+        / "classic"
+        / "preset.slangp"
+    )
+    preset.parent.mkdir(parents=True)
+
+    preset.write_text(
+        '#reference "../../../../outside/base.slangp"\n',
+        encoding="utf-8",
+    )
+
+    asset = VisualAsset(
+        id="rvv.shader.external.escape",
+        display_name="External Escape",
+        asset_type=VisualAssetType.SHADER,
+        source=VisualAssetSource.RVV_NATIVE,
+        reference=(
+            "retro-vault://shaders/"
+            "nes/classic/preset.slangp"
+        ),
+        author="RetroVault",
+        attribution="RetroVault",
+    )
+
+    service = NativeShaderDeploymentService(
+        repository_root=repository_root,
+        shader_root=shader_root,
+    )
+
+    import pytest
+
+    with pytest.raises(
+        ValueError,
+        match="escaped the configured shader root",
+    ):
+        service.plan(asset)
+
+
+def test_shader_plan_requires_external_dependency_to_be_installed(
+    tmp_path,
+):
+    repository_root = tmp_path / "repo"
+    package_root = repository_root / "retrovault"
+    shader_root = tmp_path / "shaders"
+
+    preset = (
+        package_root
+        / "nes"
+        / "classic"
+        / "preset.slangp"
+    )
+    preset.parent.mkdir(parents=True)
+
+    preset.write_text(
+        '#reference "../../../shaders_slang/missing.slangp"\n',
+        encoding="utf-8",
+    )
+
+    asset = VisualAsset(
+        id="rvv.shader.external.missing",
+        display_name="Missing External",
+        asset_type=VisualAssetType.SHADER,
+        source=VisualAssetSource.RVV_NATIVE,
+        reference=(
+            "retro-vault://shaders/"
+            "nes/classic/preset.slangp"
+        ),
+        author="RetroVault",
+        attribution="RetroVault",
+    )
+
+    service = NativeShaderDeploymentService(
+        repository_root=repository_root,
+        shader_root=shader_root,
+    )
+
+    import pytest
+
+    with pytest.raises(
+        ValueError,
+        match="external dependency does not exist",
+    ):
+        service.plan(asset)
+
+
+def test_shader_plan_uses_retrovault_deployment_namespace(
+    tmp_path,
+):
+    repository_root = tmp_path / "repo"
+    shader_root = tmp_path / "shaders"
+
+    preset = (
+        repository_root
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "preset.slangp"
+    )
+    preset.parent.mkdir(parents=True)
+    preset.write_text(
+        'shaders = "0"\n',
+        encoding="utf-8",
+    )
+
+    asset = VisualAsset(
+        id="rvv.shader.namespace",
+        display_name="Namespace",
+        asset_type=VisualAssetType.SHADER,
+        source=VisualAssetSource.RVV_NATIVE,
+        reference=(
+            "retro-vault://shaders/"
+            "nes/classic/preset.slangp"
+        ),
+        author="RetroVault",
+        attribution="RetroVault",
+    )
+
+    service = NativeShaderDeploymentService(
+        repository_root=repository_root,
+        shader_root=shader_root,
+    )
+
+    plan = service.plan(asset)
+
+    assert plan.destination_preset == (
+        shader_root
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "preset.slangp"
+    ).resolve()
+
+
+def test_shader_deploy_writes_only_to_retrovault_namespace(
+    tmp_path,
+):
+    repository_root = tmp_path / "repo"
+    shader_root = tmp_path / "shaders"
+
+    preset = (
+        repository_root
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "preset.slangp"
+    )
+    shader = (
+        repository_root
+        / "retrovault"
+        / "shaders"
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "pass.slang"
+    )
+
+    preset.parent.mkdir(parents=True)
+    shader.parent.mkdir(parents=True)
+
+    preset.write_text(
+        'shaders = "1"\n'
+        'shader0 = "../../shaders/retrovault/nes/classic/pass.slang"\n',
+        encoding="utf-8",
+    )
+    shader.write_text(
+        "// pass\n",
+        encoding="utf-8",
+    )
+
+    asset = VisualAsset(
+        id="rvv.shader.namespace.deploy",
+        display_name="Namespace Deploy",
+        asset_type=VisualAssetType.SHADER,
+        source=VisualAssetSource.RVV_NATIVE,
+        reference=(
+            "retro-vault://shaders/"
+            "nes/classic/preset.slangp"
+        ),
+        author="RetroVault",
+        attribution="RetroVault",
+    )
+
+    service = NativeShaderDeploymentService(
+        repository_root=repository_root,
+        shader_root=shader_root,
+    )
+
+    plan = service.deploy(asset)
+
+    expected_preset = (
+        shader_root
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "preset.slangp"
+    )
+    expected_shader = (
+        shader_root
+        / "retrovault"
+        / "shaders"
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "pass.slang"
+    )
+
+    assert plan.destination_preset == expected_preset.resolve()
+    assert expected_preset.read_bytes() == preset.read_bytes()
+    assert expected_shader.read_bytes() == shader.read_bytes()
+
+    assert not (
+        shader_root
+        / "nes"
+        / "classic"
+        / "preset.slangp"
+    ).exists()
+
+    assert not (
+        shader_root
+        / "shaders"
+        / "retrovault"
+        / "nes"
+        / "classic"
+        / "pass.slang"
+    ).exists()

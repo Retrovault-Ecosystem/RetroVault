@@ -6,6 +6,9 @@ from services.presentation.platform_policy import (
     PlatformPresentationPolicyRegistry,
     PlatformPresentationPolicyState,
 )
+from services.presentation.production_glass import (
+    ProductionGlassResolver,
+)
 
 
 @dataclass(frozen=True)
@@ -24,6 +27,19 @@ class ProductionPresentationPackage:
     shader: str
     runtime_descriptor: str
     production_manifest: str
+
+    def fixed_glass(self):
+        """
+        Return this package's semantic fixed artwork aperture.
+
+        The production manifest is the package-level source of aperture
+        authority.  Callers do not need to parse RetroArch runtime CFG
+        syntax or substitute the generic master safe envelope.
+        """
+        return ProductionGlassResolver.from_manifest(
+            self.production_manifest,
+            expected_platform_id=self.platform_id,
+        )
 
 
 class ProductionPresentationPackageValidator:
@@ -131,15 +147,6 @@ class ProductionPresentationPackageValidator:
                 f"{shader_path}"
             )
 
-        # A production package is intentionally directory-coherent.
-        # This prevents a READY platform from combining an overlay from
-        # one system/package with a shader from another.
-        if overlay_path.parent != shader_path.parent:
-            raise ValueError(
-                "Production overlay and shader do not belong "
-                "to the same package."
-            )
-
         if overlay_path.suffix != ".cfg":
             raise ValueError(
                 "Production overlay must be a RetroArch "
@@ -228,6 +235,66 @@ class ProductionPresentationPackageValidator:
                 "platform identity does not match the launch "
                 "platform."
             )
+
+        # Production package identity is semantic rather than
+        # positional. RetroVault deliberately deploys overlays and
+        # shaders beneath independent configured roots, so requiring
+        # both files to share one filesystem parent rejects the normal
+        # production topology.
+        #
+        # When the production manifest explicitly declares its CRT
+        # preset, that declaration is the authoritative shader member
+        # of the package. Only the basename is compared because the
+        # deployment root is intentionally independent.
+        production_assets = manifest_data.get(
+            "production_assets"
+        )
+
+        declared_shader = None
+
+        if isinstance(
+            production_assets,
+            dict,
+        ):
+            value = production_assets.get(
+                "crt_preset"
+            )
+
+            if isinstance(
+                value,
+                str,
+            ):
+                value = value.strip()
+
+                if value:
+                    declared_shader = Path(
+                        value
+                    ).name
+
+        if declared_shader is not None:
+            if shader_path.name != declared_shader:
+                raise ValueError(
+                    "Production overlay and shader do not belong "
+                    "to the same package."
+                )
+        else:
+            # Older production manifests may predate the explicit
+            # production_assets contract. Preserve fail-closed package
+            # mixing protection by requiring the overlay descriptor and
+            # shader preset to share the canonical package stem.
+            overlay_stem = overlay_path.stem
+            shader_stem = shader_path.stem
+
+            accepted_shader_stems = {
+                overlay_stem,
+                f"{overlay_stem}_CRT",
+            }
+
+            if shader_stem not in accepted_shader_stems:
+                raise ValueError(
+                    "Production overlay and shader do not belong "
+                    "to the same package."
+                )
 
         return ProductionPresentationPackage(
             platform_id=platform_id,

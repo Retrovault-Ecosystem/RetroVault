@@ -20,6 +20,24 @@
       "attribution": "Original RetroVault bezel composition. Platform names and trademarks are the property of their respective owners."
     },
     {
+      "id": "rvv.shader.nes.classic.crt",
+      "display_name": "Nintendo Entertainment System — RetroVault Classic CRT",
+      "asset_type": "shader",
+      "source": "rvv_native",
+      "reference": "retro-vault://shaders/nes/classic/RetroVault_NES_Classic_CRT.slangp",
+      "author": "RetroVault",
+      "attribution": "Original RetroVault CRT shader."
+    },
+    {
+      "id": "rvv.shader.snes.classic.crt",
+      "display_name": "Super Nintendo Entertainment System — RetroVault Classic CRT",
+      "asset_type": "shader",
+      "source": "rvv_native",
+      "reference": "retro-vault://shaders/snes/classic/RetroVault_SNES_Classic_CRT.slangp",
+      "author": "RetroVault",
+      "attribution": "Original RetroVault CRT shader."
+    },
+    {
       "id": "rvv.shader.genesis.classic.crt",
       "display_name": "Sega Genesis — RetroVault Classic CRT",
       "asset_type": "shader",

@@ -6,6 +6,9 @@ from pathlib import Path
 from services.presentation.platform_policy import (
     PlatformPresentationPolicyRegistry,
 )
+from services.retroarch.core_identity import (
+    canonical_libretro_core_identity,
+)
 
 
 def _default_runtime_directory() -> Path:
@@ -81,6 +84,9 @@ class CoreOptionsRuntimeConfig:
     def _core_identity(
         core,
     ):
+        # Preserve the historical CoreOptionsRuntimeConfig validation
+        # contract while delegating all actual identity normalization to
+        # the shared Libretro representation boundary.
         if not isinstance(core, str):
             raise ValueError(
                 "Core path must be a string."
@@ -91,43 +97,9 @@ class CoreOptionsRuntimeConfig:
                 "Core path cannot be empty."
             )
 
-        name = (
-            Path(core)
-            .name
-            .lower()
+        return canonical_libretro_core_identity(
+            core
         )
-
-        if name.endswith(
-            "_libretro.so"
-        ):
-            name = name[
-                :-len("_libretro.so")
-            ]
-        elif name.endswith(
-            "_libretro.dll"
-        ):
-            name = name[
-                :-len("_libretro.dll")
-            ]
-        elif name.endswith(
-            "_libretro.dylib"
-        ):
-            name = name[
-                :-len("_libretro.dylib")
-            ]
-        elif name.endswith(
-            "_libretro"
-        ):
-            name = name[
-                :-len("_libretro")
-            ]
-
-        if name.startswith(
-            "lr-"
-        ):
-            name = name[3:]
-
-        return name
 
     @classmethod
     def policy_for(

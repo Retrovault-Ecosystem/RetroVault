@@ -824,12 +824,14 @@ def test_application_service_installs_native_shader(
 
     assert (
         shader_root
+        / "retrovault"
         / "audit"
         / "Classic.slangp"
     ).is_file()
 
     assert (
         shader_root
+        / "retrovault"
         / "audit"
         / "Pass.slang"
     ).is_file()
@@ -906,6 +908,7 @@ def test_modified_native_shader_is_outdated(
 
     (
         shader_root
+        / "retrovault"
         / "audit"
         / "Pass.slang"
     ).write_text(

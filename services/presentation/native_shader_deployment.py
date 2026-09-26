@@ -362,22 +362,8 @@ class NativeShaderDeploymentService:
                 "must use portable relative references."
             )
 
-        candidate = (
-            owner.parent
-            / reference_path
-        ).resolve()
-
-        self._assert_within(
-            candidate,
-            self.package_root,
-            message=(
-                "Native RVV shader dependency "
-                "escaped the repository package root."
-            ),
-        )
-
         if (
-            candidate.suffix.casefold()
+            reference_path.suffix.casefold()
             not in _DEPENDENCY_EXTENSIONS
         ):
             raise ValueError(
@@ -385,9 +371,61 @@ class NativeShaderDeploymentService:
                 "uses an unsupported file type."
             )
 
+        candidate = (
+            owner.parent
+            / reference_path
+        ).resolve()
+
+        try:
+            candidate.relative_to(
+                self.package_root
+            )
+        except ValueError:
+            return self._resolve_external_dependency(
+                owner,
+                reference_path,
+            )
+
         if not candidate.is_file():
             raise ValueError(
                 "Native RVV shader dependency "
+                f"does not exist: {candidate}"
+            )
+
+        return candidate
+
+    def _resolve_external_dependency(
+        self,
+        owner,
+        reference_path,
+    ):
+        owner_relative = owner.relative_to(
+            self.package_root
+        )
+
+        deployed_owner = (
+            self.shader_root
+            / "retrovault"
+            / owner_relative
+        ).resolve()
+
+        candidate = (
+            deployed_owner.parent
+            / reference_path
+        ).resolve()
+
+        self._assert_within(
+            candidate,
+            self.shader_root,
+            message=(
+                "Native RVV shader external dependency "
+                "escaped the configured shader root."
+            ),
+        )
+
+        if not candidate.is_file():
+            raise ValueError(
+                "Native RVV shader external dependency "
                 f"does not exist: {candidate}"
             )
 
@@ -433,11 +471,17 @@ class NativeShaderDeploymentService:
                     )
                 )
 
-                dependency_relative = (
-                    dependency.relative_to(
-                        self.package_root
+                try:
+                    dependency_relative = (
+                        dependency.relative_to(
+                            self.package_root
+                        )
                     )
-                )
+                except ValueError:
+                    # Installed third-party shader dependencies are
+                    # validated beneath the configured shader root,
+                    # but remain externally owned and are not copied.
+                    continue
 
                 if (
                     dependency_relative
@@ -496,6 +540,7 @@ class NativeShaderDeploymentService:
 
         destination_preset = (
             self.shader_root
+            / "retrovault"
             / relative_preset
         ).resolve()
 
@@ -663,6 +708,7 @@ class NativeShaderDeploymentService:
             for relative in plan.relative_files:
                 destination = (
                     self.shader_root
+                    / "retrovault"
                     / relative
                 ).resolve()
 
@@ -711,6 +757,7 @@ class NativeShaderDeploymentService:
 
                 destination = (
                     self.shader_root
+                    / "retrovault"
                     / relative
                 ).resolve()
 
@@ -729,6 +776,7 @@ class NativeShaderDeploymentService:
             ):
                 destination = (
                     self.shader_root
+                    / "retrovault"
                     / relative
                 )
 
@@ -748,6 +796,7 @@ class NativeShaderDeploymentService:
             ):
                 destination = (
                     self.shader_root
+                    / "retrovault"
                     / relative
                 )
 

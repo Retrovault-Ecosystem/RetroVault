@@ -417,3 +417,65 @@ def test_overlay_runtime_propagates_complete_geometry_authority(tmp_path):
 
     for line in required:
         assert line in text
+
+
+def test_production_snes_runtime_descriptor_obeys_runtime_authority():
+    """
+    The production SNES descriptor predates the strict runtime-key
+    allow-list. Its calibrated viewport geometry remains authoritative,
+    but session/fullscreen and generic overlay controls belong to their
+    dedicated transient runtime layers rather than this descriptor.
+    """
+    from pathlib import Path
+
+    repository_root = Path(__file__).resolve().parents[1]
+
+    overlay = (
+        repository_root
+        / "retrovault"
+        / "snes"
+        / "classic"
+        / "RetroVault_SNES_Classic.cfg"
+    )
+
+    descriptor = overlay.with_suffix(
+        ".runtime.cfg"
+    )
+
+    text = descriptor.read_text(
+        encoding="utf-8"
+    )
+
+    required = {
+        'aspect_ratio_index = "23"',
+        'video_force_aspect = "true"',
+        'video_scale_integer = "false"',
+        'custom_viewport_width = "1044"',
+        'custom_viewport_height = "783"',
+        'video_viewport_bias_x = "0.500000"',
+        'video_viewport_bias_y = "0.239057239"',
+    }
+
+    forbidden = {
+        "video_fullscreen",
+        "video_windowed_fullscreen",
+        "input_overlay_enable",
+        "input_overlay_opacity",
+        "input_overlay_scale",
+    }
+
+    for line in required:
+        assert line in text
+
+    for key in forbidden:
+        assert key not in text
+
+    payload = (
+        OverlayRuntimeConfig
+        ._runtime_descriptor_payload(
+            overlay
+        )
+    )
+
+    for line in required:
+        assert line in payload
