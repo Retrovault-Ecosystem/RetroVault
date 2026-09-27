@@ -1,7 +1,9 @@
 import os
+import shutil
 import signal
 import subprocess
 import time
+from pathlib import Path
 
 from models.launch_profile import LaunchProfile
 from services.retroarch.core_identity import (
@@ -112,6 +114,7 @@ class RetroArchLauncher:
         self._active_process = None
         self._active_primary_config = None
         self._active_contain_config = None
+        self._active_cheat_config = None
 
     @property
     def active_process(self):
@@ -120,6 +123,17 @@ class RetroArchLauncher:
         return self._active_process
 
     def _cleanup_active_transients(self):
+        """
+        Clean every one-launch RetroArch runtime artifact.
+
+        Service-owned runtimes clean their internally tracked paths.
+        PrimaryConfigRuntime remains path-owned. CheatRuntime currently
+        has no cleanup API, so its unique generated launch directory is
+        removed explicitly.
+
+        ArchiveRuntime is intentionally excluded because extracted
+        archive content is reusable cache material.
+        """
         primary_cleanup = getattr(
             self.primary_config_runtime,
             "cleanup",
@@ -131,18 +145,40 @@ class RetroArchLauncher:
                 self._active_primary_config
             )
 
-        self._active_primary_config = None
-
-        contain_cleanup = getattr(
+        for runtime in (
+            self.core_options_runtime,
+            self.session_config,
+            self.overlay_runtime,
             self.contain_runtime,
-            "cleanup",
-            None,
-        )
+            self.shader_runtime,
+        ):
+            cleanup = getattr(
+                runtime,
+                "cleanup",
+                None,
+            )
 
-        if callable(contain_cleanup):
-            contain_cleanup()
+            if callable(cleanup):
+                cleanup()
 
+        cheat_config = self._active_cheat_config
+
+        if cheat_config:
+            cheat_root = Path(
+                cheat_config
+            ).expanduser().parent
+
+            if cheat_root.name.startswith(
+                "retrovault-cheats-"
+            ):
+                shutil.rmtree(
+                    cheat_root,
+                    ignore_errors=True,
+                )
+
+        self._active_primary_config = None
         self._active_contain_config = None
+        self._active_cheat_config = None
 
     def process_running(self) -> bool:
         """
@@ -422,7 +458,10 @@ class RetroArchLauncher:
                     ),
                 )
             )
+            self._active_primary_config = primary_config
         except (OSError, ValueError) as exc:
+            self._cleanup_active_transients()
+
             return {
                 "success": False,
                 "error": str(exc),
@@ -472,6 +511,8 @@ class RetroArchLauncher:
             OSError,
             ValueError,
         ) as error:
+            self._cleanup_active_transients()
+
             return {
                 "success": False,
                 "error": str(error),
@@ -516,6 +557,8 @@ class RetroArchLauncher:
                 OSError,
                 ValueError,
             ) as error:
+                self._cleanup_active_transients()
+
                 return {
                     "success": False,
                     "error": str(error),
@@ -613,30 +656,13 @@ class RetroArchLauncher:
                         display_aspect=display_aspect,
                     )
                 )
+                self._active_contain_config = startup_contain_config
             except (
                 OSError,
                 TypeError,
                 ValueError,
             ) as error:
-                primary_cleanup = getattr(
-                    self.primary_config_runtime,
-                    "cleanup",
-                    None,
-                )
-
-                if callable(primary_cleanup):
-                    primary_cleanup(
-                        primary_config
-                    )
-
-                contain_cleanup = getattr(
-                    self.contain_runtime,
-                    "cleanup",
-                    None,
-                )
-
-                if callable(contain_cleanup):
-                    contain_cleanup()
+                self._cleanup_active_transients()
 
                 return {
                     "success": False,
@@ -652,10 +678,13 @@ class RetroArchLauncher:
                         runtime_rom,
                     )
                 )
+                self._active_cheat_config = cheat_config
             except (
                 OSError,
                 ValueError,
             ) as error:
+                self._cleanup_active_transients()
+
                 return {
                     "success": False,
                     "error": str(error),
@@ -699,6 +728,8 @@ class RetroArchLauncher:
                 OSError,
                 ValueError,
             ) as error:
+                self._cleanup_active_transients()
+
                 return {
                     "success": False,
                     "error": str(error),
@@ -718,8 +749,6 @@ class RetroArchLauncher:
             )
 
             self._active_process = process
-            self._active_primary_config = primary_config
-            self._active_contain_config = startup_contain_config
 
             return {
                 "success": True,
@@ -727,29 +756,8 @@ class RetroArchLauncher:
             }
 
         except Exception as error:
-            primary_cleanup = getattr(
-                self.primary_config_runtime,
-                "cleanup",
-                None,
-            )
-
-            if callable(primary_cleanup):
-                primary_cleanup(
-                    primary_config
-                )
-
-            contain_cleanup = getattr(
-                self.contain_runtime,
-                "cleanup",
-                None,
-            )
-
-            if callable(contain_cleanup):
-                contain_cleanup()
-
             self._active_process = None
-            self._active_primary_config = None
-            self._active_contain_config = None
+            self._cleanup_active_transients()
 
             return {
                 "success": False,

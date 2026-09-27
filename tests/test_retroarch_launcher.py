@@ -3114,3 +3114,250 @@ def test_stop_refuses_to_cleanup_if_process_group_survives_sigkill(
         launcher.stop()
 
     assert cleanup_calls == []
+
+
+def test_a3n5e_cleanup_owns_all_one_launch_runtime_services(
+    tmp_path,
+):
+    from services.retroarch.launcher import RetroArchLauncher
+
+    class PrimaryRuntime:
+        def __init__(self):
+            self.cleaned = []
+
+        def cleanup(self, path):
+            self.cleaned.append(path)
+
+    class ServiceRuntime:
+        def __init__(self):
+            self.cleanup_calls = 0
+
+        def cleanup(self):
+            self.cleanup_calls += 1
+
+    launcher = object.__new__(
+        RetroArchLauncher
+    )
+
+    launcher.primary_config_runtime = PrimaryRuntime()
+    launcher.core_options_runtime = ServiceRuntime()
+    launcher.session_config = ServiceRuntime()
+    launcher.overlay_runtime = ServiceRuntime()
+    launcher.contain_runtime = ServiceRuntime()
+    launcher.shader_runtime = ServiceRuntime()
+
+    launcher._active_primary_config = (
+        "/tmp/retrovault-primary.cfg"
+    )
+    launcher._active_contain_config = (
+        "/tmp/retrovault-contain.cfg"
+    )
+
+    cheat_root = (
+        tmp_path
+        / "retrovault-cheats-a3n5e"
+    )
+
+    cheat_root.mkdir()
+
+    cheat_config = (
+        cheat_root
+        / "retroarch-cheats.cfg"
+    )
+
+    cheat_config.write_text(
+        'apply_cheats_after_load = "true"\n',
+        encoding="utf-8",
+    )
+
+    launcher._active_cheat_config = str(
+        cheat_config
+    )
+
+    launcher._cleanup_active_transients()
+
+    assert (
+        launcher.primary_config_runtime.cleaned
+        == ["/tmp/retrovault-primary.cfg"]
+    )
+
+    for runtime in (
+        launcher.core_options_runtime,
+        launcher.session_config,
+        launcher.overlay_runtime,
+        launcher.contain_runtime,
+        launcher.shader_runtime,
+    ):
+        assert runtime.cleanup_calls == 1
+
+    assert not cheat_root.exists()
+
+    assert launcher._active_primary_config is None
+    assert launcher._active_contain_config is None
+    assert launcher._active_cheat_config is None
+
+
+def test_a3n5e_cleanup_preserves_archive_cache(
+    tmp_path,
+):
+    from services.retroarch.launcher import RetroArchLauncher
+
+    class PrimaryRuntime:
+        def cleanup(self, _path):
+            pass
+
+    class ServiceRuntime:
+        def cleanup(self):
+            pass
+
+    launcher = object.__new__(
+        RetroArchLauncher
+    )
+
+    launcher.primary_config_runtime = PrimaryRuntime()
+    launcher.core_options_runtime = ServiceRuntime()
+    launcher.session_config = ServiceRuntime()
+    launcher.overlay_runtime = ServiceRuntime()
+    launcher.contain_runtime = ServiceRuntime()
+    launcher.shader_runtime = ServiceRuntime()
+
+    launcher._active_primary_config = None
+    launcher._active_contain_config = None
+    launcher._active_cheat_config = None
+
+    archive_cache = (
+        tmp_path
+        / "archive-runtime"
+        / "cached"
+        / "Game.rom"
+    )
+
+    archive_cache.parent.mkdir(
+        parents=True
+    )
+
+    archive_cache.write_bytes(
+        b"RETROVAULT-CACHE"
+    )
+
+    launcher._cleanup_active_transients()
+
+    assert archive_cache.is_file()
+
+    assert archive_cache.read_bytes() == (
+        b"RETROVAULT-CACHE"
+    )
+
+
+def test_a3n5e_all_post_primary_failure_paths_route_through_universal_cleanup():
+    import ast
+    from pathlib import Path
+
+    launcher_path = (
+        Path(__file__).resolve().parents[1]
+        / "services"
+        / "retroarch"
+        / "launcher.py"
+    )
+
+    source = launcher_path.read_text(
+        encoding="utf-8"
+    )
+
+    tree = ast.parse(source)
+
+    launcher = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.ClassDef)
+        and node.name == "RetroArchLauncher"
+    )
+
+    launch = next(
+        node
+        for node in launcher.body
+        if isinstance(node, ast.FunctionDef)
+        and node.name == "launch"
+    )
+
+    def call_name(call):
+        if not isinstance(call, ast.Call):
+            return None
+
+        func = call.func
+
+        if isinstance(func, ast.Attribute):
+            parts = [func.attr]
+            value = func.value
+
+            while isinstance(value, ast.Attribute):
+                parts.append(value.attr)
+                value = value.value
+
+            if isinstance(value, ast.Name):
+                parts.append(value.id)
+
+            return ".".join(
+                reversed(parts)
+            )
+
+        return None
+
+    def contains_cleanup(node):
+        return any(
+            isinstance(child, ast.Call)
+            and call_name(child)
+            == "self._cleanup_active_transients"
+            for child in ast.walk(node)
+        )
+
+    def contains_failure_return(node):
+        for child in ast.walk(node):
+            if not isinstance(child, ast.Return):
+                continue
+
+            if not isinstance(
+                child.value,
+                ast.Dict,
+            ):
+                continue
+
+            for key, value in zip(
+                child.value.keys,
+                child.value.values,
+            ):
+                if (
+                    isinstance(key, ast.Constant)
+                    and key.value == "success"
+                    and isinstance(value, ast.Constant)
+                    and value.value is False
+                ):
+                    return True
+
+        return False
+
+    primary_line = min(
+        child.lineno
+        for child in ast.walk(launch)
+        if isinstance(child, ast.Assign)
+        and any(
+            isinstance(target, ast.Name)
+            and target.id == "primary_config"
+            for target in child.targets
+        )
+    )
+
+    handlers = [
+        node
+        for node in ast.walk(launch)
+        if isinstance(node, ast.ExceptHandler)
+        and node.lineno > primary_line
+        and contains_failure_return(node)
+    ]
+
+    assert len(handlers) == 7
+
+    assert all(
+        contains_cleanup(node)
+        for node in handlers
+    )
