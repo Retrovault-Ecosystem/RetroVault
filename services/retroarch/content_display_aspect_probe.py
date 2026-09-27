@@ -95,40 +95,86 @@ class ContentLoadedDisplayAspectProbe:
         )
 
     @staticmethod
-    def _terminate_and_reap(process) -> None:
-        if process is None:
-            return
-
-        if process.poll() is not None:
-            process.wait()
-            return
-
-        try:
-            process_group = os.getpgid(
-                process.pid
-            )
-        except (
-            ProcessLookupError,
-            OSError,
-        ):
-            process.wait()
-            return
-
+    def _process_group_exists(process_group) -> bool:
         try:
             os.killpg(
                 process_group,
-                signal.SIGTERM,
+                0,
             )
         except ProcessLookupError:
-            pass
+            return False
+        except PermissionError:
+            return True
+        return True
+
+    def _wait_for_process_group_exit(
+        self,
+        process_group,
+        *,
+        timeout,
+    ) -> bool:
+        deadline = (
+            self._monotonic()
+            + float(timeout)
+        )
+
+        while self._process_group_exists(
+            process_group
+        ):
+            if self._monotonic() >= deadline:
+                return False
+
+            self._sleep(
+                self.poll_interval
+            )
+
+        return True
+
+    def _terminate_and_reap(
+        self,
+        process,
+        *,
+        process_group=None,
+    ) -> None:
+        if process is None:
+            return
+
+        if process_group is None:
+            process_group = process.pid
+
+        if self._process_group_exists(
+            process_group
+        ):
+            try:
+                os.killpg(
+                    process_group,
+                    signal.SIGTERM,
+                )
+            except ProcessLookupError:
+                pass
 
         try:
             process.wait(
                 timeout=5.0
             )
-            return
         except subprocess.TimeoutExpired:
-            pass
+            try:
+                os.killpg(
+                    process_group,
+                    signal.SIGKILL,
+                )
+            except ProcessLookupError:
+                pass
+
+            process.wait(
+                timeout=5.0
+            )
+
+        if self._wait_for_process_group_exit(
+            process_group,
+            timeout=5.0,
+        ):
+            return
 
         try:
             os.killpg(
@@ -136,11 +182,16 @@ class ContentLoadedDisplayAspectProbe:
                 signal.SIGKILL,
             )
         except ProcessLookupError:
-            pass
+            return
 
-        process.wait(
-            timeout=5.0
-        )
+        if not self._wait_for_process_group_exit(
+            process_group,
+            timeout=5.0,
+        ):
+            raise OSError(
+                "RetroArch display-aspect probe process "
+                "group did not terminate."
+            )
 
     def acquire(
         self,
@@ -302,7 +353,12 @@ class ContentLoadedDisplayAspectProbe:
                 )
         finally:
             self._terminate_and_reap(
-                process
+                process,
+                process_group=(
+                    process.pid
+                    if process is not None
+                    else None
+                ),
             )
 
             try:

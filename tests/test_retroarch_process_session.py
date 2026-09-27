@@ -271,6 +271,11 @@ def test_stop_requests_termination_without_releasing_process():
         patch(
             "services.retroarch.launcher.os.killpg",
         ) as killpg,
+        patch.object(
+            launcher,
+            "_wait_for_process_group_exit",
+            return_value=True,
+        ) as wait_for_group_exit,
     ):
         assert launcher.stop() is True
 
@@ -280,8 +285,15 @@ def test_stop_requests_termination_without_releasing_process():
         12345,
         signal.SIGTERM,
     )
+    process.wait.assert_called_once_with(
+        timeout=5.0,
+    )
+    wait_for_group_exit.assert_called_once_with(
+        12345,
+        timeout=2.0,
+    )
 
-    assert launcher.active_process is process
+    assert launcher.active_process is None
 
 
 def test_stop_without_owned_process_is_safe():
@@ -367,6 +379,11 @@ def test_stop_terminates_complete_owned_process_group():
         patch(
             "services.retroarch.launcher.os.killpg",
         ) as killpg,
+        patch.object(
+            launcher,
+            "_wait_for_process_group_exit",
+            return_value=True,
+        ) as wait_for_group_exit,
     ):
         assert launcher.stop() is True
 
@@ -378,8 +395,15 @@ def test_stop_terminates_complete_owned_process_group():
         43210,
         signal.SIGTERM,
     )
+    process.wait.assert_called_once_with(
+        timeout=5.0,
+    )
+    wait_for_group_exit.assert_called_once_with(
+        43210,
+        timeout=2.0,
+    )
 
-    assert launcher.active_process is process
+    assert launcher.active_process is None
 
 
 def test_stop_returns_false_if_owned_process_group_is_gone():
@@ -445,6 +469,22 @@ def test_stop_reaps_owned_launch_root_after_group_signal(monkeypatch):
         ),
     )
 
+    group_waits = []
+
+    monkeypatch.setattr(
+        launcher,
+        "_wait_for_process_group_exit",
+        lambda process_group, **kwargs: (
+            group_waits.append(
+                (
+                    process_group,
+                    kwargs,
+                )
+            )
+            or True
+        ),
+    )
+
     assert launcher.stop() is True
 
     assert events[0][0] == "killpg"
@@ -454,4 +494,13 @@ def test_stop_reaps_owned_launch_root_after_group_signal(monkeypatch):
         for event in events
     )
 
-    assert launcher._active_process is not None
+    assert group_waits == [
+        (
+            43210,
+            {
+                "timeout": 2.0,
+            },
+        )
+    ]
+
+    assert launcher._active_process is None

@@ -2827,3 +2827,290 @@ def test_ready_platform_launch_does_not_require_content_named_runtime_descriptor
 
     assert "platform.nintendo.nes" in ready
     assert "platform.nintendo.snes" in ready
+
+
+def test_process_group_exists_reports_live_and_missing_groups(
+    monkeypatch,
+):
+    from services.retroarch.launcher import (
+        RetroArchLauncher,
+    )
+
+    calls = []
+
+    def fake_killpg(process_group, signal_number):
+        calls.append(
+            (
+                process_group,
+                signal_number,
+            )
+        )
+
+        if process_group == 222:
+            raise ProcessLookupError
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.os.killpg",
+        fake_killpg,
+    )
+
+    assert (
+        RetroArchLauncher._process_group_exists(
+            111
+        )
+        is True
+    )
+
+    assert (
+        RetroArchLauncher._process_group_exists(
+            222
+        )
+        is False
+    )
+
+    assert calls == [
+        (111, 0),
+        (222, 0),
+    ]
+
+
+def test_stop_escalates_when_wrapper_exits_before_process_group(
+    monkeypatch,
+):
+    from services.retroarch.launcher import (
+        RetroArchLauncher,
+    )
+
+    class Process:
+        pid = 12345
+
+        def __init__(self):
+            self.returncode = None
+            self.wait_calls = []
+
+        def poll(self):
+            return self.returncode
+
+        def wait(self, timeout=None):
+            self.wait_calls.append(
+                timeout
+            )
+
+            self.returncode = -15
+
+            return self.returncode
+
+    process = Process()
+
+    launcher = object.__new__(
+        RetroArchLauncher
+    )
+
+    launcher._active_process = process
+    launcher._active_primary_config = None
+    launcher._active_contain_config = None
+
+    cleanup_calls = []
+
+    launcher._cleanup_active_transients = (
+        lambda: cleanup_calls.append(
+            True
+        )
+    )
+
+    signals = []
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.os.getpgid",
+        lambda pid: 54321,
+    )
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.os.killpg",
+        lambda pgid, sig: signals.append(
+            (
+                pgid,
+                sig,
+            )
+        ),
+    )
+
+    group_waits = iter(
+        [
+            False,
+            True,
+        ]
+    )
+
+    monkeypatch.setattr(
+        launcher,
+        "_wait_for_process_group_exit",
+        lambda process_group, **kwargs: next(
+            group_waits
+        ),
+    )
+
+    assert launcher.stop() is True
+
+    import signal
+
+    assert signals == [
+        (
+            54321,
+            signal.SIGTERM,
+        ),
+        (
+            54321,
+            signal.SIGKILL,
+        ),
+    ]
+
+    assert process.wait_calls == [
+        5.0,
+    ]
+
+    assert cleanup_calls == [
+        True,
+    ]
+
+    assert (
+        launcher._active_process
+        is None
+    )
+
+
+def test_stop_does_not_escalate_when_complete_group_exits(
+    monkeypatch,
+):
+    from services.retroarch.launcher import (
+        RetroArchLauncher,
+    )
+
+    class Process:
+        pid = 12345
+
+        def __init__(self):
+            self.returncode = None
+
+        def poll(self):
+            return self.returncode
+
+        def wait(self, timeout=None):
+            self.returncode = -15
+            return self.returncode
+
+    process = Process()
+
+    launcher = object.__new__(
+        RetroArchLauncher
+    )
+
+    launcher._active_process = process
+    launcher._active_primary_config = None
+    launcher._active_contain_config = None
+
+    launcher._cleanup_active_transients = (
+        lambda: None
+    )
+
+    signals = []
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.os.getpgid",
+        lambda pid: 54321,
+    )
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.os.killpg",
+        lambda pgid, sig: signals.append(
+            (
+                pgid,
+                sig,
+            )
+        ),
+    )
+
+    monkeypatch.setattr(
+        launcher,
+        "_wait_for_process_group_exit",
+        lambda process_group, **kwargs: True,
+    )
+
+    assert launcher.stop() is True
+
+    import signal
+
+    assert signals == [
+        (
+            54321,
+            signal.SIGTERM,
+        ),
+    ]
+
+
+def test_stop_refuses_to_cleanup_if_process_group_survives_sigkill(
+    monkeypatch,
+):
+    import pytest
+
+    from services.retroarch.launcher import (
+        RetroArchLauncher,
+    )
+
+    class Process:
+        pid = 12345
+
+        def __init__(self):
+            self.returncode = None
+
+        def poll(self):
+            return self.returncode
+
+        def wait(self, timeout=None):
+            self.returncode = -15
+            return self.returncode
+
+    process = Process()
+
+    launcher = object.__new__(
+        RetroArchLauncher
+    )
+
+    launcher._active_process = process
+    launcher._active_primary_config = None
+    launcher._active_contain_config = None
+
+    cleanup_calls = []
+
+    launcher._cleanup_active_transients = (
+        lambda: cleanup_calls.append(
+            True
+        )
+    )
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.os.getpgid",
+        lambda pid: 54321,
+    )
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.os.killpg",
+        lambda pgid, sig: None,
+    )
+
+    monkeypatch.setattr(
+        launcher,
+        "_wait_for_process_group_exit",
+        lambda process_group, **kwargs: False,
+    )
+
+    with pytest.raises(
+        RuntimeError,
+        match=(
+            "RetroArch process group did not "
+            "terminate completely"
+        ),
+    ):
+        launcher.stop()
+
+    assert cleanup_calls == []

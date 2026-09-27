@@ -23,13 +23,27 @@ class FakeProcess:
 
 
 def _isolate_process_group(monkeypatch):
+    state = {
+        "alive": True,
+    }
+
     monkeypatch.setattr(
         "services.retroarch.content_display_aspect_probe.os.getpgid",
         lambda pid: pid,
     )
+
+    def killpg(pgid, sig):
+        if sig == 0:
+            if not state["alive"]:
+                raise ProcessLookupError
+            return None
+
+        state["alive"] = False
+        return None
+
     monkeypatch.setattr(
         "services.retroarch.content_display_aspect_probe.os.killpg",
-        lambda pgid, sig: None,
+        killpg,
     )
 
 
@@ -236,3 +250,158 @@ def test_probe_is_content_identity_independent():
         "sonic the hedgehog",
     ):
         assert forbidden not in source
+
+
+def test_reap_checks_group_after_direct_wrapper_has_exited(
+    monkeypatch,
+):
+    import signal
+
+    class ExitedProcess:
+        pid = 7001
+
+        def poll(self):
+            return 0
+
+        def wait(self, timeout=None):
+            return 0
+
+    probe = ContentLoadedDisplayAspectProbe(
+        timeout=1.0,
+        settle_time=0.0,
+        poll_interval=0.01,
+    )
+
+    state = {"alive": True}
+    signals = []
+
+    def exists(group):
+        assert group == 7001
+        return state["alive"]
+
+    def killpg(group, sig):
+        assert group == 7001
+        signals.append(sig)
+        state["alive"] = False
+
+    monkeypatch.setattr(
+        probe,
+        "_process_group_exists",
+        exists,
+    )
+    monkeypatch.setattr(
+        "services.retroarch.content_display_aspect_probe.os.killpg",
+        killpg,
+    )
+
+    probe._terminate_and_reap(
+        ExitedProcess(),
+        process_group=7001,
+    )
+
+    assert signals == [signal.SIGTERM]
+    assert state["alive"] is False
+
+
+def test_reap_escalates_when_group_survives_sigterm(
+    monkeypatch,
+):
+    import signal
+
+    class ExitedProcess:
+        pid = 7002
+
+        def poll(self):
+            return 0
+
+        def wait(self, timeout=None):
+            return 0
+
+    clock = {"value": 0.0}
+
+    probe = ContentLoadedDisplayAspectProbe(
+        timeout=1.0,
+        settle_time=0.0,
+        poll_interval=1.0,
+        monotonic_fn=lambda: clock["value"],
+        sleep_fn=lambda value: clock.__setitem__(
+            "value",
+            clock["value"] + value,
+        ),
+    )
+
+    state = {"alive": True}
+    signals = []
+
+    monkeypatch.setattr(
+        probe,
+        "_process_group_exists",
+        lambda group: state["alive"],
+    )
+
+    def killpg(group, sig):
+        signals.append(sig)
+        if sig == signal.SIGKILL:
+            state["alive"] = False
+
+    monkeypatch.setattr(
+        "services.retroarch.content_display_aspect_probe.os.killpg",
+        killpg,
+    )
+
+    probe._terminate_and_reap(
+        ExitedProcess(),
+        process_group=7002,
+    )
+
+    assert signals == [
+        signal.SIGTERM,
+        signal.SIGKILL,
+    ]
+    assert state["alive"] is False
+
+
+def test_reap_fails_closed_if_owned_group_survives_sigkill(
+    monkeypatch,
+):
+    class ExitedProcess:
+        pid = 7003
+
+        def poll(self):
+            return 0
+
+        def wait(self, timeout=None):
+            return 0
+
+    clock = {"value": 0.0}
+
+    probe = ContentLoadedDisplayAspectProbe(
+        timeout=1.0,
+        settle_time=0.0,
+        poll_interval=1.0,
+        monotonic_fn=lambda: clock["value"],
+        sleep_fn=lambda value: clock.__setitem__(
+            "value",
+            clock["value"] + value,
+        ),
+    )
+
+    monkeypatch.setattr(
+        probe,
+        "_process_group_exists",
+        lambda group: True,
+    )
+
+    monkeypatch.setattr(
+        "services.retroarch.content_display_aspect_probe.os.killpg",
+        lambda group, sig: None,
+    )
+
+    with pytest.raises(
+        OSError,
+        match="process group did not terminate",
+    ):
+        probe._terminate_and_reap(
+            ExitedProcess(),
+            process_group=7003,
+        )

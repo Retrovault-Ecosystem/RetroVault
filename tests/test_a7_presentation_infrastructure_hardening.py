@@ -84,21 +84,26 @@ def test_session_baseline_neutralizes_inherited_fixed_geometry():
         RetroArchSessionConfig.BASELINE
     )
 
+    # Generic session state neutralizes inherited aspect-auto state.
+    # It deliberately does NOT own physical viewport geometry.
     assert values["aspect_ratio_index"] == "0"
     assert values["video_force_aspect"] == "true"
     assert values["video_aspect_ratio"] == "-1.000000"
     assert values["video_aspect_ratio_auto"] == "true"
-    assert values["video_scale_integer"] == "false"
 
-    assert values["video_viewport_bias_x"] == "0.500000"
-    assert values["video_viewport_bias_y"] == "0.500000"
+    viewport_keys = (
+        "video_scale_integer",
+        "video_viewport_bias_x",
+        "video_viewport_bias_y",
+        "custom_viewport_x",
+        "custom_viewport_y",
+        "custom_viewport_width",
+        "custom_viewport_height",
+        "video_crop_overscan",
+    )
 
-    assert values["custom_viewport_x"] == "0"
-    assert values["custom_viewport_y"] == "0"
-    assert values["custom_viewport_width"] == "0"
-    assert values["custom_viewport_height"] == "0"
-
-    assert values["video_crop_overscan"] == "false"
+    for key in viewport_keys:
+        assert key not in values
 
 
 def test_nes_package_overrides_neutral_session_geometry():
@@ -156,29 +161,34 @@ def test_genesis_retains_core_driven_dynamic_geometry():
 
     assert values["video_force_aspect"] == "true"
     assert values["video_aspect_ratio_auto"] == "true"
-    assert values["video_scale_integer"] == "false"
-    assert values["video_crop_overscan"] == "false"
 
-    # The baseline neutralizes any inherited custom viewport. Genesis
-    # itself must not replace that neutral state with fixed coordinates.
-    assert values["custom_viewport_x"] == "0"
-    assert values["custom_viewport_y"] == "0"
-    assert values["custom_viewport_width"] == "0"
-    assert values["custom_viewport_height"] == "0"
-
-    forbidden = (
-        "aspect_ratio_index",
-        "video_aspect_ratio =",
+    # Genesis remains core-driven and carries no fixed physical viewport.
+    # Generic SessionConfig also no longer manufactures a zero viewport.
+    # When Genesis eventually becomes READY, its platform glass plus the
+    # universal CONTAIN runtime will establish the physical viewport.
+    for key in (
         "custom_viewport_x",
         "custom_viewport_y",
         "custom_viewport_width",
         "custom_viewport_height",
         "video_viewport_bias_x",
         "video_viewport_bias_y",
+    ):
+        assert key not in values
+
+    # The Genesis runtime descriptor must remain dynamically neutral.
+    forbidden_runtime = (
+        "custom_viewport_x",
+        "custom_viewport_y",
+        "custom_viewport_width",
+        "custom_viewport_height",
+        "video_viewport_bias_x",
+        "video_viewport_bias_y",
+        "aspect_ratio_index",
     )
 
-    for token in forbidden:
-        assert token not in runtime
+    for key in forbidden_runtime:
+        assert key not in runtime
 
 
 def test_native_deployment_carries_production_manifest(tmp_path):

@@ -61,14 +61,6 @@ class RetroArchSessionConfig:
         'video_force_aspect = "true"\n'
         'video_aspect_ratio = "-1.000000"\n'
         'video_aspect_ratio_auto = "true"\n'
-        'video_scale_integer = "false"\n'
-        'video_viewport_bias_x = "0.500000"\n'
-        'video_viewport_bias_y = "0.500000"\n'
-        'custom_viewport_x = "0"\n'
-        'custom_viewport_y = "0"\n'
-        'custom_viewport_width = "0"\n'
-        'custom_viewport_height = "0"\n'
-        'video_crop_overscan = "false"\n'
     )
 
     def __init__(

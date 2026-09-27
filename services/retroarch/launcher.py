@@ -1,6 +1,7 @@
 import os
 import signal
 import subprocess
+import time
 
 from models.launch_profile import LaunchProfile
 from services.retroarch.core_identity import (
@@ -176,14 +177,76 @@ class RetroArchLauncher:
 
         return process
 
+    @staticmethod
+    def _process_group_exists(
+        process_group: int,
+    ) -> bool:
+        """
+        Return True while any process remains in ``process_group``.
+
+        ``Popen.wait()`` only proves that the launcher-owned root
+        process has exited. Wrapper/sandbox descendants can remain in
+        the same process group after that root exits, so lifecycle
+        completion must independently observe the group itself.
+        """
+
+        try:
+            os.killpg(
+                process_group,
+                0,
+            )
+        except ProcessLookupError:
+            return False
+        except PermissionError:
+            return True
+
+        return True
+
+    @classmethod
+    def _wait_for_process_group_exit(
+        cls,
+        process_group: int,
+        *,
+        timeout: float,
+        poll_interval: float = 0.05,
+    ) -> bool:
+        """
+        Wait until the complete owned process group disappears.
+
+        The wait is bounded so a misbehaving emulator or sandbox
+        cannot block RetroVault shutdown indefinitely.
+        """
+
+        deadline = (
+            time.monotonic()
+            + max(
+                0.0,
+                float(timeout),
+            )
+        )
+
+        while cls._process_group_exists(
+            process_group
+        ):
+            if time.monotonic() >= deadline:
+                return False
+
+            time.sleep(
+                poll_interval
+            )
+
+        return True
+
     def stop(self) -> bool:
         """
-        Terminate the complete process group owned by the active
-        RetroArch launch and synchronously reap the Popen root.
+        Terminate and fully drain the process group owned by the
+        active RetroArch launch.
 
-        The process-group signal terminates wrapper/sandbox/emulator
-        descendants. wait() then reaps the launcher-owned root so a
-        terminated child cannot remain observable as a zombie.
+        RetroArch may be reached through wrapper/sandbox processes
+        such as Flatpak/bwrap. The wrapper can exit immediately after
+        SIGTERM while emulator descendants remain alive in the same
+        process group. Therefore root-process reaping and process-group
+        drainage are separate lifecycle requirements.
         """
 
         process = self._active_process
@@ -210,7 +273,7 @@ class RetroArchLauncher:
                 signal.SIGTERM,
             )
         except ProcessLookupError:
-            return False
+            pass
 
         try:
             process.wait(
@@ -229,6 +292,36 @@ class RetroArchLauncher:
                 timeout=5.0
             )
 
+        group_exited = (
+            self._wait_for_process_group_exit(
+                process_group,
+                timeout=2.0,
+            )
+        )
+
+        if not group_exited:
+            try:
+                os.killpg(
+                    process_group,
+                    signal.SIGKILL,
+                )
+            except ProcessLookupError:
+                pass
+
+            group_exited = (
+                self._wait_for_process_group_exit(
+                    process_group,
+                    timeout=5.0,
+                )
+            )
+
+        if not group_exited:
+            raise RuntimeError(
+                "RetroArch process group did not "
+                "terminate completely."
+            )
+
+        self._active_process = None
         self._cleanup_active_transients()
 
         return True
