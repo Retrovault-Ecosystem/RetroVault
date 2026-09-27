@@ -125,7 +125,6 @@ def test_snes_ready_package_is_complete():
 @pytest.mark.parametrize(
     "platform_id",
     (
-        "platform.sega.genesis",
         "platform.nintendo.n64",
         "platform.arcade",
     ),
@@ -315,6 +314,13 @@ def test_ready_production_manifests_declare_exact_canonical_platform_identity():
                 "RetroVault_SNES_Classic.production.json"
             ),
             "platform.nintendo.snes",
+        ),
+        (
+            Path(
+                "retrovault/genesis/classic/"
+                "RetroVault_Genesis_Classic.production.json"
+            ),
+            "platform.sega.genesis",
         ),
     )
 

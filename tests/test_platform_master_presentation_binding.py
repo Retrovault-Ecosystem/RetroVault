@@ -19,6 +19,7 @@ def test_ready_nes_and_snes_bind_to_classic_4_3():
     for platform_id in (
         "platform.nintendo.nes",
         "platform.nintendo.snes",
+        "platform.sega.genesis",
     ):
         assert (
             registry.state_for(platform_id)
@@ -66,17 +67,17 @@ def test_binding_does_not_change_production_readiness():
     ) == {
         "platform.nintendo.nes",
         "platform.nintendo.snes",
+        "platform.sega.genesis",
     }
 
     assert len(
         registry.unconfigured_platform_ids()
-    ) == 24
+    ) == 23
 
 
 @pytest.mark.parametrize(
     "platform_id",
     (
-        "platform.sega.genesis",
         "platform.nintendo.n64",
         "platform.arcade",
         "platform.sega.game.gear",

@@ -18,8 +18,57 @@
     "preserve_all_edges": true
   },
   "production_state": {
-    "policy_activation": false,
-    "production_ready": false,
-    "live_validation_required": true
+    "policy_activation": true,
+    "production_ready": true,
+    "live_validation_required": false,
+    "geometry_qualified": true
+  },
+  "canvas": {
+    "width": 1920,
+    "height": 1080
+  },
+  "aperture": {
+    "x": 330,
+    "y": 90,
+    "width": 1260,
+    "height": 900
+  },
+  "production_assets": {
+    "artwork": "retrovault/genesis/classic/RetroVault_Genesis_Classic.png"
+  },
+  "geometry": {
+    "status": "runtime_geometry_qualified",
+    "physical_glass": {
+      "x": 330,
+      "y": 90,
+      "width": 1260,
+      "height": 900
+    },
+    "runtime_geometry_policy": "derive_per_loaded_content_display_aspect",
+    "qualified_reference_display_aspect": {
+      "width": 1.524,
+      "height": 1.0
+    },
+    "qualified_reference_viewport": {
+      "x": 330,
+      "y": 126,
+      "width": 1260,
+      "height": 827
+    },
+    "qualified_reference_margins": {
+      "left": 0,
+      "right": 0,
+      "top": 36,
+      "bottom": 37
+    },
+    "contain_runtime": {
+      "aspect_ratio_index": 23,
+      "video_force_aspect": true,
+      "integer_scaling": false,
+      "viewport_bias_x": 0.5,
+      "viewport_bias_y": 0.5,
+      "crop_overscan": false
+    },
+    "title_specific_geometry": false
   }
 }

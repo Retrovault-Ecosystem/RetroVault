@@ -52,8 +52,8 @@
       "height": 1080
     },
     "authority": "master_presentation_profile",
-    "production_policy_activation": false,
-    "physical_runtime_geometry_qualified": false,
+    "production_policy_activation": true,
+    "physical_runtime_geometry_qualified": true,
     "notes": [
       "This qualification records Genesis compatibility with the reusable CLASSIC_4_3 display contract.",
       "It does not make Genesis a READY production presentation policy.",
@@ -64,26 +64,77 @@
     ]
   },
   "geometry": {
-    "status": "unqualified",
-    "canvas": null,
-    "aperture": null,
-    "viewport": null,
-    "aspect_ratio_index": null,
-    "integer_scaling": null,
-    "viewport_bias_x": null,
-    "viewport_bias_y": null,
-    "crop_overscan": null,
+    "status": "runtime_geometry_qualified",
+    "canvas": {
+      "width": 1920,
+      "height": 1080
+    },
+    "aperture": {
+      "x": 330,
+      "y": 90,
+      "width": 1260,
+      "height": 900
+    },
+    "viewport": {
+      "x": 330,
+      "y": 126,
+      "width": 1260,
+      "height": 827
+    },
+    "aspect_ratio_index": 23,
+    "integer_scaling": false,
+    "viewport_bias_x": 0.5,
+    "viewport_bias_y": 0.5,
+    "crop_overscan": false,
     "notes": [
       "Physical geometry is intentionally unset in A.3-N.5-A.",
       "NES geometry must not be copied.",
       "SNES geometry must not be copied.",
       "Genesis geometry must be derived and validated in A.3-N.5-B before production activation."
-    ]
+    ],
+    "runtime_geometry_policy": "derive_per_loaded_content_display_aspect",
+    "qualification": {
+      "source": "loaded_content_core_probe",
+      "core_identity": "genesis_plus_gx",
+      "reference_content": "Sonic The Hedgehog (USA, Europe).md",
+      "display_aspect_width": 1.524,
+      "display_aspect_height": 1.0,
+      "display_aspect": 1.524,
+      "profile_class": "classic_4_3",
+      "fit_policy": "contain",
+      "physical_glass": {
+        "x": 330,
+        "y": 90,
+        "width": 1260,
+        "height": 900
+      },
+      "qualified_reference_viewport": {
+        "x": 330,
+        "y": 126,
+        "width": 1260,
+        "height": 827
+      },
+      "qualified_reference_margins": {
+        "left": 0,
+        "right": 0,
+        "top": 36,
+        "bottom": 37
+      },
+      "runtime_geometry_policy": "derive_per_loaded_content_display_aspect",
+      "aspect_ratio_index": 23,
+      "video_force_aspect": true,
+      "integer_scaling": false,
+      "viewport_bias_x": 0.5,
+      "viewport_bias_y": 0.5,
+      "crop_overscan": false,
+      "title_specific_geometry": false
+    }
   },
   "production_state": {
     "presentation_policy_state": "unconfigured",
     "production_package_complete": false,
-    "production_ready": false,
-    "live_calibration_complete": false
+    "production_ready": true,
+    "live_calibration_complete": true,
+    "policy_activation": true
   }
 }

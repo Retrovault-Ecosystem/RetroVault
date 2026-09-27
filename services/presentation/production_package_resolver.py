@@ -49,6 +49,18 @@ class CanonicalProductionPackageResolver:
                 "RetroVault_SNES_Classic_CRT.slangp"
             ),
         ),
+        "platform.sega.genesis": CanonicalProductionPackageAssets(
+            overlay=(
+                "/opt/retropie/configs/all/retroarch/overlays/"
+                "retrovault/genesis/classic/"
+                "RetroVault_Genesis_Classic.cfg"
+            ),
+            shader=(
+                "/opt/retropie/configs/all/retroarch/shaders/"
+                "retrovault/genesis/classic/"
+                "RetroVault_Genesis_Classic_CRT.slangp"
+            ),
+        ),
     }
 
     @classmethod

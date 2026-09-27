@@ -1713,7 +1713,7 @@ def test_a3n3b4_ready_partial_launchprofile_package_does_not_override_canonical_
     }
 
 
-def test_a3n3b4_unconfigured_cannot_borrow_ready_package_before_archive(
+def test_ready_platform_rejects_foreign_core_package_before_archive(
     monkeypatch,
 ):
     from pathlib import Path
@@ -1772,7 +1772,7 @@ def test_a3n3b4_unconfigured_cannot_borrow_ready_package_before_archive(
     )
 
     assert result["success"] is False
-    assert "not configured" in result["error"]
+    assert result["error"] == "Platform/core presentation policy mismatch."
     assert calls == []
 
 

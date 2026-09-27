@@ -86,7 +86,7 @@ def test_core_mapper_is_derived_from_canonical_platform_core_authority():
         ) == expected
 
 
-def test_unconfigured_platforms_with_known_library_cores_do_not_become_presentation_ready():
+def test_known_library_cores_do_not_override_presentation_policy_state():
     from services.presentation.platform_policy import (
         PlatformPresentationPolicyRegistry,
         PlatformPresentationPolicyState,
@@ -97,16 +97,22 @@ def test_unconfigured_platforms_with_known_library_cores_do_not_become_presentat
             "Sega Genesis",
             "platform.sega.genesis",
             "genesis_plus_gx_libretro.so",
+            PlatformPresentationPolicyState.READY,
+            True,
         ),
         (
             "Nintendo 64",
             "platform.nintendo.n64",
             "mupen64plus_next_libretro.so",
+            PlatformPresentationPolicyState.UNCONFIGURED,
+            False,
         ),
         (
             "Arcade",
             "platform.arcade",
             "mame_libretro.so",
+            PlatformPresentationPolicyState.UNCONFIGURED,
+            False,
         ),
     )
 
@@ -116,22 +122,25 @@ def test_unconfigured_platforms_with_known_library_cores_do_not_become_presentat
         label,
         platform_id,
         expected_core,
+        expected_presentation_state,
+        expects_policy,
     ) in cases:
-        assert mapper.get_core(
-            label
-        ) == expected_core
+        assert mapper.get_core(label) == expected_core
 
         assert (
-            PlatformPresentationPolicyRegistry
-            .state_for(platform_id)
-            is PlatformPresentationPolicyState.UNCONFIGURED
+            PlatformPresentationPolicyRegistry.state_for(platform_id)
+            is expected_presentation_state
         )
 
-        assert (
-            PlatformPresentationPolicyRegistry
-            .for_platform(platform_id)
-            is None
+        policy = PlatformPresentationPolicyRegistry.for_platform(
+            platform_id
         )
+
+        if expects_policy:
+            assert policy is not None
+        else:
+            assert policy is None
+
 
 
 def test_sega_shared_genesis_plus_gx_library_aliases():

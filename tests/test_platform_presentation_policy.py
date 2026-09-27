@@ -20,6 +20,7 @@ def test_registry_contains_explicit_nes_and_snes_platforms():
     assert set(policies) == {
         "platform.nintendo.nes",
         "platform.nintendo.snes",
+        "platform.sega.genesis",
     }
 
     assert (
@@ -100,34 +101,38 @@ def test_platform_policy_contains_no_game_identity():
 
 
 def test_unknown_platform_falls_back_without_foreign_policy():
-    assert (
+    policy = (
         PlatformPresentationPolicyRegistry.for_platform(
             "platform.sega.genesis"
         )
-        is None
     )
+
+    assert policy is not None
+    assert policy.platform_id == "platform.sega.genesis"
 
     assert (
         PlatformPresentationPolicyRegistry.resolve(
             platform_id="platform.sega.genesis",
         )
-        is None
+        is policy
     )
 
 
 def test_unknown_core_falls_back_without_foreign_policy():
-    assert (
+    policy = (
         PlatformPresentationPolicyRegistry.for_core(
             "genesis_plus_gx"
         )
-        is None
     )
+
+    assert policy is not None
+    assert policy.platform_id == "platform.sega.genesis"
 
     assert (
         PlatformPresentationPolicyRegistry.resolve(
             core_identity="genesis_plus_gx",
         )
-        is None
+        is policy
     )
 
 
@@ -309,7 +314,7 @@ def test_every_canonical_rvdb_platform_has_explicit_policy_state():
         )
 
 
-def test_only_validated_nes_and_snes_are_ready():
+def test_validated_nes_snes_and_qualified_genesis_are_ready():
     from services.presentation.platform_policy import (
         PlatformPresentationPolicyRegistry,
     )
@@ -320,6 +325,7 @@ def test_only_validated_nes_and_snes_are_ready():
     ) == {
         "platform.nintendo.nes",
         "platform.nintendo.snes",
+        "platform.sega.genesis",
     }
 
 
@@ -333,11 +339,11 @@ def test_remaining_canonical_platforms_are_explicitly_unconfigured():
         .unconfigured_platform_ids()
     )
 
-    assert len(unconfigured) == 24
+    assert len(unconfigured) == 23
 
     assert (
         "platform.sega.genesis"
-        in unconfigured
+        not in unconfigured
     )
 
     assert (
@@ -612,10 +618,10 @@ def test_canonical_core_compatibility_is_independent_of_presentation_readiness()
         "mame",
     )
 
-    # Genesis/N64/Arcade remain presentation-UNCONFIGURED even though
+    # N64/Arcade remain presentation-UNCONFIGURED even though
     # their current Library launch core compatibility is known.
+    # Genesis completed the A.3-N.5-C READY transition.
     for platform_id in (
-        "platform.sega.genesis",
         "platform.nintendo.n64",
         "platform.arcade",
     ):

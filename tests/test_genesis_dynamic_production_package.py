@@ -200,16 +200,16 @@ def test_genesis_runtime_descriptor_is_supported_by_overlay_runtime():
     )
 
 
-def test_genesis_package_does_not_activate_production():
+def test_genesis_package_records_n5c_policy_activation():
     data = _manifest()
 
     state = data["production_state"]
 
-    assert state["policy_activation"] is False
-    assert state["production_ready"] is False
+    assert state["policy_activation"] is True
+    assert state["production_ready"] is True
     assert (
         state["live_validation_required"]
-        is True
+        is False
     )
 
 
@@ -420,10 +420,10 @@ def test_genesis_package_validator_has_no_fixed_viewport_requirement():
         assert token not in source
 
 
-def test_genesis_preproduction_state_remains_fail_closed_after_dynamic_qualification():
+def test_genesis_dynamic_qualification_is_ready_after_n5c_activation():
     """
-    A.6 qualification must not accidentally promote Genesis into the
-    READY launch boundary before physical/live validation.
+    A.3-N.5-C intentionally promotes qualified Genesis policy into the
+    READY launch boundary while final live production approval remains open.
     """
 
     from services.presentation.platform_policy import (
@@ -437,14 +437,21 @@ def test_genesis_preproduction_state_remains_fail_closed_after_dynamic_qualifica
         PlatformPresentationPolicyRegistry.state_for(
             platform_id
         )
-        is PlatformPresentationPolicyState.UNCONFIGURED
+        is PlatformPresentationPolicyState.READY
     )
 
-    assert (
+    policy = (
         PlatformPresentationPolicyRegistry.for_platform(
             platform_id
         )
-        is None
+    )
+
+    assert policy is not None
+    assert policy.platform_id == platform_id
+    assert policy.core_identities == ("genesis_plus_gx",)
+
+    from services.presentation.master_profile import (
+        MasterPresentationClass,
     )
 
     assert (
@@ -452,7 +459,7 @@ def test_genesis_preproduction_state_remains_fail_closed_after_dynamic_qualifica
         .master_presentation_class_for(
             platform_id
         )
-        is None
+        is MasterPresentationClass.CLASSIC_4_3
     )
 
 

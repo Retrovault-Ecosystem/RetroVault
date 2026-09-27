@@ -271,7 +271,7 @@ class PlatformPresentationPolicyRegistry:
         "platform.nintendo.wii.u": PlatformPresentationPolicyState.UNCONFIGURED,
         "platform.sega.dreamcast": PlatformPresentationPolicyState.UNCONFIGURED,
         "platform.sega.game.gear": PlatformPresentationPolicyState.UNCONFIGURED,
-        "platform.sega.genesis": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.sega.genesis": PlatformPresentationPolicyState.READY,
         "platform.sega.master.system": PlatformPresentationPolicyState.UNCONFIGURED,
         "platform.sega.saturn": PlatformPresentationPolicyState.UNCONFIGURED,
         "platform.sega.sc3000": PlatformPresentationPolicyState.UNCONFIGURED,
@@ -347,6 +347,18 @@ class PlatformPresentationPolicyRegistry:
             core_identities=(
                 PLATFORM_CORE_COMPATIBILITY[
                     "platform.nintendo.snes"
+                ]
+            ),
+            core_options={},
+            master_presentation_class=(
+                MasterPresentationClass.CLASSIC_4_3
+            ),
+        ),
+        PlatformPresentationPolicy(
+            platform_id="platform.sega.genesis",
+            core_identities=(
+                PLATFORM_CORE_COMPATIBILITY[
+                    "platform.sega.genesis"
                 ]
             ),
             core_options={},

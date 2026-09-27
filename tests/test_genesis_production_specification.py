@@ -6,6 +6,10 @@ from services.presentation.platform_policy import (
     PlatformPresentationPolicyState,
 )
 
+from services.presentation.master_profile import (
+    MasterPresentationClass,
+)
+
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -117,37 +121,103 @@ def test_genesis_specification_has_single_presentation_authority():
     ] is False
 
 
-def test_genesis_geometry_is_deliberately_unqualified():
-    geometry = _specification()["geometry"]
 
-    assert geometry["status"] == "unqualified"
+def test_genesis_geometry_is_runtime_qualified_without_production_activation():
+    data = _load_specification()
+    geometry = data["geometry"]
+    qualification = geometry["qualification"]
+    state = data["production_state"]
 
-    for key in (
-        "canvas",
-        "aperture",
-        "viewport",
-        "aspect_ratio_index",
-        "integer_scaling",
-        "viewport_bias_x",
-        "viewport_bias_y",
-        "crop_overscan",
-    ):
-        assert geometry[key] is None
+    assert geometry["status"] == "runtime_geometry_qualified"
+
+    assert geometry["canvas"] == {
+        "width": 1920,
+        "height": 1080,
+    }
+
+    assert geometry["aperture"] == {
+        "x": 330,
+        "y": 90,
+        "width": 1260,
+        "height": 900,
+    }
+
+    # A.3-N.5-B now records the real-content qualification result.
+    # This is evidence for the universal CONTAIN implementation.
+    # Production runtime must still derive geometry from each loaded
+    # content/core display aspect rather than treating these values
+    # as a game-specific fixed override.
+    assert geometry["viewport"] == {
+        "x": 330,
+        "y": 126,
+        "width": 1260,
+        "height": 827,
+    }
+    assert geometry["aspect_ratio_index"] == 23
+    assert geometry["integer_scaling"] is False
+    assert geometry["viewport_bias_x"] == 0.5
+    assert geometry["viewport_bias_y"] == 0.5
+    assert geometry["crop_overscan"] is False
+
+    assert geometry["runtime_geometry_policy"] == (
+        "derive_per_loaded_content_display_aspect"
+    )
+
+    assert qualification["source"] == (
+        "loaded_content_core_probe"
+    )
+    assert qualification["core_identity"] == (
+        "genesis_plus_gx"
+    )
+    assert qualification["display_aspect_width"] == 1.524
+    assert qualification["display_aspect_height"] == 1.0
+    assert qualification["display_aspect"] == 1.524
+    assert qualification["profile_class"] == "classic_4_3"
+    assert qualification["fit_policy"] == "contain"
+
+    assert qualification[
+        "qualified_reference_viewport"
+    ] == {
+        "x": 330,
+        "y": 126,
+        "width": 1260,
+        "height": 827,
+    }
+
+    assert qualification[
+        "qualified_reference_margins"
+    ] == {
+        "left": 0,
+        "right": 0,
+        "top": 36,
+        "bottom": 37,
+    }
+
+    assert qualification["runtime_geometry_policy"] == (
+        "derive_per_loaded_content_display_aspect"
+    )
+    assert qualification["title_specific_geometry"] is False
+
+    assert state["presentation_policy_state"] == "unconfigured"
+    assert state["production_package_complete"] is False
+    assert state["production_ready"] is True
+    assert state["live_calibration_complete"] is True
 
 
-def test_genesis_cannot_be_ready_during_n5a():
+
+def test_genesis_is_ready_after_n5c_policy_activation():
     registry = PlatformPresentationPolicyRegistry
 
     assert (
         registry.state_for(
             "platform.sega.genesis"
         )
-        == PlatformPresentationPolicyState.UNCONFIGURED
+        == PlatformPresentationPolicyState.READY
     )
 
     assert (
         "platform.sega.genesis"
-        not in set(
+        in set(
             registry.ready_platform_ids()
         )
     )
@@ -168,12 +238,12 @@ def test_genesis_cannot_be_ready_during_n5a():
 
     assert (
         state["production_ready"]
-        is False
+        is True
     )
 
     assert (
         state["live_calibration_complete"]
-        is False
+        is True
     )
 
 
@@ -286,7 +356,7 @@ def test_genesis_has_preproduction_master_presentation_qualification():
     )
 
 
-def test_genesis_preproduction_qualification_does_not_activate_policy():
+def test_genesis_qualified_geometry_is_activated_by_n5c_policy():
     from services.presentation.platform_policy import (
         PlatformPresentationPolicyRegistry,
         PlatformPresentationPolicyState,
@@ -301,47 +371,56 @@ def test_genesis_preproduction_qualification_does_not_activate_policy():
 
     assert (
         qualification["production_policy_activation"]
-        is False
+        is True
     )
     assert (
         qualification["physical_runtime_geometry_qualified"]
-        is False
+        is True
     )
 
     assert (
         PlatformPresentationPolicyRegistry.state_for(
             platform_id
         )
-        is PlatformPresentationPolicyState.UNCONFIGURED
+        is PlatformPresentationPolicyState.READY
     )
 
-    assert (
+    policy = (
         PlatformPresentationPolicyRegistry.for_platform(
             platform_id
         )
-        is None
     )
 
-    assert (
+    assert policy is not None
+    assert policy.platform_id == platform_id
+    assert policy.core_identities == ("genesis_plus_gx",)
+
+    core_policy = (
         PlatformPresentationPolicyRegistry.for_core(
             "genesis_plus_gx"
         )
-        is None
     )
+
+    assert core_policy is not None
+    assert core_policy.platform_id == platform_id
+    assert core_policy.core_identities == ("genesis_plus_gx",)
 
     assert (
         PlatformPresentationPolicyRegistry
-        .master_presentation_class_for(platform_id)
-        is None
+        .master_presentation_class_for(
+            platform_id
+        )
+        is MasterPresentationClass.CLASSIC_4_3
     )
 
-    assert platform_id not in (
+    assert platform_id in (
         PlatformPresentationPolicyRegistry
         .ready_platform_ids()
     )
 
 
-def test_genesis_preproduction_qualification_keeps_physical_geometry_unqualified():
+
+def test_genesis_runtime_geometry_qualification_supports_ready_policy():
     data = _load_specification()
 
     qualification = data[
@@ -352,30 +431,67 @@ def test_genesis_preproduction_qualification_keeps_physical_geometry_unqualified
 
     assert (
         qualification["physical_runtime_geometry_qualified"]
-        is False
+        is True
     )
-
-    assert geometry["status"] == "unqualified"
-
-    for key in (
-        "canvas",
-        "aperture",
-        "viewport",
-        "aspect_ratio_index",
-        "integer_scaling",
-        "viewport_bias_x",
-        "viewport_bias_y",
-        "crop_overscan",
-    ):
-        assert geometry[key] is None
-
     assert (
-        state["presentation_policy_state"]
-        == "unconfigured"
+        qualification["production_policy_activation"]
+        is True
     )
+
+    assert geometry["status"] == "runtime_geometry_qualified"
+    assert geometry["canvas"] == {
+        "width": 1920,
+        "height": 1080,
+    }
+    assert geometry["aperture"] == {
+        "x": 330,
+        "y": 90,
+        "width": 1260,
+        "height": 900,
+    }
+    assert geometry["viewport"] == {
+        "x": 330,
+        "y": 126,
+        "width": 1260,
+        "height": 827,
+    }
+    assert geometry["aspect_ratio_index"] == 23
+    assert geometry["integer_scaling"] is False
+    assert geometry["viewport_bias_x"] == 0.5
+    assert geometry["viewport_bias_y"] == 0.5
+    assert geometry["crop_overscan"] is False
+    assert geometry["runtime_geometry_policy"] == (
+        "derive_per_loaded_content_display_aspect"
+    )
+
+    evidence = geometry["qualification"]
+
+    assert evidence["source"] == "loaded_content_core_probe"
+    assert evidence["core_identity"] == "genesis_plus_gx"
+    assert evidence["display_aspect_width"] == 1.524
+    assert evidence["display_aspect_height"] == 1.0
+    assert evidence["display_aspect"] == 1.524
+    assert evidence["profile_class"] == "classic_4_3"
+    assert evidence["fit_policy"] == "contain"
+    assert evidence["qualified_reference_viewport"] == {
+        "x": 330,
+        "y": 126,
+        "width": 1260,
+        "height": 827,
+    }
+    assert evidence["qualified_reference_margins"] == {
+        "left": 0,
+        "right": 0,
+        "top": 36,
+        "bottom": 37,
+    }
+    assert evidence["title_specific_geometry"] is False
+
+    assert state["presentation_policy_state"] == "unconfigured"
     assert state["production_package_complete"] is False
-    assert state["production_ready"] is False
-    assert state["live_calibration_complete"] is False
+    assert state["production_ready"] is True
+    assert state["live_calibration_complete"] is True
+
 
 
 def test_genesis_master_qualification_contains_no_game_identity():
