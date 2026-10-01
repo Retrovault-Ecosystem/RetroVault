@@ -33,7 +33,7 @@ class SourceManager:
         result = []
 
 
-        for source in self.config["library"]["sources"]:
+        for source in self.config.get("library", {}).get("sources", []):
 
 
             result.append(

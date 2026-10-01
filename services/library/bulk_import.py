@@ -1,3 +1,4 @@
+from services.library.identity import location_key
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -92,11 +93,7 @@ class BulkImporter:
             if not rom:
                 continue
 
-            identity = str(
-                Path(rom)
-                .expanduser()
-                .resolve(strict=False)
-            )
+            identity = location_key(rom)
 
             if identity in identities:
                 duplicate_count += 1

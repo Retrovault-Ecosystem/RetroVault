@@ -65,6 +65,7 @@ class GameCard(QWidget):
         )
 
 
+        self.title.setTextFormat(Qt.TextFormat.PlainText)
         self.title.setAlignment(
             Qt.AlignmentFlag.AlignCenter
         )
@@ -92,6 +93,7 @@ class GameCard(QWidget):
         )
 
 
+        self.info.setTextFormat(Qt.TextFormat.PlainText)
         self.info.setAlignment(
             Qt.AlignmentFlag.AlignCenter
         )

@@ -523,21 +523,12 @@ class RVDBService:
         ):
             return None
 
-        relationships = frontend.get(
-            "relationships",
-            {},
-        )
-
-        if not isinstance(
-            relationships,
-            Mapping,
-        ):
-            relationships = {}
-
-        core_ids = self._values(
-            relationships.get(
-                "launches_core"
-            )
+        # Use the exported graph consistently with platform and frontend views.
+        # Embedded node relationships are descriptive payload, not a second
+        # source of relationship authority.
+        core_ids = self._consumer.relationship_targets(
+            frontend_id,
+            "launches_core",
         )
 
         compatibility_entities = [

@@ -55,18 +55,8 @@ class _Resolver:
         self.profile = profile
         self.calls = []
 
-    def resolve(
-        self,
-        platform,
-        game_id,
-    ):
-        self.calls.append(
-            (
-                platform,
-                game_id,
-            )
-        )
-
+    def resolve(self, game):
+        self.calls.append(game)
         return self.profile
 
 
@@ -76,6 +66,9 @@ def _game():
         platform="Nintendo Entertainment System",
         core="fceumm",
         rvdb_game_id="mega-man-2",
+        rvdb_platform_id="platform.nintendo.nes",
+        rom="/roms/Mega Man 2.nes",
+        local_file_id="local-file:example",
     )
 
 
@@ -120,12 +113,7 @@ def test_library_presentation_studio_uses_authoritative_resolver():
         _game()
     )
 
-    assert resolver.calls == [
-        (
-            "Nintendo Entertainment System",
-            "mega-man-2",
-        )
-    ]
+    assert resolver.calls == [_game()]
 
     assert state.shader == "/shaders/nes.slangp"
     assert state.overlay == "/overlays/nes.cfg"
@@ -139,13 +127,13 @@ def test_library_presentation_source_precedence_is_descriptive_only():
                     shader="/default.slangp"
                 ),
                 "systems": {
-                    "Nintendo Entertainment System":
+                    "platform.nintendo.nes":
                         PresentationProfile(
                             overlay="/nes.cfg"
                         )
                 },
                 "games": {
-                    "mega-man-2":
+                    "local-file:example":
                         PresentationProfile(
                             shader="/mega.slangp"
                         )

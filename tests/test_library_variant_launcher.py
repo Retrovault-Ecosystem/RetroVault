@@ -49,6 +49,7 @@ def make_game(filename):
         genre="",
         core="nestopia",
         rom=f"/validation/{filename}",
+        local_file_id=f"local-file:{filename}",
         source="Validation",
         rvdb_platform_id="platform.nes",
     )
@@ -349,6 +350,8 @@ def test_game_details_builds_physical_launch_target_without_mutating_family():
         == "revision"
     )
 
+    assert launch_target.local_file_id == revision["local_file_id"]
+    assert launch_target.local_file_id != family.local_file_id
     assert family.rom == original_rom
     assert family.name == original_name
 
@@ -380,6 +383,7 @@ def test_game_details_singleton_launch_target_uses_original_rom():
     )
 
     assert launch_target.rom == game.rom
+    assert launch_target.local_file_id == game.local_file_id
 
 
 def test_launcher_normalizes_a7_category_titles_to_stable_keys():

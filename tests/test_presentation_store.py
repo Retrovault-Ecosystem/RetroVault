@@ -22,7 +22,7 @@ def test_absent_file_returns_empty_typed_state(
     data = store.load()
 
     assert data == {
-        "version": 1,
+        "version": PresentationStore.VERSION,
         "default": PresentationProfile(),
         "systems": {},
         "games": {},
@@ -68,7 +68,7 @@ def test_save_round_trips_typed_assignments(
     )
 
     assert store.load() == {
-        "version": 1,
+        "version": PresentationStore.VERSION,
         "default": default,
         "systems": systems,
         "games": games,
@@ -106,7 +106,7 @@ def test_save_uses_versioned_json_document(
     )
 
     assert data == {
-        "version": 1,
+        "version": PresentationStore.VERSION,
         "default": {
             "shader": "/default.slangp",
             "overlay": "",
@@ -166,7 +166,7 @@ def test_save_is_atomic_and_removes_temporary_file(
     [
         [],
         {
-            "version": 2,
+            "version": 999,
             "default": {},
             "systems": {},
             "games": {},

@@ -206,3 +206,45 @@ def test_invalid_contract(tmp_path):
         match="exactly 'nodes' and 'edges'",
     ):
         RVDBConsumer(path)
+
+
+@pytest.mark.parametrize("section,key,value", [
+    ("nodes", "platform.test.system", []),
+    ("nodes", "platform.test.system", {"id": "wrong", "type": "platform"}),
+    ("nodes", "platform.test.system", {"id": "platform.test.system", "type": []}),
+    ("nodes", "platform.test.system", {"id": "platform.test.system", "type": "platform", "name": []}),
+    ("edges", "platform.test.system", []),
+    ("edges", "platform.test.system", {"supports_core": "core.test.core"}),
+    ("edges", "platform.test.system", {"supports_core": [None]}),
+    ("edges", "platform.test.system", {"supports_core": [""]}),
+])
+def test_malformed_reload_preserves_previous_snapshot(bundle_path, section, key, value):
+    consumer = RVDBConsumer(bundle_path)
+    nodes, edges = consumer.nodes, consumer.edges
+    data = json.loads(bundle_path.read_text())
+    data[section][key] = value
+    bundle_path.write_text(json.dumps(data))
+    with pytest.raises(RVDBError):
+        consumer.reload()
+    assert consumer.nodes is nodes
+    assert consumer.edges is edges
+    assert consumer.supported_cores("platform.test.system")[0]["id"] == "core.test.core"
+
+
+def test_invalid_encoding_is_a_consumer_error(bundle_path):
+    consumer = RVDBConsumer(bundle_path)
+    nodes = consumer.nodes
+    bundle_path.write_bytes(b"\xff")
+    with pytest.raises(RVDBError, match="Unable to read"):
+        consumer.reload()
+    assert consumer.nodes is nodes
+
+
+def test_structural_validation_preserves_optional_names_and_unresolved_targets(tmp_path):
+    path = tmp_path / "bundle.json"
+    path.write_text(json.dumps({
+        "nodes": {"platform.example": {"id": "platform.example", "type": "platform"}},
+        "edges": {"platform.example": {"supports_core": ["core.unavailable"]}},
+    }))
+    consumer = RVDBConsumer(path)
+    assert consumer.supported_cores("platform.example") == []

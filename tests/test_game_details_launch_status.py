@@ -138,15 +138,14 @@ def test_missing_core_reports_user_facing_failure(
 ):
     details, lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: None
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: None)
     )
 
     details.launch_game()
 
     assert details.launch_status.text() == (
-        "Unable to launch: required emulator core "
-        "is missing."
+        "Unable to launch: Required core is missing: " + details.current_game.core
     )
 
     lifecycle.launch_failed.assert_called_once_with()
@@ -158,12 +157,12 @@ def test_validation_failure_reports_diagnostics(
 ):
     details, lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         NotReadyValidator,
     )
 
@@ -182,12 +181,12 @@ def test_launcher_failure_reports_launcher_error(
 ):
     details, lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -214,12 +213,12 @@ def test_successful_launch_reports_running_game(
 ):
     details, lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -245,12 +244,12 @@ def test_successful_launch_marks_session_active(
 ):
     details, _lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -272,12 +271,12 @@ def test_process_exit_reports_session_ended(
 ):
     details, _lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -315,12 +314,12 @@ def test_process_exit_notification_is_idempotent(
 ):
     details, _lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -346,12 +345,12 @@ def test_failed_launch_does_not_mark_session_active(
 ):
     details, _lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -523,12 +522,12 @@ def test_successful_launch_enables_stop_and_disables_launch(
 ):
     details, _lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -747,8 +746,8 @@ def test_missing_core_failure_is_reported_to_user(
 
     details, lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: None
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: None)
     )
 
     warnings = []
@@ -774,24 +773,13 @@ def test_missing_core_failure_is_reported_to_user(
     parent, title, message = warnings[0]
 
     assert parent is details
-    assert title == "Emulator Core Missing"
+    assert title == "Emulator Core Unavailable"
 
-    assert (
-        "RetroVault could not start this game "
-        "because its required emulator core "
-        "could not be found."
-        in message
-    )
-
-    assert (
-        f"Required core: "
-        f"{details.current_game.core}"
-        in message
-    )
+    assert "Required core is missing:" in message
+    assert details.current_game.core in message
 
     assert details.launch_status.text() == (
-        "Unable to launch: required emulator core "
-        "is missing."
+        "Unable to launch: Required core is missing: " + details.current_game.core
     )
 
     lifecycle.launch_failed.assert_called_once_with()
@@ -806,8 +794,8 @@ def test_recently_played_update_failure_is_reported_to_user(
 
     details, lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     class ReadyValidator:
@@ -828,7 +816,7 @@ def test_recently_played_update_failure_is_reported_to_user(
             }
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -902,3 +890,14 @@ def test_recently_played_update_failure_is_reported_to_user(
         launch_result
     )
     lifecycle.launch_failed.assert_not_called()
+
+
+def _core_resolution_mock(callback):
+    """Keep UI sequencing tests independent of installed host binaries."""
+    from unittest.mock import Mock
+    from services.retroarch.core_resolver import CoreResolution
+    def resolve(name, **kwargs):
+        path = callback(name)
+        return CoreResolution("resolved" if path else "missing", path=path,
+                              message="Required core is missing: " + str(name))
+    return Mock(side_effect=resolve)

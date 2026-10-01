@@ -1,3 +1,4 @@
+from services.library.game_variants import normalize_variant_category
 from collections import OrderedDict
 
 from PyQt6.QtCore import Qt
@@ -40,79 +41,7 @@ class GameEditionLauncher(QDialog):
 
     @staticmethod
     def _category_key(value):
-        """
-        Normalize A.7 variant category representations to the
-        stable internal keys consumed by the grouped launcher.
-
-        A.7 records may contain VariantCategory enum values,
-        enum names, raw semantic values, or professional UI titles.
-        """
-
-        raw = getattr(
-            value,
-            "value",
-            value,
-        )
-
-        raw = str(
-            raw or ""
-        ).strip()
-
-        normalized = (
-            raw.casefold()
-            .replace("&", "and")
-            .replace("/", " ")
-            .replace("_", " ")
-            .replace("-", " ")
-        )
-
-        normalized = " ".join(
-            normalized.split()
-        )
-
-        aliases = {
-            "standard": "standard",
-            "standard edition": "standard",
-
-            "revision": "revision",
-            "revisions": "revision",
-
-            "translation": "translation",
-            "translations": "translation",
-            "translations and languages": "translation",
-            "language": "translation",
-            "languages": "translation",
-
-            "region": "region",
-            "regional": "region",
-            "regional edition": "region",
-            "regional editions": "region",
-
-            "hack": "hack",
-            "hacks": "hack",
-            "mod": "hack",
-            "mods": "hack",
-            "hacks and mods": "hack",
-
-            "prototype": "prototype",
-            "prototypes": "prototype",
-            "beta": "prototype",
-            "betas": "prototype",
-            "prototypes and betas": "prototype",
-
-            "unlicensed": "unlicensed",
-            "aftermarket": "unlicensed",
-            "unlicensed aftermarket": "unlicensed",
-
-            "other": "other",
-            "other variant": "other",
-            "other variants": "other",
-        }
-
-        return aliases.get(
-            normalized,
-            "other",
-        )
+        return normalize_variant_category(value)
 
     def __init__(
         self,
@@ -167,6 +96,7 @@ class GameEditionLauncher(QDialog):
 
         return [
             {
+                "local_file_id": getattr(game, "local_file_id", ""),
                 "name": getattr(
                     game,
                     "name",

@@ -100,6 +100,7 @@ def test_set_favorite_persists_identity(
     )
 
     assert data == {
+        "version": 2,
         "favorites": [
             game_identity(game)
         ],
@@ -1329,9 +1330,11 @@ def test_library_service_uses_configured_artwork_root(
         def __init__(
             self,
             directory=None,
+            rvdb_resolver=None,
         ):
 
             self.directory = directory
+            self.rvdb_resolver = rvdb_resolver
 
         def get_artwork(
             self,
@@ -1501,3 +1504,34 @@ def test_library_controller_refresh_artwork_delegates():
     assert controller.library.calls == [
         "/artwork/new"
     ]
+
+
+def test_platform_statistics_distinguishes_unavailable_from_zero():
+    from services.library.library_service import LibraryService
+    from services.library.models import Game
+    game = Game('Game', 'NES', 0, '', '', rom='/game.nes',
+                rvdb_platform_id='platform.nintendo.nes', local_file_id='local-file:1')
+    def unavailable(*args):
+        raise OSError('Collection store unreadable')
+    stats = LibraryService.query_platform_statistics(
+        'platform.nintendo.nes', games_provider=lambda: [game], recent_provider=lambda: [],
+        collection_names_provider=unavailable, collection_games_provider=lambda name: [])
+    assert stats['games'] == 1
+    assert stats['recent'] == 0
+    assert stats['collections'] is None
+    assert 'unreadable' in stats['errors']['collections']
+
+
+def test_platform_statistics_counts_hidden_edition_once():
+    from services.library.library_service import LibraryService
+    from services.library.models import Game
+    game = Game('Game', 'NES', 0, '', '', rom='/game.nes', favorite=True,
+                rvdb_platform_id='platform.nintendo.nes', local_file_id='local-file:1',
+                variants=[{'local_file_id': 'local-file:1', 'rom': '/game.nes'},
+                          {'local_file_id': 'local-file:2', 'rom': '/alternate.nes'}])
+    stats = LibraryService.query_platform_statistics(
+        'platform.nintendo.nes', games_provider=lambda: [game],
+        recent_provider=lambda: ['local-file:1', 'local-file:2'],
+        collection_names_provider=lambda: ['both'], collection_games_provider=lambda name: [game])
+    assert {key: stats[key] for key in ('games', 'favorites', 'recent', 'collections')} == {
+        'games': 1, 'favorites': 1, 'recent': 1, 'collections': 1}

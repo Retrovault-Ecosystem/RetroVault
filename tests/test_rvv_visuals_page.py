@@ -537,9 +537,9 @@ def test_page_reuses_existing_presentation_assignment_boundary():
     )
 
     assert "PresentationStore(" not in source
-    assert ".assign_default_overlay(" in source
-    assert ".assign_system_overlay(" in source
-    assert ".assign_game_overlay(" in source
+    assert ".assign('overlay', 'default'," in source
+    assert ".assign('overlay', 'system'," in source
+    assert ".assign('overlay', 'game'," in source
 
 
 def test_existing_overlays_page_remains_separate():
@@ -953,6 +953,7 @@ def test_main_window_injects_shared_assignment_context_into_visuals_page():
 
     assert (
         "NativeVisualsPage(\n"
+        "                presentation_resolver_provider=presentation_composition_factory.build_launch,\n"
         "                presentation_store=("
         in source
     )
@@ -1874,9 +1875,9 @@ def test_native_visual_page_exposes_clear_assignment_controls():
     ):
         assert name in source
 
-    assert ".clear_default_overlay(" in source
-    assert ".clear_system_overlay(" in source
-    assert ".clear_game_overlay(" in source
+    assert ".clear_assignment('overlay', 'default'" in source
+    assert ".clear_assignment('overlay', 'system'" in source
+    assert ".clear_assignment('overlay', 'game'" in source
 
 
 def test_native_clear_assignment_boundary_has_no_warning_dialog():
@@ -2011,7 +2012,7 @@ def test_native_assignment_state_distinguishes_direct_and_effective(
 
     assert (
         page.effective_assignment_value.text()
-        == "Effective: rvv://game"
+        == "Saved: rvv://game"
     )
 
 
@@ -2077,7 +2078,7 @@ def test_native_assignment_state_reveals_fallback_after_clear(
 
     assert (
         page.effective_assignment_value.text()
-        == "Effective: rvv://system"
+        == "Saved: rvv://system"
     )
 
     page.clear_system_visual()
@@ -2089,7 +2090,7 @@ def test_native_assignment_state_reveals_fallback_after_clear(
 
     assert (
         page.effective_assignment_value.text()
-        == "Effective: rvv://default"
+        == "Saved: rvv://default"
     )
 
 
@@ -2140,7 +2141,7 @@ def test_native_assignment_state_without_game_uses_default(
 
     assert (
         page.effective_assignment_value.text()
-        == "Effective: rvv://default"
+        == "Saved: rvv://default"
     )
 
 

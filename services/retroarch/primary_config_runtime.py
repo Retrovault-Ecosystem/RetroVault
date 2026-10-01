@@ -1,3 +1,4 @@
+from config.paths import runtime_directory, config_home
 import os
 import re
 import tempfile
@@ -18,8 +19,8 @@ class PrimaryConfigRuntime:
     """
 
     _VIDEO_DRIVER = re.compile(
-        r'(?m)^[ \\t]*video_driver[ \\t]*='
-        r'[ \\t]*"[^"]*"[ \\t]*$'
+        r'(?m)^[ \t]*video_driver[ \t]*='
+        r'[ \t]*"[^"]*"[ \t]*$'
     )
 
     # RetroVault production presentation owns these authorities explicitly.
@@ -40,8 +41,8 @@ class PrimaryConfigRuntime:
         value,
     ):
         pattern = re.compile(
-            rf'(?m)^[ \\t]*{re.escape(key)}[ \\t]*='
-            rf'[ \\t]*"(?:true|false)"[ \\t]*$',
+            rf'(?m)^[ \t]*{re.escape(key)}[ \t]*='
+            rf'[ \t]*"(?:true|false)"[ \t]*$',
             re.IGNORECASE,
         )
 
@@ -79,12 +80,11 @@ class PrimaryConfigRuntime:
         self.directory = Path(
             directory
             or (
-                Path.home()
-                / ".cache"
-                / "retrovault"
-                / "primary-runtime"
+                runtime_directory("primary-runtime")
             )
-        )
+        ).expanduser()
+
+        self._created = []
 
     @staticmethod
     def qualified_video_driver():
@@ -126,7 +126,7 @@ class PrimaryConfigRuntime:
 
         if xdg_config_home:
             candidates.append(
-                Path(xdg_config_home).expanduser()
+                config_home()
                 / "retroarch"
                 / "retroarch.cfg"
             )
@@ -182,7 +182,7 @@ class PrimaryConfigRuntime:
             else str(video_driver).strip()
         )
 
-        if not driver:
+        if not driver and not source and not overlay:
             return None
 
         source_path = self.discover_source(
@@ -201,28 +201,32 @@ class PrimaryConfigRuntime:
             errors="strict",
         )
 
-        matches = list(
-            self._VIDEO_DRIVER.finditer(
-                text
-            )
-        )
+        if re.search(r'^\s*#include\b', text, re.MULTILINE):
+            raise ValueError("RetroArch primary configuration includes are unsupported for isolated launch; select a standalone config.")
 
-        if len(matches) != 1:
-            raise ValueError(
-                "Expected exactly one video_driver "
-                "directive in RetroArch primary "
-                f"configuration; found {len(matches)}."
+        if driver:
+            matches = list(
+                self._VIDEO_DRIVER.finditer(
+                    text
+                )
             )
 
-        replacement = (
-            f'video_driver = "{driver}"'
-        )
+            if len(matches) != 1:
+                raise ValueError(
+                    "Expected exactly one video_driver "
+                    "directive in RetroArch primary "
+                    f"configuration; found {len(matches)}."
+                )
 
-        text = self._VIDEO_DRIVER.sub(
-            replacement,
-            text,
-            count=1,
-        )
+            replacement = (
+                f'video_driver = "{driver}"'
+            )
+
+            text = self._VIDEO_DRIVER.sub(
+                replacement,
+                text,
+                count=1,
+            )
 
         # Establish RetroVault's presentation authority in the transient
         # primary configuration before RetroArch initializes the core and
@@ -304,6 +308,7 @@ class PrimaryConfigRuntime:
             delete=False,
         )
 
+        self._created.append(Path(handle.name))
         try:
             handle.write(
                 text
@@ -314,18 +319,16 @@ class PrimaryConfigRuntime:
 
         return handle.name
 
-    def cleanup(
-        self,
-        path,
-    ):
-        if not path:
-            return
-
-        candidate = Path(
-            path
-        )
-
-        try:
-            candidate.unlink()
-        except FileNotFoundError:
-            pass
+    def cleanup(self, path=None):
+        candidates = list(self._created)
+        if path and Path(path) not in candidates:
+            candidates.append(Path(path))
+        remaining = []
+        for candidate in candidates:
+            try:
+                candidate.unlink(missing_ok=True)
+            except OSError:
+                remaining.append(candidate)
+        self._created = remaining
+        if remaining:
+            raise OSError("Primary configuration cleanup pending: " + ", ".join(map(str, remaining)))

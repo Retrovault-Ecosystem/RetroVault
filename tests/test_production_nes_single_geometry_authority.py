@@ -97,7 +97,7 @@ def test_nes_full_crt_preset_cannot_create_secondary_geometry():
     expected = (
         'HSM_INT_SCALE_MODE = "0.000000"',
         'HSM_NON_INTEGER_SCALE = "100.000000"',
-        'HSM_ASPECT_RATIO_MODE = "0.000000"',
+        'HSM_ASPECT_RATIO_MODE = "6.000000"',
         'HSM_SCREEN_POSITION_X = "0.000000"',
         'HSM_SCREEN_POSITION_Y = "0.000000"',
         'HSM_CROP_PERCENT_ZOOM = "0.000000"',
@@ -145,3 +145,21 @@ def test_fceumm_runtime_preserves_all_four_frame_edges():
         )
         == expected
     )
+
+
+def test_megabezel_presets_follow_the_aspect_correct_viewport():
+    from pathlib import Path
+
+    root = Path(__file__).resolve().parents[1]
+    for platform in ("nes", "snes"):
+        filename = f"RetroVault_{platform.upper()}_Classic_CRT.slangp"
+        for directory in (
+            root / "retrovault" / platform / "classic",
+            root / "data/presentation/shaders/retrovault" / platform / "classic",
+        ):
+            parameters = _hsm_parameters((directory / filename).read_text())
+            # Mega Bezel mode 6 uses FinalViewportSize and scale (1,1), so
+            # the core-corrected physical viewport is not refitted to 4:3.
+            assert parameters["HSM_ASPECT_RATIO_MODE"] == "6.000000"
+            for edge in ("TOP", "BOTTOM", "LEFT", "RIGHT"):
+                assert parameters[f"HSM_CROP_PERCENT_{edge}"] == "0.000000"

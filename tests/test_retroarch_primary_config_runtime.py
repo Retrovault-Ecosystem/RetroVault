@@ -124,7 +124,7 @@ def test_primary_runtime_rejects_missing_explicit_source(
         )
 
 
-def test_primary_runtime_no_driver_override_is_noop(
+def test_explicit_primary_is_isolated_without_changing_driver(
     tmp_path,
 ):
     source = _source(
@@ -138,13 +138,15 @@ def test_primary_runtime_no_driver_override_is_noop(
         )
     )
 
-    assert (
-        runtime.create(
-            source,
-            video_driver="",
-        )
-        is None
-    )
+    before = source.read_bytes()
+    result = Path(runtime.create(source, video_driver=""))
+    text = result.read_text()
+    assert 'video_driver = "vulkan"' in text
+    assert 'auto_overrides_enable = "false"' in text
+    assert 'auto_shaders_enable = "false"' in text
+    assert source.read_bytes() == before
+    runtime.cleanup(str(result))
+
 
 
 def test_primary_runtime_cleanup_removes_transient_file(
@@ -358,3 +360,46 @@ def test_primary_runtime_materializes_missing_presentation_authority(
         runtime.cleanup(generated)
 
     assert not generated.exists()
+
+
+def test_primary_runtime_uses_disposable_xdg_cache(monkeypatch, tmp_path):
+    monkeypatch.setenv("XDG_CACHE_HOME", str(tmp_path / "cache"))
+    runtime = PrimaryConfigRuntime()
+    source = _source(tmp_path)
+    before = source.read_bytes()
+    result = Path(runtime.create(source, video_driver="glcore"))
+    assert result.is_relative_to(tmp_path / "cache")
+    assert source.read_bytes() == before
+    runtime.cleanup(str(result))
+    assert not result.exists()
+
+
+def test_production_overlay_isolates_primary_without_driver_override(tmp_path, monkeypatch):
+    from services.retroarch.primary_config_runtime import PrimaryConfigRuntime
+    source = tmp_path / 'native.cfg'
+    source.write_text('\tvideo_driver\t=\t"gl"\n\tauto_overrides_enable\t=\t"true"\n')
+    overlay = tmp_path / 'overlay.cfg'
+    overlay.write_text('overlays = "1"\n')
+    original = source.read_bytes()
+    runtime = PrimaryConfigRuntime(directory=tmp_path / 'runtime')
+    monkeypatch.setattr(runtime, 'default_config_candidates', lambda: (source,))
+    result = Path(runtime.create(video_driver='', overlay=str(overlay)))
+    assert 'auto_overrides_enable = "false"' in result.read_text()
+    assert '\tvideo_driver\t=\t"gl"' in result.read_text()
+    assert source.read_bytes() == original
+    runtime.cleanup()
+    assert not result.exists()
+
+
+def test_tabbed_driver_is_updated_and_includes_fail_before_writing(tmp_path):
+    from services.retroarch.primary_config_runtime import PrimaryConfigRuntime
+    source = tmp_path / 'source.cfg'
+    runtime = PrimaryConfigRuntime(directory=tmp_path / 'runtime')
+    source.write_text('\tvideo_driver\t=\t"gl"\n')
+    result = Path(runtime.create(source=source, video_driver='glcore'))
+    assert 'video_driver = "glcore"' in result.read_text()
+    runtime.cleanup()
+    source.write_text('#include "other.cfg"\nvideo_driver = "gl"\n')
+    with pytest.raises(ValueError, match='includes are unsupported'):
+        runtime.create(source=source, video_driver='glcore')
+    assert not list(runtime.directory.iterdir())

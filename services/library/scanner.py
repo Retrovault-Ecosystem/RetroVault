@@ -1,5 +1,7 @@
 import os
 
+from services.library.archive_scan_cache import ArchiveScanCache
+
 from services.retroarch.archive_runtime import ArchiveRuntime
 
 from services.library.core_mapper import CoreMapper
@@ -47,6 +49,7 @@ class RomScanner:
     def __init__(
         self,
         rvdb_resolver=None,
+        archive_scan_cache=None,
     ):
 
         self.core_mapper = CoreMapper()
@@ -54,6 +57,7 @@ class RomScanner:
         self.rvdb_resolver = rvdb_resolver
 
         self.archive_runtime = ArchiveRuntime()
+        self.archive_scan_cache = archive_scan_cache or ArchiveScanCache()
 
     def _resolve_platform(
         self,
@@ -122,9 +126,8 @@ class RomScanner:
                     )
 
                     preferred_member = (
-                        self.archive_runtime
-                        .preferred_member(
-                            archive_path
+                        self.archive_scan_cache.preferred_member(
+                            archive_path, self.archive_runtime
                         )
                     )
 
@@ -174,7 +177,8 @@ class RomScanner:
                     and rvdb_platform_id
                 ):
                     rvdb_game = (
-                        self.rvdb_resolver.game_for_name(
+                        getattr(self.rvdb_resolver, "game_for_rom_name",
+                                self.rvdb_resolver.game_for_name)(
                             game_name,
                             rvdb_platform_id,
                         )
@@ -222,7 +226,7 @@ class RomScanner:
                         genre=genre,
 
                         core=self.core_mapper.get_core(
-                            platform
+                            rvdb_platform_id or platform
                         ),
 
                         rom=os.path.join(
@@ -248,4 +252,5 @@ class RomScanner:
 
                 )
 
+        self.archive_scan_cache.flush()
         return games

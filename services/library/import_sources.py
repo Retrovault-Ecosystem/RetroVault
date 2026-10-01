@@ -27,7 +27,7 @@ class ImportSourceStore:
         self.writer = (
             config_writer
             if config_writer is not None
-            else ConfigWriter()
+            else ConfigWriter(runtime_file=self.loader.runtime_file)
         )
 
     def sources(self):

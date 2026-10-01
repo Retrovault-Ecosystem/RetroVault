@@ -1,3 +1,4 @@
+from services.library.identity import project_identities
 from PyQt6.QtWidgets import (
     QWidget,
     QVBoxLayout,
@@ -39,6 +40,7 @@ class GalleryView(QWidget):
         presentation_store=None,
         launcher=None,
         process_lifecycle=None,
+        launch_controller=None,
     ):
 
         super().__init__()
@@ -182,6 +184,7 @@ class GalleryView(QWidget):
             ),
             launcher=launcher,
             process_lifecycle=process_lifecycle,
+            launch_controller=launch_controller,
         )
 
 
@@ -793,16 +796,7 @@ class GalleryView(QWidget):
                 self.recent_provider()
             )
 
-            games_by_identity = {
-                str(game.rom): game
-                for game in self.all_games
-            }
-
-            games = [
-                games_by_identity[identity]
-                for identity in identities
-                if identity in games_by_identity
-            ]
+            games = project_identities(self.all_games, identities)
 
         elif recent_active:
 

@@ -96,6 +96,10 @@ class PresentationRecommendationResolver:
         platform_id: str,
         game_id: str = "",
     ) -> PresentationProfile:
+        return self.asset_resolver.resolve_profile(self.references(platform_id, game_id))
+
+    def references(self, platform_id, game_id=""):
+        """Select automatic references without requiring unused assets to exist."""
         system = self.catalog.recommend(
             platform_id
         )
@@ -112,6 +116,4 @@ class PresentationRecommendationResolver:
             game,
         )
 
-        return self.asset_resolver.resolve_profile(
-            automatic
-        )
+        return automatic

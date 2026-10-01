@@ -1,37 +1,20 @@
+# Machine-specific choices belong in the user runtime.json, not this file.
 retroarch:
-
-  executable: /usr/bin/retroarch
-
+  executable: retroarch
+  primary_config: ""
   cores:
-
-    directory: /opt/retropie/libretrocores
-
-
+    directory: ""
 library:
-
-  sources:
-
-    - id: dev
-
-      name: Development Library
-
-      enabled: true
-
-      type: local
-
-      path: /home/oilcan/roms
-
-
+  sources: []
 paths:
-
   overlays:
-
     directory: ~/.config/retroarch/overlays
-
   shaders:
-
     directory: ~/.config/retroarch/shaders
-
   artwork:
-
     directory: ~/.local/share/retrovault/artwork
+
+# Standalone adapters are opt-in; RVDB compatibility does not imply installation.
+emulation:
+  snes_backend: retroarch
+  snes9x_executable: ""

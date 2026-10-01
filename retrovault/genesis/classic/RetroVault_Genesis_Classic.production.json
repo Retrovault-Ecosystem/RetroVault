@@ -28,10 +28,10 @@
     "height": 1080
   },
   "aperture": {
-    "x": 330,
-    "y": 90,
-    "width": 1260,
-    "height": 900
+    "x": 312,
+    "y": 80,
+    "width": 1296,
+    "height": 770
   },
   "production_assets": {
     "artwork": "retrovault/genesis/classic/RetroVault_Genesis_Classic.png"
@@ -39,10 +39,10 @@
   "geometry": {
     "status": "runtime_geometry_qualified",
     "physical_glass": {
-      "x": 330,
-      "y": 90,
-      "width": 1260,
-      "height": 900
+      "x": 312,
+      "y": 80,
+      "width": 1296,
+      "height": 770
     },
     "runtime_geometry_policy": "derive_per_loaded_content_display_aspect",
     "qualified_reference_display_aspect": {
@@ -50,16 +50,16 @@
       "height": 1.0
     },
     "qualified_reference_viewport": {
-      "x": 330,
-      "y": 126,
-      "width": 1260,
-      "height": 827
+      "x": 373,
+      "y": 80,
+      "width": 1173,
+      "height": 770
     },
     "qualified_reference_margins": {
-      "left": 0,
-      "right": 0,
-      "top": 36,
-      "bottom": 37
+      "left": 61,
+      "right": 62,
+      "top": 0,
+      "bottom": 0
     },
     "contain_runtime": {
       "aspect_ratio_index": 23,
@@ -70,5 +70,29 @@
       "crop_overscan": false
     },
     "title_specific_geometry": false
+  },
+  "adaptive_frame": {
+    "frame": [
+      290,
+      60,
+      1340,
+      810
+    ],
+    "housing_texture": [
+      500,
+      20,
+      200,
+      25
+    ]
+  },
+  "sha256": {
+    "overlay_png": "8e8ef7137843ec26dec708b3eb9404cda62dd1b924b82f69518e4e620f9332a0"
+  },
+  "artwork_revision": {
+    "design": "user-approved Genesis Model 1",
+    "date": "2026-09-29",
+    "source": "design/genesis-model1/Genesis_Model1_branded.png",
+    "visual_approval": "User approved all three final branded designs for production integration.",
+    "runtime_verification": "build/milestone6/final-genesis/report.json"
   }
 }

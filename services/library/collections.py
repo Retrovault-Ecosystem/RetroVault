@@ -1,31 +1,15 @@
+from config.paths import config_file
 import json
 import os
 from pathlib import Path
 
-from services.library.state import game_identity
+from services.library.identity import game_identity, family_identities
 
 
 
 def _default_collections_file() -> Path:
-    xdg_config_home = os.environ.get(
-        "XDG_CONFIG_HOME"
-    )
+    return config_file('collections.json')
 
-    if xdg_config_home:
-        config_home = Path(
-            xdg_config_home
-        ).expanduser()
-    else:
-        config_home = (
-            Path.home()
-            / ".config"
-        )
-
-    return (
-        config_home
-        / "retrovault"
-        / "collections.json"
-    )
 
 
 def _normalized_name(name) -> str:
@@ -56,7 +40,7 @@ class CollectionStore:
 
     def _empty_data(self):
         return {
-            "version": 1,
+            "version": 2,
             "collections": [],
         }
 
@@ -82,10 +66,13 @@ class CollectionStore:
                 "a JSON object."
             )
 
-        if data.get("version") != 1:
+        if type(data.get("version")) is not int or data.get("version") not in (1, 2):
             raise ValueError(
                 "Unsupported RetroVault collections version."
             )
+
+        if set(data) - {"version", "collections"}:
+            raise ValueError("Unsupported RetroVault collections fields.")
 
         collections = data.get(
             "collections"
@@ -105,6 +92,9 @@ class CollectionStore:
                 raise ValueError(
                     "Each collection must be a JSON object."
                 )
+
+            if set(collection) - {"name", "games"}:
+                raise ValueError("Unsupported collection fields.")
 
             name = _normalized_name(
                 collection.get("name")
@@ -149,11 +139,12 @@ class CollectionStore:
             )
 
         return {
-            "version": 1,
+            "version": 2,
             "collections": normalized_collections,
         }
 
     def _write(self, data):
+        data = dict(data, version=2)
         self.collections_file.parent.mkdir(
             parents=True,
             exist_ok=True,
@@ -306,10 +297,25 @@ class CollectionStore:
             name,
         )
 
-        if identity in collection["games"]:
-            collection["games"].remove(
-                identity
-            )
+        remaining = [key for key in collection["games"] if key not in family_identities(game)]
+        if remaining != collection["games"]:
+            collection["games"] = remaining
             self._write(data)
 
         return identity
+
+    def validate_identity_migration(self):
+        self._read()
+
+    def migrate_identities(self, mapping):
+        from copy import deepcopy
+        from services.library.identity_migration import backup_original, mapped_list
+        data = self._read()
+        migrated = deepcopy(data)
+        for collection in migrated["collections"]:
+            collection["games"] = mapped_list(collection["games"], mapping)
+        if self.collections_file.exists():
+            raw = json.loads(self.collections_file.read_text(encoding="utf-8"))
+            if migrated != data or raw.get("version") != 2:
+                backup_original(self.collections_file)
+                self._write(migrated)

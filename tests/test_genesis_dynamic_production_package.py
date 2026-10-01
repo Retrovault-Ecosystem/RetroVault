@@ -253,6 +253,12 @@ def test_genesis_shader_source_is_geometry_neutral():
         encoding="utf-8"
     ).casefold()
 
+    # RetroArch's input positions require its projection/orientation matrix.
+    # Bypassing it draws an inverted quad in only one viewport quadrant.
+    assert "mat4 mvp;" in source
+    assert "gl_position = global.mvp * position;" in source
+    assert "vtexcoord = texcoord;" in source
+
     forbidden = (
         "custom_viewport",
         "aspect_ratio_index",

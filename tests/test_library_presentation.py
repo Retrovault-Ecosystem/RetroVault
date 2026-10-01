@@ -165,7 +165,7 @@ def test_game_details_presentation_semantics():
 
 def test_presentation_resolution_contract_preserved():
     source = Path(
-        "ui/library/details/game_details.py"
+        "controllers/game_launch_controller.py"
     ).read_text()
 
     assert "self.presentation_resolver_provider()" in source

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from pathlib import Path
+from config import ConfigLoader
 
 from services.presentation.platform_policy import (
     PlatformPresentationPolicyRegistry,
@@ -29,34 +30,28 @@ class CanonicalProductionPackageResolver:
     _ASSETS = {
         "platform.nintendo.nes": CanonicalProductionPackageAssets(
             overlay=(
-                "/opt/retropie/configs/all/retroarch/overlays/"
                 "retrovault/nes/classic/RetroVault_NES_Classic.cfg"
             ),
             shader=(
-                "/opt/retropie/configs/all/retroarch/shaders/"
                 "retrovault/nes/classic/"
                 "RetroVault_NES_Classic_CRT.slangp"
             ),
         ),
         "platform.nintendo.snes": CanonicalProductionPackageAssets(
             overlay=(
-                "/opt/retropie/configs/all/retroarch/overlays/"
                 "retrovault/snes/classic/RetroVault_SNES_Classic.cfg"
             ),
             shader=(
-                "/opt/retropie/configs/all/retroarch/shaders/"
                 "retrovault/snes/classic/"
                 "RetroVault_SNES_Classic_CRT.slangp"
             ),
         ),
         "platform.sega.genesis": CanonicalProductionPackageAssets(
             overlay=(
-                "/opt/retropie/configs/all/retroarch/overlays/"
                 "retrovault/genesis/classic/"
                 "RetroVault_Genesis_Classic.cfg"
             ),
             shader=(
-                "/opt/retropie/configs/all/retroarch/shaders/"
                 "retrovault/genesis/classic/"
                 "RetroVault_Genesis_Classic_CRT.slangp"
             ),
@@ -69,6 +64,7 @@ class CanonicalProductionPackageResolver:
         *,
         platform_id,
         core_identity,
+        config=None,
     ):
         if not isinstance(platform_id, str):
             return None
@@ -102,12 +98,26 @@ class CanonicalProductionPackageResolver:
                 f"production package mapping: {platform_id}."
             ) from exc
 
-        overlay = str(
-            Path(assets.overlay).expanduser().resolve(strict=False)
-        )
-        shader = str(
-            Path(assets.shader).expanduser().resolve(strict=False)
-        )
+        config = ConfigLoader().load() if config is None else config
+        if not isinstance(config, dict) or not isinstance(config.get("paths", {}), dict):
+            raise ValueError("Presentation configuration must contain a paths mapping.")
+        paths = config.get("paths", {})
+        def installed(kind, relative):
+            entry = paths.get(kind, {})
+            if not isinstance(entry, dict):
+                raise ValueError(f"Presentation directory configuration for {kind} must be a mapping.")
+            root = entry.get("directory", "")
+            if not isinstance(root, str) or not root.strip():
+                raise ValueError(f"No local presentation asset root configured for {kind}.")
+            root = Path(root).expanduser().resolve()
+            candidate = (root / relative).resolve()
+            try:
+                candidate.relative_to(root)
+            except ValueError as exc:
+                raise ValueError(f"Production {kind} asset escapes its configured root.") from exc
+            return str(candidate)
+        overlay = installed("overlays", assets.overlay)
+        shader = installed("shaders", assets.shader)
 
         return ProductionPresentationPackageValidator.validate(
             platform_id=platform_id,

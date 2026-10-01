@@ -261,5 +261,5 @@ def test_collections_are_separate_from_library_state(
                 "name": "Separate",
             }
         ],
-        "version": 1,
+        "version": 2,
     }

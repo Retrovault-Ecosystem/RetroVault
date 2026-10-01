@@ -740,3 +740,54 @@ def test_game_lookup_exposes_relationship_metadata():
     ] == [
         "genre.platformer",
     ]
+
+
+@pytest.mark.parametrize("embedded,exported", [
+    (["core.stale"], ["core.actual"]),
+    (None, ["core.actual"]),
+    (["core.stale"], None),
+])
+def test_retroarch_view_uses_exported_graph_as_relationship_authority(tmp_path, embedded, exported):
+    frontend = {"id": "frontend.retroarch", "type": "frontend", "name": "RetroArch"}
+    if embedded is not None:
+        frontend["relationships"] = {"launches_core": embedded}
+    bundle = {
+        "nodes": {
+            "frontend.retroarch": frontend,
+            "core.actual": {"id": "core.actual", "type": "core", "name": "Actual"},
+            "core.stale": {"id": "core.stale", "type": "core", "name": "Stale"},
+        },
+        "edges": {} if exported is None else {
+            "frontend.retroarch": {"launches_core": exported},
+        },
+    }
+    path = tmp_path / "bundle.json"
+    path.write_text(json.dumps(bundle))
+    view = RVDBService.from_bundle(path).retroarch_view()
+    assert tuple(core.id for core in view.cores) == tuple(exported or [])
+    for core in view.cores:
+        assert core.frontends == ("RetroArch",)
+
+
+@pytest.mark.parametrize("platform_id,core_id,name,platform_name,runtime_core", [
+    ("platform.arcade", "core.mame", "MAME", "Arcade", "mame"),
+    ("platform.nintendo.n64", "core.mupen64plus.next", "Mupen64Plus-Next", "Nintendo 64", "mupen64plus_next"),
+])
+def test_reconciled_knowledge_does_not_enable_production_presentation(
+    platform_id, core_id, name, platform_name, runtime_core,
+):
+    from services.presentation.platform_policy import (
+        PlatformPresentationPolicyRegistry,
+        PlatformPresentationPolicyState,
+    )
+    service = RVDBService.from_bundle(REAL_BUNDLE)
+    platform = service.platform_view(platform_id)
+    assert tuple(core.id for core in platform.cores) == (core_id,)
+    core = next(core for core in service.retroarch_view().cores if core.id == core_id)
+    assert core.name == name
+    assert core.platforms == (platform_name,)
+    assert core.playability == ("playable",)
+    assert core.evidence_count == 3
+    assert core.frontends == ("RetroArch",)
+    assert PlatformPresentationPolicyRegistry.state_for(platform_id) is PlatformPresentationPolicyState.UNCONFIGURED
+    assert PlatformPresentationPolicyRegistry.compatible_core_identities(platform_id) == (runtime_core,)

@@ -401,6 +401,10 @@ class LibraryCanonicalizer:
 
                 variants.append(
                     {
+                        "local_file_id": getattr(game, "local_file_id", ""),
+                        "artwork": getattr(game, "artwork", ""),
+                        "artwork_origin": getattr(game, "artwork_origin", ""),
+                        "artwork_explicit": getattr(game, "artwork_explicit", ""),
                         "name": str(
                             getattr(
                                 game,

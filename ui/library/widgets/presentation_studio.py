@@ -3,6 +3,8 @@ from pathlib import Path
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QFrame,
+    QComboBox,
+    QDoubleSpinBox,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -390,6 +392,98 @@ class PresentationStudio(QWidget):
             utility_actions
         )
 
+        self._build_tuning_ui(root)
+
+    def _build_tuning_ui(self, root):
+        self.tuning_panel = QWidget()
+        layout = QGridLayout(self.tuning_panel)
+        layout.addWidget(QLabel("CRT adjustments · apply on next launch"), 0, 0, 1, 3)
+        self.tuning_scope = QComboBox()
+        self.tuning_scope.addItem("This game", "games")
+        self.tuning_scope.addItem("This platform", "systems")
+        self.tuning_control = QComboBox()
+        self.tuning_mode = QComboBox()
+        for label, value in (("Inherit", "inherit"), ("Approved appearance", "approved"), ("Custom", "custom")):
+            self.tuning_mode.addItem(label, value)
+        self.tuning_value = QDoubleSpinBox()
+        self.tuning_value.setDecimals(2)
+        self.tuning_value.setSingleStep(0.05)
+        self.tuning_apply = QPushButton("Save adjustment")
+        self.tuning_reset = QPushButton("Restore approved appearance")
+        self.tuning_status = QLabel()
+        self.tuning_status.setWordWrap(True)
+        for col, widget in enumerate((self.tuning_scope, self.tuning_control, self.tuning_mode)):
+            layout.addWidget(widget, 1, col)
+        layout.addWidget(self.tuning_value, 2, 0)
+        layout.addWidget(self.tuning_apply, 2, 1)
+        layout.addWidget(self.tuning_reset, 2, 2)
+        layout.addWidget(self.tuning_status, 3, 0, 1, 3)
+        root.addWidget(self.tuning_panel)
+        self.tuning_control.currentIndexChanged.connect(self._load_tuning_control)
+        self.tuning_scope.currentIndexChanged.connect(self._load_tuning_control)
+        self.tuning_mode.currentIndexChanged.connect(
+            lambda: self.tuning_value.setEnabled(self.tuning_mode.currentData() == 'custom'))
+        self.tuning_apply.clicked.connect(self._save_tuning)
+        self.tuning_reset.clicked.connect(self._reset_tuning)
+        self.tuning_panel.setVisible(False)
+
+    def _refresh_tuning(self):
+        decision = getattr(self.current_state, 'launch_decision', None)
+        enabled = bool(self.current_game and decision and decision.available and decision.package)
+        self.tuning_panel.setVisible(enabled)
+        if not enabled:
+            return
+        try:
+            state = self.service.visual_tuning_state(self.current_game)
+            previous = self.tuning_control.currentData()
+            self.tuning_control.blockSignals(True)
+            self.tuning_control.clear()
+            for control in state['controls']:
+                self.tuning_control.addItem(control.label, control.key)
+            index = self.tuning_control.findData(previous)
+            self.tuning_control.setCurrentIndex(max(0, index))
+            self.tuning_control.blockSignals(False)
+            self._load_tuning_control()
+        except (OSError, ValueError) as exc:
+            self.tuning_panel.setEnabled(False)
+            self.tuning_status.setText(str(exc))
+
+    def _load_tuning_control(self):
+        if self.current_game is None or self.tuning_control.currentData() is None:
+            return
+        try:
+            state = self.service.visual_tuning_state(self.current_game)
+            key = self.tuning_control.currentData()
+            control = next(c for c in state['controls'] if c.key == key)
+            values = state[self.tuning_scope.currentData()]
+            mode = 'inherit' if key not in values else 'approved' if values[key] is None else 'custom'
+            self.tuning_mode.setCurrentIndex(self.tuning_mode.findData(mode))
+            self.tuning_value.setRange(control.minimum, control.maximum)
+            self.tuning_value.setValue(values.get(key) if mode == 'custom' else control.suggested)
+            self.tuning_value.setEnabled(mode == 'custom')
+            value = state['effective'].get(key)
+            source = 'game' if key in state['games'] else 'platform' if key in state['systems'] else 'package'
+            self.tuning_status.setText(f"Effective {control.label.lower()}: " +
+                ('approved appearance' if value is None else str(value)) + f" ({source}).")
+            self.tuning_panel.setEnabled(True)
+        except (OSError, ValueError, StopIteration) as exc:
+            self.tuning_status.setText(str(exc))
+
+    def _save_tuning(self):
+        try:
+            self.service.set_visual_adjustment(self.current_game, self.tuning_scope.currentData(),
+                self.tuning_control.currentData(), self.tuning_mode.currentData(), self.tuning_value.value())
+            self.refresh()
+        except (OSError, ValueError) as exc:
+            self.tuning_status.setText(f"Adjustment not saved: {exc}")
+
+    def _reset_tuning(self):
+        try:
+            self.service.restore_approved_visuals(self.current_game, self.tuning_scope.currentData())
+            self.refresh()
+        except (OSError, ValueError) as exc:
+            self.tuning_status.setText(f"Reset not saved: {exc}")
+
     @staticmethod
     def _display_asset(value):
         if not value:
@@ -418,6 +512,7 @@ class PresentationStudio(QWidget):
         return text
 
     def _sync_action_state(self):
+        self._refresh_tuning()
         has_game = (
             self.current_game is not None
         )
@@ -677,6 +772,19 @@ class PresentationStudio(QWidget):
 
         self.current_state = state
 
+        if state.backend == 'snes9x':
+            from services.emulators.models import STANDALONE_NOTICE
+            self.source_value.setText(state.source_label)
+            self.overlay_value.setText('Not applied by this backend')
+            self.shader_value.setText('Not applied by this backend')
+            self.game_override.setText('Saved RetroArch preferences retained.')
+            self.status.setText(STANDALONE_NOTICE)
+            self._sync_action_state()
+            for button in (self.use_overlay_button, self.use_shader_button,
+                           self.clear_overlay_button, self.clear_shader_button):
+                button.setEnabled(False)
+            return
+
         self.source_value.setText(
             state.source_label
         )
@@ -692,6 +800,25 @@ class PresentationStudio(QWidget):
                 state.shader
             )
         )
+
+        if state.launch_decision is not None:
+            decision = state.launch_decision
+            origin = "; ".join(f"{field.title()}: {source}" for field, source in decision.sources)
+            if not decision.available:
+                self.game_override.setText("Saved preferences retained. " + origin)
+                self.status.setText("Launch presentation unavailable: " + decision.error)
+            elif decision.authority == "production package":
+                self.game_override.setText("The qualified platform package controls launch visuals. "
+                                           "Saved preferences are retained. " + origin)
+                self.status.setText("Showing the overlay and shader selected for launch.")
+            else:
+                self.game_override.setText(origin)
+                self.status.setText("Showing the presentation selected for launch.")
+            self._sync_action_state()
+            if decision.authority == "production package":
+                self.use_overlay_button.setEnabled(False)
+                self.use_shader_button.setEnabled(False)
+            return
 
         if state.has_game_override:
             self.game_override.setText(

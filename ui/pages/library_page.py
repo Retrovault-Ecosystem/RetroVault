@@ -19,6 +19,7 @@ class LibraryPage(GalleryView):
         presentation_store=None,
         launcher=None,
         process_lifecycle=None,
+        launch_controller=None,
     ):
         super().__init__(
             games,
@@ -52,4 +53,5 @@ class LibraryPage(GalleryView):
             ),
             launcher=launcher,
             process_lifecycle=process_lifecycle,
+            launch_controller=launch_controller,
         )

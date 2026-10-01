@@ -1,3 +1,4 @@
+from config.paths import config_file
 import json
 import os
 from dataclasses import replace
@@ -7,29 +8,12 @@ from .models import PresentationProfile
 
 
 def _default_presentation_file() -> Path:
-    xdg_config_home = os.environ.get(
-        "XDG_CONFIG_HOME"
-    )
+    return config_file('presentation-state.json')
 
-    if xdg_config_home:
-        config_home = Path(
-            xdg_config_home
-        ).expanduser()
-    else:
-        config_home = (
-            Path.home()
-            / ".config"
-        )
-
-    return (
-        config_home
-        / "retrovault"
-        / "presentation-state.json"
-    )
 
 
 class PresentationStore:
-    VERSION = 1
+    VERSION = 3
 
     def __init__(
         self,
@@ -226,6 +210,8 @@ class PresentationStore:
             "default",
             "systems",
             "games",
+            "legacy_games",
+            "visual_tuning",
         }
 
         unknown = (
@@ -239,7 +225,7 @@ class PresentationStore:
                 "contains unsupported fields."
             )
 
-        if data.get("version") != self.VERSION:
+        if type(data.get("version")) is not int or data.get("version") not in (1, 2, self.VERSION):
             raise ValueError(
                 "Unsupported RetroVault "
                 "presentation state version."
@@ -263,7 +249,7 @@ class PresentationStore:
                 "must contain games."
             )
 
-        return {
+        result = {
             "version": self.VERSION,
             "default": self._profile_from_data(
                 data["default"],
@@ -279,12 +265,21 @@ class PresentationStore:
             ),
         }
 
+        if "legacy_games" in data:
+            result["legacy_games"] = self._mapping_from_data(data["legacy_games"], "Legacy game conflicts")
+        if "visual_tuning" in data:
+            from .visual_tuning import validate_state
+            result["visual_tuning"] = validate_state(data["visual_tuning"])
+        return result
+
     def save(
         self,
         *,
         default=None,
         systems=None,
         games=None,
+        legacy_games=None,
+        visual_tuning=None,
     ):
         default_profile = (
             default
@@ -304,6 +299,17 @@ class PresentationStore:
                 games or {}
             ),
         }
+
+        if legacy_games is None and self.presentation_file.exists():
+            legacy_games = self.load().get("legacy_games", {})
+        if legacy_games:
+            payload_data["legacy_games"] = self._mapping_to_data(legacy_games)
+
+        if visual_tuning is None and self.presentation_file.exists():
+            visual_tuning = self.load().get("visual_tuning")
+        if visual_tuning is not None:
+            from .visual_tuning import validate_state
+            payload_data["visual_tuning"] = validate_state(visual_tuning)
 
         self.presentation_file.parent.mkdir(
             parents=True,
@@ -737,3 +743,47 @@ class PresentationStore:
             systems=data["systems"],
             games=data["games"],
         )
+
+    def validate_identity_migration(self):
+        self.load()
+
+    def migrate_identities(self, mapping):
+        from services.library.identity_migration import backup_original
+        data = self.load()
+        games = dict(data["games"])
+        legacy = dict(data.get("legacy_games", {}))
+        for old, new in mapping.items():
+            if old not in games or old == new:
+                continue
+            if new not in games:
+                games[new] = games.pop(old)
+            elif games[new] == games[old]:
+                del games[old]
+            else:
+                # Quarantine conflicts so clearing the new assignment cannot
+                # resurrect an old one on the next migration pass.
+                legacy[old] = games.pop(old)
+        if self.presentation_file.exists():
+            raw = json.loads(self.presentation_file.read_text(encoding="utf-8"))
+            if games != data["games"] or raw.get("version") != self.VERSION:
+                backup_original(self.presentation_file)
+                self.save(default=data["default"], systems=data["systems"], games=games, legacy_games=legacy)
+
+    def set_visual_tuning(self, scope, identity, platform_id, values):
+        from .visual_tuning import validate_values, validate_state
+        from copy import deepcopy
+        data = self.load()
+        tuning = deepcopy(data.get('visual_tuning', {'systems': {}, 'games': {}}))
+        if scope not in ('systems', 'games'):
+            raise ValueError('CRT scope must be systems or games.')
+        values = validate_values(platform_id, values)
+        if scope == 'systems' and identity != platform_id:
+            raise ValueError('CRT system identity must match its platform.')
+        if values:
+            tuning[scope][identity] = (values if scope == 'systems' else
+                                      dict(platform_id=platform_id, values=values))
+        else:
+            tuning[scope].pop(identity, None)
+        validate_state(tuning)
+        self.save(default=data['default'], systems=data['systems'], games=data['games'],
+                  legacy_games=data.get('legacy_games'), visual_tuning=tuning)

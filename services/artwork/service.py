@@ -1,289 +1,107 @@
 from pathlib import Path
 
-
-SUPPORTED_ARTWORK_EXTENSIONS = {
-    ".png",
-    ".jpg",
-    ".jpeg",
-    ".webp",
-}
+SUPPORTED_ARTWORK_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 
 
 class ArtworkService:
+    """Resolve local Library covers, independently of runtime presentation assets."""
 
+    def __init__(self, directory=None, rvdb_resolver=None):
+        self.rvdb_resolver = rvdb_resolver
+        self.set_directory(directory)
 
-    def __init__(
-        self,
-        directory=None,
-    ):
+    def set_directory(self, directory):
+        self.directory = Path(directory).expanduser() if directory else None
+        self.invalidate()
 
-        self.directory = (
-            Path(
-                directory
-            ).expanduser()
-            if directory
-            else None
-        )
-
+    def invalidate(self):
         self.cache = {}
-
         self._index = None
-
-
-    def set_directory(
-        self,
-        directory,
-    ):
-
-        self.directory = (
-            Path(
-                directory
-            ).expanduser()
-            if directory
-            else None
-        )
-
-        self.cache.clear()
-        self._index = None
-
 
     @staticmethod
     def _identity(game):
-
-        rom = getattr(
-            game,
-            "rom",
-            "",
-        )
-
-        if rom:
-            return str(rom)
-
-        return (
-            getattr(
-                game,
-                "name",
-                "",
-            ),
-            getattr(
-                game,
-                "platform",
-                "",
-            ),
-        )
-
+        location = (getattr(game, "rom", "") or
+                    (getattr(game, "name", ""), getattr(game, "platform", "")))
+        return (location, getattr(game, "rvdb_platform_id", ""),
+                getattr(game, "rvdb_game_id", ""))
 
     def _build_index(self):
-
         if self._index is not None:
             return self._index
-
         index = {}
-
-        root = self.directory
-
-        if (
-            root is None
-            or not root.is_dir()
-        ):
-            self._index = index
-
-            return self._index
-
-        try:
-
-            for path in root.rglob(
-                "*"
-            ):
-
-                if not path.is_file():
-                    continue
-
-                if (
-                    path.suffix.lower()
-                    not in SUPPORTED_ARTWORK_EXTENSIONS
-                ):
-                    continue
-
-                key = (
-                    path.stem
-                    .casefold()
-                )
-
-                index.setdefault(
-                    key,
-                    [],
-                ).append(
-                    path
-                )
-
-        except OSError:
-
-            self._index = {}
-
-            return self._index
-
-        for paths in index.values():
-
-            paths.sort(
-                key=lambda item:
-                    str(item)
-                    .casefold()
-            )
-
+        if self.directory is not None and self.directory.is_dir():
+            try:
+                for path in self.directory.rglob("*"):
+                    if path.is_file() and path.suffix.lower() in SUPPORTED_ARTWORK_EXTENSIONS:
+                        index.setdefault(path.stem.casefold(), []).append(path)
+            except OSError:
+                index = {}
         self._index = index
+        return index
 
-        return self._index
+    def _select(self, paths, game):
+        platform_id = getattr(game, "rvdb_platform_id", "")
+        platform_name = str(getattr(game, "platform", "") or "").strip().casefold()
+        own_names = {platform_name} - {"", "unknown"}
+        recognized = {}
+        if self.rvdb_resolver is not None:
+            for platform in self.rvdb_resolver.platforms():
+                for name in (platform.id, platform.name, *platform.aliases):
+                    recognized.setdefault(name.casefold(), set()).add(platform.id)
+                if platform.id == platform_id:
+                    own_names.update(n.casefold() for n in (platform.id, platform.name, *platform.aliases))
+        scoped, unscoped = [], []
+        for path in paths:
+            if not path.is_file():
+                continue
+            parts = {part.casefold() for part in path.relative_to(self.directory).parts[:-1]}
+            scopes = set().union(*(recognized.get(part, set()) for part in parts))
+            if scopes and (not platform_id or scopes != {platform_id}):
+                continue
+            if parts & own_names:
+                scoped.append(path)
+            else:
+                unscoped.append(path)
+        candidates = scoped or unscoped
+        return str(candidates[0]) if len(candidates) == 1 else None
 
-
-    def _discover_artwork(
-        self,
-        game,
-    ):
-
-        rom = getattr(
-            game,
-            "rom",
-            "",
-        )
-
+    def _discover_artwork(self, game):
+        rom = getattr(game, "rom", "")
         if not rom:
             return None
+        index = self._build_index()
+        matches = index.get(Path(rom).stem.casefold(), [])
+        if matches:
+            # Ambiguous exact matches must not silently fall through to another title.
+            return self._select(matches, game)
+        game_id = getattr(game, "rvdb_game_id", "")
+        if game_id and self.rvdb_resolver is not None:
+            canonical = self.rvdb_resolver.service.game(game_id)
+            if canonical and getattr(game, "rvdb_platform_id", "") in canonical.platforms:
+                return self._select(index.get(canonical.name.casefold(), []), game)
+        return None
 
-        stem = (
-            Path(
-                rom
-            )
-            .stem
-            .casefold()
-        )
-
-        matches = (
-            self._build_index()
-            .get(
-                stem,
-                [],
-            )
-        )
-
-        if len(matches) == 1:
-            return str(
-                matches[0]
-            )
-
-        if not matches:
-            return None
-
-        platform = str(
-            getattr(
-                game,
-                "platform",
-                "",
-            )
-            or ""
-        ).strip()
-
-        if (
-            not platform
-            or platform.casefold()
-            == "unknown"
-        ):
-            return None
-
-        platform_key = (
-            platform.casefold()
-        )
-
-        platform_matches = []
-
-        for path in matches:
-
-            try:
-                relative = (
-                    path.relative_to(
-                        self.directory
-                    )
-                )
-            except (
-                TypeError,
-                ValueError,
-            ):
-                continue
-
-            directory_parts = (
-                relative.parts[:-1]
-            )
-
-            if any(
-                part.casefold()
-                == platform_key
-                for part
-                in directory_parts
-            ):
-                platform_matches.append(
-                    path
-                )
-
-        if len(
-            platform_matches
-        ) != 1:
-            return None
-
-        return str(
-            platform_matches[0]
-        )
-
-
-    def get_artwork(
-        self,
-        game,
-    ):
-
-        identity = self._identity(
-            game
-        )
-
-        if identity in self.cache:
-
-            return self.cache[
-                identity
-            ]
-
-        artwork = getattr(
-            game,
-            "artwork",
-            "",
-        )
-
-        if artwork:
-
-            path = Path(
-                artwork
-            ).expanduser()
-
+    def get_artwork(self, game):
+        identity = self._identity(game)
+        current = getattr(game, "artwork", "")
+        origin = getattr(game, "artwork_origin", "")
+        explicit = getattr(game, "artwork_explicit", "")
+        if current and origin != "discovered":
+            explicit = current
+        if explicit:
+            game.artwork_explicit = explicit
+            path = Path(explicit).expanduser()
             if path.is_file():
-
-                resolved = str(
-                    path
-                )
-
-                self.cache[
-                    identity
-                ] = resolved
-
-                return resolved
-
-        discovered = (
-            self._discover_artwork(
-                game
-            )
-        )
-
-        if discovered is None:
-            return None
-
-        self.cache[
-            identity
-        ] = discovered
-
+                game.artwork_origin = "explicit"
+                self.cache[identity] = str(path)
+                return str(path)
+        cached = self.cache.get(identity)
+        if cached and Path(cached).is_file():
+            game.artwork_origin = "discovered"
+            return cached
+        self.cache.pop(identity, None)
+        discovered = self._discover_artwork(game)
+        game.artwork_origin = "discovered" if discovered else ""
+        if discovered:
+            self.cache[identity] = discovered
         return discovered

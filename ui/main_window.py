@@ -1,4 +1,8 @@
+from services.emulators.session import EmulatorSession
+from controllers.game_launch_controller import GameLaunchController
+from config.paths import RVDB_BUNDLE
 from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import QEvent
 
 from PyQt6.QtWidgets import (
     QMainWindow,
@@ -67,8 +71,36 @@ from services.presentation import (
 class MainWindow(QMainWindow):
 
 
+    def shutdown_runtime(self):
+        """Stop only this application's owned launch tree and resources."""
+        try:
+            getattr(self, 'emulator_session', self.retroarch_launcher).shutdown()
+            controller = getattr(self, "game_launch_controller", None)
+            if controller is not None:
+                controller.cleanup_inputs()
+        except (OSError, RuntimeError) as exc:
+            self.statusBar().showMessage(f"Runtime shutdown incomplete: {exc}")
+            return False
+        self.process_lifecycle_timer.stop()
+        return True
+
+    def eventFilter(self, watched, event):
+        if event.type() == QEvent.Type.Quit:
+            return not self.shutdown_runtime()
+        return super().eventFilter(watched, event)
+
+    def closeEvent(self, event):
+        if self.shutdown_runtime():
+            event.accept()
+        else:
+            event.ignore()
+
     def _poll_process_lifecycle(self):
-        snapshot = self.process_lifecycle.poll()
+        try:
+            snapshot = self.process_lifecycle.poll()
+        except (OSError, RuntimeError) as exc:
+            self.statusBar().showMessage(f"Runtime lifecycle error: {exc}")
+            return
 
         self.hardware_indicator_render_frame = (
             self.hardware_indicator_render_bridge.frame_for(
@@ -121,7 +153,7 @@ class MainWindow(QMainWindow):
 
         try:
             rvdb_consumer = RVDBConsumer(
-                "data/rvdb/rvdb.bundle.json"
+                RVDB_BUNDLE
             )
             rvdb_service = RVDBService(
                 rvdb_consumer
@@ -135,12 +167,18 @@ class MainWindow(QMainWindow):
             )
 
         controller = LibraryController(
-            rvdb_resolver=rvdb_resolver
+            rvdb_resolver=rvdb_resolver,
+            library_enabled=rvdb_resolver is not None,
         )
 
         self.retroarch_launcher = (
-            RetroArchLauncher()
+            RetroArchLauncher(
+                executable=ConfigLoader().load()["retroarch"]["executable"],
+                presentation_config_provider=ConfigLoader().load
+            )
         )
+
+        self.emulator_session = EmulatorSession(self.retroarch_launcher)
 
         self.hardware_runtime = (
             HardwareRuntimeOrchestrator(
@@ -151,9 +189,12 @@ class MainWindow(QMainWindow):
         self.process_lifecycle = (
             ProcessLifecycleAdapter(
                 self.hardware_runtime,
-                self.retroarch_launcher,
+                self.emulator_session,
             )
         )
+
+        self.game_launch_controller = GameLaunchController(
+            launcher=self.emulator_session, process_lifecycle=self.process_lifecycle)
 
         self.hardware_indicator_render_bridge = (
             HardwareIndicatorRenderBridge()
@@ -243,13 +284,14 @@ class MainWindow(QMainWindow):
                 bulk_import_completed
             ),
             presentation_resolver_provider=(
-                presentation_composition_factory.build
+                presentation_composition_factory.build_launch
             ),
             presentation_store=(
                 presentation_store
             ),
-            launcher=self.retroarch_launcher,
+            launcher=self.emulator_session,
             process_lifecycle=self.process_lifecycle,
+            launch_controller=self.game_launch_controller,
         )
 
         self.pages.add_page(
@@ -271,6 +313,8 @@ class MainWindow(QMainWindow):
             "Systems",
             systems_page
         )
+
+        systems_page.statistics_provider = controller.platform_statistics
 
         systems_page.collection_names_provider = (
             controller.collection_names
@@ -337,9 +381,12 @@ class MainWindow(QMainWindow):
 
         playlists_page = PlaylistsPage(
             controller,
+            presentation_store=presentation_store,
+            presentation_resolver_provider=presentation_composition_factory.build_launch,
             rvdb_service=rvdb_service,
-            launcher=self.retroarch_launcher,
+            launcher=self.emulator_session,
             process_lifecycle=self.process_lifecycle,
+            launch_controller=self.game_launch_controller,
         )
 
         self.pages.add_page(
@@ -387,6 +434,7 @@ class MainWindow(QMainWindow):
         self.pages.add_page(
             "RetroVault Visuals",
             NativeVisualsPage(
+                presentation_resolver_provider=presentation_composition_factory.build_launch,
                 presentation_store=(
                     presentation_store
                 ),
@@ -462,15 +510,12 @@ class MainWindow(QMainWindow):
             library_sources_changed
         )
 
-        settings_page.artwork_directory_saved.connect(
-            lambda directory: (
-                library_page.set_games(
-                    controller.refresh_artwork(
-                        directory
-                    )
-                )
-            )
-        )
+        def artwork_directory_changed(directory):
+            library_page.set_games(controller.refresh_artwork(directory))
+            playlists_page.refresh_collections(
+                select_name=playlists_page.selected_collection())
+
+        settings_page.artwork_directory_saved.connect(artwork_directory_changed)
 
         settings_page.overlay_directory_saved.connect(
             overlays_page.set_directory
@@ -520,3 +565,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(
             container
         )
+        if rvdb_resolver is None or not controller.get_games():
+            self.pages.show_page("Settings")
+        if rvdb_resolver is None:
+            self.statusBar().showMessage("RVDB unavailable. Install a validated bundle and restart; Library scanning is disabled.")

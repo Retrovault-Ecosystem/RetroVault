@@ -775,21 +775,13 @@ class CheatService:
         if not enabled:
             return ""
 
+        serialized = RetroArchCheatParser.serialize(enabled)
         handle = tempfile.NamedTemporaryFile(
-            mode="w",
-            prefix="retrovault-cheats-",
-            suffix=".cht",
-            delete=False,
-        )
-
+            mode="w", prefix="retrovault-cheats-", suffix=".cht", delete=False)
         try:
-            handle.write(
-                RetroArchCheatParser
-                .serialize(
-                    enabled
-                )
-            )
-        finally:
-            handle.close()
-
+            with handle:
+                handle.write(serialized)
+        except BaseException:
+            Path(handle.name).unlink(missing_ok=True)
+            raise
         return handle.name

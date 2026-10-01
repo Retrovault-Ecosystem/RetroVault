@@ -3,7 +3,7 @@
   "assets": [
     {
       "id": "rvv.overlay.nes.classic",
-      "display_name": "Nintendo NES — RetroVault Classic",
+      "display_name": "Nintendo NES \u2014 RetroVault Classic",
       "asset_type": "overlay",
       "source": "rvv_native",
       "reference": "retro-vault://overlays/retrovault/nes/classic/RetroVault_NES_Classic.cfg",
@@ -12,7 +12,7 @@
     },
     {
       "id": "rvv.overlay.snes.classic",
-      "display_name": "Nintendo SNES — RetroVault Classic",
+      "display_name": "Nintendo SNES \u2014 RetroVault Classic",
       "asset_type": "overlay",
       "source": "rvv_native",
       "reference": "retro-vault://overlays/retrovault/snes/classic/RetroVault_SNES_Classic.cfg",
@@ -20,8 +20,17 @@
       "attribution": "Original RetroVault bezel composition. Platform names and trademarks are the property of their respective owners."
     },
     {
+      "id": "rvv.overlay.genesis.classic",
+      "display_name": "Sega Genesis \u2014 RetroVault Classic",
+      "asset_type": "overlay",
+      "source": "rvv_native",
+      "reference": "retro-vault://overlays/retrovault/genesis/classic/RetroVault_Genesis_Classic.cfg",
+      "author": "RetroVault",
+      "attribution": "Original RetroVault bezel composition. Platform names and trademarks are the property of their respective owners."
+    },
+    {
       "id": "rvv.shader.nes.classic.crt",
-      "display_name": "Nintendo Entertainment System — RetroVault Classic CRT",
+      "display_name": "Nintendo Entertainment System \u2014 RetroVault Classic CRT",
       "asset_type": "shader",
       "source": "rvv_native",
       "reference": "retro-vault://shaders/nes/classic/RetroVault_NES_Classic_CRT.slangp",
@@ -30,7 +39,7 @@
     },
     {
       "id": "rvv.shader.snes.classic.crt",
-      "display_name": "Super Nintendo Entertainment System — RetroVault Classic CRT",
+      "display_name": "Super Nintendo Entertainment System \u2014 RetroVault Classic CRT",
       "asset_type": "shader",
       "source": "rvv_native",
       "reference": "retro-vault://shaders/snes/classic/RetroVault_SNES_Classic_CRT.slangp",
@@ -39,7 +48,7 @@
     },
     {
       "id": "rvv.shader.genesis.classic.crt",
-      "display_name": "Sega Genesis — RetroVault Classic CRT",
+      "display_name": "Sega Genesis \u2014 RetroVault Classic CRT",
       "asset_type": "shader",
       "source": "rvv_native",
       "reference": "retro-vault://shaders/genesis/classic/RetroVault_Genesis_Classic_CRT.slangp",

@@ -444,7 +444,7 @@ def test_default_overlay_assignment_persists_selected_descriptor(
     assert data["default"].overlay == expected
 
     assert page.status_label.text() == (
-        "Assigned selected overlay as "
+        "Saved selected overlay preference as "
         "RetroVault default."
     )
 

@@ -46,3 +46,8 @@ class Game:
     variant_revision: str = ""
     is_primary_variant: bool = True
     variants: List[object] = field(default_factory=list)
+    local_file_id: str = ""
+
+    # In-memory cover provenance; never a presentation preference or durable identity.
+    artwork_origin: str = ""
+    artwork_explicit: str = ""

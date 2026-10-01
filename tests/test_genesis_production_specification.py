@@ -122,7 +122,7 @@ def test_genesis_specification_has_single_presentation_authority():
 
 
 
-def test_genesis_geometry_is_runtime_qualified_without_production_activation():
+def test_genesis_geometry_matches_ready_production_package():
     data = _load_specification()
     geometry = data["geometry"]
     qualification = geometry["qualification"]
@@ -136,10 +136,10 @@ def test_genesis_geometry_is_runtime_qualified_without_production_activation():
     }
 
     assert geometry["aperture"] == {
-        "x": 330,
-        "y": 90,
-        "width": 1260,
-        "height": 900,
+        "x": 312,
+        "y": 80,
+        "width": 1296,
+        "height": 770,
     }
 
     # A.3-N.5-B now records the real-content qualification result.
@@ -148,10 +148,10 @@ def test_genesis_geometry_is_runtime_qualified_without_production_activation():
     # content/core display aspect rather than treating these values
     # as a game-specific fixed override.
     assert geometry["viewport"] == {
-        "x": 330,
-        "y": 126,
-        "width": 1260,
-        "height": 827,
+        "x": 373,
+        "y": 80,
+        "width": 1173,
+        "height": 770,
     }
     assert geometry["aspect_ratio_index"] == 23
     assert geometry["integer_scaling"] is False
@@ -178,19 +178,19 @@ def test_genesis_geometry_is_runtime_qualified_without_production_activation():
     assert qualification[
         "qualified_reference_viewport"
     ] == {
-        "x": 330,
-        "y": 126,
-        "width": 1260,
-        "height": 827,
+        "x": 373,
+        "y": 80,
+        "width": 1173,
+        "height": 770,
     }
 
     assert qualification[
         "qualified_reference_margins"
     ] == {
-        "left": 0,
-        "right": 0,
-        "top": 36,
-        "bottom": 37,
+        "left": 61,
+        "right": 62,
+        "top": 0,
+        "bottom": 0,
     }
 
     assert qualification["runtime_geometry_policy"] == (
@@ -198,8 +198,8 @@ def test_genesis_geometry_is_runtime_qualified_without_production_activation():
     )
     assert qualification["title_specific_geometry"] is False
 
-    assert state["presentation_policy_state"] == "unconfigured"
-    assert state["production_package_complete"] is False
+    assert state["presentation_policy_state"] == "ready"
+    assert state["production_package_complete"] is True
     assert state["production_ready"] is True
     assert state["live_calibration_complete"] is True
 
@@ -228,12 +228,12 @@ def test_genesis_is_ready_after_n5c_policy_activation():
 
     assert (
         state["presentation_policy_state"]
-        == "unconfigured"
+        == "ready"
     )
 
     assert (
         state["production_package_complete"]
-        is False
+        is True
     )
 
     assert (
@@ -444,16 +444,16 @@ def test_genesis_runtime_geometry_qualification_supports_ready_policy():
         "height": 1080,
     }
     assert geometry["aperture"] == {
-        "x": 330,
-        "y": 90,
-        "width": 1260,
-        "height": 900,
+        "x": 312,
+        "y": 80,
+        "width": 1296,
+        "height": 770,
     }
     assert geometry["viewport"] == {
-        "x": 330,
-        "y": 126,
-        "width": 1260,
-        "height": 827,
+        "x": 373,
+        "y": 80,
+        "width": 1173,
+        "height": 770,
     }
     assert geometry["aspect_ratio_index"] == 23
     assert geometry["integer_scaling"] is False
@@ -474,21 +474,21 @@ def test_genesis_runtime_geometry_qualification_supports_ready_policy():
     assert evidence["profile_class"] == "classic_4_3"
     assert evidence["fit_policy"] == "contain"
     assert evidence["qualified_reference_viewport"] == {
-        "x": 330,
-        "y": 126,
-        "width": 1260,
-        "height": 827,
+        "x": 373,
+        "y": 80,
+        "width": 1173,
+        "height": 770,
     }
     assert evidence["qualified_reference_margins"] == {
-        "left": 0,
-        "right": 0,
-        "top": 36,
-        "bottom": 37,
+        "left": 61,
+        "right": 62,
+        "top": 0,
+        "bottom": 0,
     }
     assert evidence["title_specific_geometry"] is False
 
-    assert state["presentation_policy_state"] == "unconfigured"
-    assert state["production_package_complete"] is False
+    assert state["presentation_policy_state"] == "ready"
+    assert state["production_package_complete"] is True
     assert state["production_ready"] is True
     assert state["live_calibration_complete"] is True
 

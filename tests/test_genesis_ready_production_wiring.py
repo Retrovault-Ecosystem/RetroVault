@@ -155,10 +155,10 @@ def test_genesis_repository_package_validates_semantically():
     ) == (
         1920,
         1080,
-        330,
-        90,
-        1260,
-        900,
+        312,
+        80,
+        1296,
+        770,
     )
 
     profile = glass.as_master_profile(
@@ -178,10 +178,10 @@ def test_genesis_repository_package_validates_semantically():
         geometry.width,
         geometry.height,
     ) == (
-        330,
-        126,
-        1260,
-        827,
+        373,
+        80,
+        1173,
+        770,
     )
 
 
@@ -194,12 +194,12 @@ def test_genesis_canonical_mapping_uses_own_asset_roots():
     )
 
     assert (
-        "/retrovault/genesis/classic/"
+        "retrovault/genesis/classic/"
         in assets.overlay
     )
 
     assert (
-        "/retrovault/genesis/classic/"
+        "retrovault/genesis/classic/"
         in assets.shader
     )
 

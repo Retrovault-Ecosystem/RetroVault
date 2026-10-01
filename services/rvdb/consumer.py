@@ -19,10 +19,12 @@ class RVDBConsumer:
 
     @property
     def nodes(self) -> dict[str, dict[str, Any]]:
+        """Low-level compatibility access; callers must not mutate this snapshot."""
         return self._nodes
 
     @property
     def edges(self) -> dict[str, dict[str, list[str]]]:
+        """Low-level compatibility access; callers must not mutate this snapshot."""
         return self._edges
 
     def reload(self) -> None:
@@ -37,7 +39,7 @@ class RVDBConsumer:
                     encoding="utf-8"
                 )
             )
-        except (OSError, json.JSONDecodeError) as exc:
+        except (OSError, UnicodeError, json.JSONDecodeError) as exc:
             raise RVDBError(
                 f"Unable to read RVDB bundle: {self.bundle_path}"
             ) from exc
@@ -65,6 +67,31 @@ class RVDBConsumer:
             raise RVDBError(
                 "RVDB 'edges' must be an object."
             )
+
+        # Validate the portable structure before replacing the live snapshot.
+        # Schema semantics belong to RVDB; unknown types and missing targets
+        # remain compatible with RVDBService's existing fallback read models.
+        for entity_id, entity in nodes.items():
+            if not entity_id or not isinstance(entity, dict):
+                raise RVDBError("RVDB nodes must map non-empty IDs to objects.")
+            if entity.get("id") != entity_id:
+                raise RVDBError(f"RVDB node identity mismatch: {entity_id}")
+            if not isinstance(entity.get("type"), str) or not entity["type"]:
+                raise RVDBError(f"RVDB node type must be a non-empty string: {entity_id}")
+            if "name" in entity and not isinstance(entity["name"], str):
+                raise RVDBError(f"RVDB node name must be a string: {entity_id}")
+
+        for entity_id, relationships in edges.items():
+            if not entity_id or not isinstance(relationships, dict):
+                raise RVDBError("RVDB edges must map non-empty IDs to objects.")
+            for relationship, targets in relationships.items():
+                if not relationship or not isinstance(targets, list) or not all(
+                    isinstance(target, str) and target for target in targets
+                ):
+                    raise RVDBError(
+                        f"RVDB relationship must contain a list of non-empty IDs: "
+                        f"{entity_id}.{relationship}"
+                    )
 
         self._nodes = nodes
         self._edges = edges

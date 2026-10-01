@@ -1,3 +1,11 @@
+from pathlib import Path
+from services.library.identity import IdentityRegistry, location_key, family_identities, project_identities
+from services.library.identity_migration import migrate_stores
+from services.presentation.store import PresentationStore
+from copy import deepcopy
+from dataclasses import fields
+
+from services.library.models import Game
 from services.library.source_manager import SourceManager
 from services.library.library_builder import LibraryBuilder
 from services.library.state import (
@@ -20,6 +28,8 @@ class LibraryService:
         library_state=None,
         artwork_service=None,
         collection_store=None,
+        identity_registry=None,
+        presentation_store=None,
     ):
 
         self.sources = SourceManager()
@@ -60,8 +70,18 @@ class LibraryService:
             artwork_service
             if artwork_service is not None
             else ArtworkService(
-                directory=artwork_directory
+                directory=artwork_directory, rvdb_resolver=rvdb_resolver
             )
+        )
+
+        state_path = getattr(self.state, "state_file", None)
+        self.identity_registry = identity_registry or (
+            IdentityRegistry(Path(state_path).parent / "library-identities.json")
+            if state_path is not None else None
+        )
+        self.presentation_store = presentation_store or (
+            PresentationStore(Path(state_path).parent / "presentation-state.json")
+            if state_path is not None else None
         )
 
         self.canonicalizer = LibraryCanonicalizer()
@@ -179,6 +199,8 @@ class LibraryService:
             or ""
         )
 
+        game.local_file_id = str(variant.get("local_file_id", "") or "")
+
         game.source = str(
             variant.get(
                 "source",
@@ -234,6 +256,9 @@ class LibraryService:
             )
         )
 
+        game.artwork = str(variant.get("artwork", "") or "")
+        game.artwork_origin = str(variant.get("artwork_origin", "") or "")
+        game.artwork_explicit = str(variant.get("artwork_explicit", "") or "")
         game.variants = []
 
         return game
@@ -333,12 +358,44 @@ class LibraryService:
 
         return physical_games
 
+    def _register(self, games):
+        registry = getattr(self, "identity_registry", None)
+        if registry is None:
+            return games
+        games, staged = registry.stage(games)
+        stores = [store for store in (
+            self.state, self.collections, self.presentation_store
+        ) if callable(getattr(store, "validate_identity_migration", None))]
+        for store in stores:
+            store.validate_identity_migration()
+        registry.commit(staged)
+        migrate_stores(staged["legacy_paths"], *stores)
+        return games
+
+    def _project_favorites(self, games):
+        # Read ownership from the store, not representative.favorite: the latter
+        # is a family projection and must never leak onto a different edition.
+        reader = getattr(self.state, "favorites", None)
+        if callable(reader):
+            favorites = reader()
+            for game in games:
+                try:
+                    game.favorite = bool(set(family_identities(game)) & favorites)
+                except ValueError:
+                    game.favorite = False
+        return games
+
     def load(self):
+
+        invalidate = getattr(self.artwork, "invalidate", None)
+        if callable(invalidate):
+            invalidate()
 
         physical_games = self.builder.build(
             self.sources.sources()
         )
 
+        physical_games = self._register(physical_games)
         physical_games = self.state.apply(
             physical_games
         )
@@ -385,6 +442,7 @@ class LibraryService:
         else:
             self.games = canonical_games
 
+        self._project_favorites(self.games)
         return self.games
 
 
@@ -405,6 +463,12 @@ class LibraryService:
 
         previous_sources = self.sources
         previous_games = self.games
+        previous_physical = getattr(self, "_physical_games", None)
+        previous_objects = {
+            id(game): (game, deepcopy(vars(game)))
+            for game in [*previous_games, *(previous_physical or [])]
+            if hasattr(game, "__dict__")
+        }
 
         previous_by_identity = {}
 
@@ -450,35 +514,30 @@ class LibraryService:
                     )
                     continue
 
-                previous_game.name = game.name
-                previous_game.platform = game.platform
-                previous_game.year = game.year
-                previous_game.genre = game.genre
-                previous_game.core = game.core
-                previous_game.rom = game.rom
-                previous_game.source = game.source
-                previous_game.artwork = game.artwork
-                previous_game.favorite = game.favorite
-                previous_game.rvdb_platform_id = (
-                    game.rvdb_platform_id
-                )
-                previous_game.rvdb_game_id = (
-                    game.rvdb_game_id
-                )
-                previous_game.description = (
-                    game.description
-                )
-                previous_game.developer = (
-                    game.developer
-                )
-                previous_game.publisher = (
-                    game.publisher
-                )
+                for field in fields(Game):
+                    if hasattr(game, field.name):
+                        setattr(
+                            previous_game,
+                            field.name,
+                            deepcopy(getattr(game, field.name)),
+                        )
 
                 preserved_games.append(
                     previous_game
                 )
 
+            # Physical inventory and the visible projection must reference the
+            # same surviving representative after an identity-preserving reload.
+            replacements = {
+                game_identity(game): game
+                for game in preserved_games
+                if getattr(game, "rom", "")
+            }
+            self._physical_games = [
+                replacements.get(game_identity(game), game)
+                if getattr(game, "rom", "") else game
+                for game in getattr(self, "_physical_games", [])
+            ]
             self.games = preserved_games
 
             return self.games
@@ -486,6 +545,13 @@ class LibraryService:
         except Exception:
             self.sources = previous_sources
             self.games = previous_games
+            if previous_physical is None:
+                self.__dict__.pop("_physical_games", None)
+            else:
+                self._physical_games = previous_physical
+            for game, state in previous_objects.values():
+                game.__dict__.clear()
+                game.__dict__.update(state)
             raise
 
 
@@ -498,21 +564,11 @@ class LibraryService:
             directory
         )
 
-        for game in self.games:
-
-            game.artwork = ""
-
-            artwork = (
-                self.artwork.get_artwork(
-                    game
-                )
-            )
-
-            game.artwork = (
-                artwork
-                if artwork is not None
-                else ""
-            )
+        physical = self._physical_inventory()
+        for game in physical:
+            game.artwork = self.artwork.get_artwork(game) or ""
+        self.games = self._canonicalizer().canonicalize(physical)
+        self._project_favorites(self.games)
 
         return self.games
 
@@ -522,10 +578,52 @@ class LibraryService:
         return self.games
 
 
+    def _merge_registered(self, result):
+        previous_games = self.games
+        previous_physical = self._physical_games
+        old_objects = {id(g): (g, deepcopy(vars(g))) for g in [*previous_games, *previous_physical]}
+        try:
+            incoming = self._register(list(result.games))
+            physical = list(previous_physical)
+            known = {game_identity(g): g for g in physical}
+            added, skipped = [], len(result.games) - len(incoming)
+            for game in incoming:
+                identity = game_identity(game)
+                survivor = known.get(identity)
+                if survivor is not None:
+                    # A moved registered file is the same edition, at a new location.
+                    for field in fields(Game):
+                        setattr(survivor, field.name, deepcopy(getattr(game, field.name)))
+                    game = survivor
+                    skipped += 1
+                else:
+                    added.append(game)
+                physical = [g for g in physical if g is not game
+                            and location_key(g.rom) != location_key(game.rom)]
+                physical.append(game)
+                known[identity] = game
+            self.state.apply(physical)
+            for game in physical:
+                game.artwork = self.artwork.get_artwork(game) or ""
+            canonical = self._canonicalizer().canonicalize(physical)
+            self._project_favorites(canonical)
+            self._physical_games = physical
+            self.games = canonical
+            return {"added": tuple(added), "added_count": len(added), "skipped_count": skipped}
+        except Exception:
+            self.games, self._physical_games = previous_games, previous_physical
+            for game, state in old_objects.values():
+                game.__dict__.clear()
+                game.__dict__.update(state)
+            raise
+
     def merge_bulk_import(
         self,
         result,
     ):
+        if getattr(self, "identity_registry", None) is not None:
+            return self._merge_registered(result)
+
         physical_games = list(
             self._physical_inventory()
         )
@@ -651,8 +749,11 @@ class LibraryService:
                 "genre",
                 "core",
                 "rom",
+                "local_file_id",
                 "source",
                 "artwork",
+                "artwork_origin",
+                "artwork_explicit",
                 "favorite",
                 "rvdb_platform_id",
                 "rvdb_game_id",
@@ -711,7 +812,7 @@ class LibraryService:
             )
         )
 
-        self.games = preserved_games
+        self.games = self._project_favorites(preserved_games)
 
         return {
             "added": tuple(
@@ -860,6 +961,7 @@ class LibraryService:
             favorite,
         )
 
+        self._project_favorites(getattr(self, "games", []))
         game.favorite = favorite
 
         return game.favorite
@@ -936,23 +1038,41 @@ class LibraryService:
             )
         )
 
-        games_by_identity = {}
+        return project_identities(self.games, identities)
 
-        for game in self.games:
-
+    @staticmethod
+    def query_platform_statistics(platform_id, *, games_provider, recent_provider=None,
+                                  collection_names_provider=None, collection_games_provider=None):
+        """Project existing family identities; None means unavailable, never zero."""
+        result = {'games': None, 'favorites': None, 'recent': None, 'collections': None,
+                  'errors': {}}
+        try:
+            if games_provider is None:
+                return result
+            matching = [game for game in games_provider()
+                        if str(getattr(game, 'rvdb_platform_id', '') or '') == platform_id]
+        except (OSError, ValueError, RuntimeError, TypeError) as exc:
+            result['errors']['games'] = str(exc)
+            return result
+        result['games'] = len(matching)
+        result['favorites'] = sum(bool(getattr(game, 'favorite', False)) for game in matching)
+        if recent_provider is not None:
             try:
-                identity = game_identity(
-                    game
-                )
-            except ValueError:
-                continue
+                result['recent'] = len(project_identities(matching, {str(i) for i in recent_provider()}))
+            except (OSError, ValueError, RuntimeError, TypeError) as exc:
+                result['errors']['recent'] = str(exc)
+        if collection_names_provider is not None and collection_games_provider is not None:
+            try:
+                result['collections'] = sum(
+                    any(str(getattr(game, 'rvdb_platform_id', '') or '') == platform_id
+                        for game in collection_games_provider(name))
+                    for name in collection_names_provider())
+            except (OSError, ValueError, RuntimeError, TypeError) as exc:
+                result['errors']['collections'] = str(exc)
+        return result
 
-            games_by_identity[
-                identity
-            ] = game
-
-        return [
-            games_by_identity[identity]
-            for identity in identities
-            if identity in games_by_identity
-        ]
+    def platform_statistics(self, platform_id):
+        return self.query_platform_statistics(
+            platform_id, games_provider=self.get_games, recent_provider=self.recent,
+            collection_names_provider=self.collection_names,
+            collection_games_provider=self.collection_games)

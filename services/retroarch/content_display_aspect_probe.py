@@ -1,13 +1,17 @@
 from __future__ import annotations
 
+from config.paths import runtime_directory
+
 import os
 import signal
+import shutil
 import subprocess
 import tempfile
 import time
 from pathlib import Path
 
 from .display_aspect import CoreDisplayAspect
+from .process_group import group_exists, terminate_group
 from .runtime_display_aspect import (
     RuntimeDisplayAspectObserver,
 )
@@ -17,7 +21,7 @@ class ContentLoadedDisplayAspectProbe:
     """
     Resolve libretro display-aspect authority after content has loaded.
 
-    A short-lived isolated RetroArch process is started with the exact
+    A short-lived headless RetroArch process is started with the exact
     core/content pair selected for the launch.  RetroArch's verbose log
     supplies the generic libretro geometry evidence:
 
@@ -50,13 +54,12 @@ class ContentLoadedDisplayAspectProbe:
             directory
             if directory is not None
             else (
-                Path.home()
-                / ".cache"
-                / "retrovault"
-                / "aspect-probe"
+                runtime_directory("aspect-probe")
             )
         ).expanduser()
 
+        self._active_process = None
+        self._session_directory = None
         self.timeout = float(timeout)
         self.settle_time = float(settle_time)
         self.poll_interval = float(poll_interval)
@@ -95,17 +98,8 @@ class ContentLoadedDisplayAspectProbe:
         )
 
     @staticmethod
-    def _process_group_exists(process_group) -> bool:
-        try:
-            os.killpg(
-                process_group,
-                0,
-            )
-        except ProcessLookupError:
-            return False
-        except PermissionError:
-            return True
-        return True
+    def _process_group_exists(process_group):
+        return group_exists(process_group)
 
     def _wait_for_process_group_exit(
         self,
@@ -130,70 +124,42 @@ class ContentLoadedDisplayAspectProbe:
 
         return True
 
-    def _terminate_and_reap(
-        self,
-        process,
-        *,
-        process_group=None,
-    ) -> None:
+    def _terminate_and_reap(self, process, *, process_group=None):
         if process is None:
             return
-
-        if process_group is None:
-            process_group = process.pid
-
-        if self._process_group_exists(
-            process_group
-        ):
-            try:
-                os.killpg(
-                    process_group,
-                    signal.SIGTERM,
-                )
-            except ProcessLookupError:
-                pass
-
         try:
-            process.wait(
-                timeout=5.0
-            )
-        except subprocess.TimeoutExpired:
+            terminate_group(process, process_group or process.pid, self._wait_for_process_group_exit)
+        except RuntimeError as exc:
+            raise OSError(str(exc)) from exc
+
+    def process_running(self):
+        process = self._active_process
+        return process is not None and (process.poll() is None or self._process_group_exists(process.pid))
+
+    def stop(self):
+        if self._active_process is not None:
+            self._terminate_and_reap(self._active_process, process_group=self._active_process.pid)
+            self._active_process = None
+        if self._session_directory is not None:
             try:
-                os.killpg(
-                    process_group,
-                    signal.SIGKILL,
-                )
-            except ProcessLookupError:
+                shutil.rmtree(self._session_directory)
+            except FileNotFoundError:
                 pass
+            self._session_directory = None
 
-            process.wait(
-                timeout=5.0
-            )
+    def cleanup(self):
+        self.stop()
 
-        if self._wait_for_process_group_exit(
-            process_group,
-            timeout=5.0,
-        ):
-            return
-
+    def acquire(self, **kwargs):
+        if self.process_running():
+            raise OSError("Previous display-aspect probe still owns a process group.")
+        self.stop()
         try:
-            os.killpg(
-                process_group,
-                signal.SIGKILL,
-            )
-        except ProcessLookupError:
-            return
+            return self._acquire(**kwargs)
+        finally:
+            self.stop()
 
-        if not self._wait_for_process_group_exit(
-            process_group,
-            timeout=5.0,
-        ):
-            raise OSError(
-                "RetroArch display-aspect probe process "
-                "group did not terminate."
-            )
-
-    def acquire(
+    def _acquire(
         self,
         *,
         command,
@@ -239,6 +205,7 @@ class ContentLoadedDisplayAspectProbe:
             )
         )
 
+        self._session_directory = session_directory
         log_path = (
             session_directory
             / "retroarch.log"
@@ -248,6 +215,32 @@ class ContentLoadedDisplayAspectProbe:
             log_path
         )
 
+        # Geometry acquisition must never create a second visible game
+        # window. Keep core options from the launch, then override only
+        # presentation and probe side effects in the final config layer.
+        headless_config = session_directory / "headless.cfg"
+        settings = {
+            "video_driver": "null",
+            "audio_driver": "null",
+            "input_driver": "null",
+            "video_threaded": "false",
+            "video_fullscreen": "false",
+            "video_shader_enable": "false",
+            "input_overlay_enable": "false",
+            "audio_enable": "false",
+            "config_save_on_exit": "false",
+            "history_list_enable": "false",
+            "content_runtime_log": "false",
+            "content_runtime_log_aggregate": "false",
+            "savestate_auto_save": "false",
+            "savestate_auto_load": "false",
+            "savefile_directory": str(session_directory),
+            "savestate_directory": str(session_directory),
+        }
+        headless_config.write_text("".join(
+            f'{key} = "{value}"\n' for key, value in settings.items()
+        ), encoding="utf-8")
+
         probe_command = [
             command,
             *tuple(prefix_args),
@@ -256,22 +249,13 @@ class ContentLoadedDisplayAspectProbe:
             content,
         ]
 
-        for config in append_configs:
-            if config:
-                probe_command.extend(
-                    [
-                        "--appendconfig",
-                        config,
-                    ]
-                )
-
-        if shader:
-            probe_command.extend(
-                [
-                    "--set-shader",
-                    shader,
-                ]
-            )
+        # Match the visible launch: repeated options retain only the last
+        # layer in RetroArch, losing the session's core-options authority.
+        configs = [config for config in append_configs if config]
+        configs.append(str(headless_config))
+        probe_command.extend(["--appendconfig", "|".join(configs)])
+        # The shader argument remains accepted for caller compatibility;
+        # a display-aspect probe has no rendered surface to shade.
 
         probe_command.extend(
             [
@@ -293,6 +277,7 @@ class ContentLoadedDisplayAspectProbe:
                 stderr=subprocess.DEVNULL,
             )
 
+            self._active_process = process
             started = self._monotonic()
             deadline = (
                 started
@@ -352,31 +337,6 @@ class ContentLoadedDisplayAspectProbe:
                     self.poll_interval
                 )
         finally:
-            self._terminate_and_reap(
-                process,
-                process_group=(
-                    process.pid
-                    if process is not None
-                    else None
-                ),
-            )
-
-            try:
-                for candidate in (
-                    session_directory
-                    .iterdir()
-                ):
-                    try:
-                        candidate.unlink()
-                    except (
-                        FileNotFoundError,
-                        IsADirectoryError,
-                    ):
-                        pass
-
-                session_directory.rmdir()
-            except (
-                FileNotFoundError,
-                OSError,
-            ):
-                pass
+            # Outer acquire() retains ownership and performs cleanup even when
+            # configuration writing or process creation fails.
+            pass

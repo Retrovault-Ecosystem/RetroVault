@@ -1,3 +1,7 @@
+from config import ConfigLoader
+from services.retroarch.process_group import group_exists, terminate_group
+from services.retroarch.validator import LaunchValidator
+from services.retroarch.diagnostics import LaunchDiagnostics
 import os
 import shutil
 import signal
@@ -6,6 +10,8 @@ import time
 from pathlib import Path
 
 from models.launch_profile import LaunchProfile
+from services.presentation.models import PresentationProfile
+from services.presentation.launch_resolver import LaunchPresentationResolver
 from services.retroarch.core_identity import (
     canonical_libretro_core_identity,
 )
@@ -36,6 +42,7 @@ from .archive_runtime import ArchiveRuntime
 from .cheat_runtime import CheatRuntimeConfig
 from .core_options_runtime import CoreOptionsRuntimeConfig
 from .overlay_runtime import OverlayRuntimeConfig
+from .adaptive_bezel_runtime import AdaptiveBezelRuntime
 from .session_config import RetroArchSessionConfig
 from .shader_runtime import ShaderRuntimeConfig
 
@@ -54,8 +61,15 @@ class RetroArchLauncher:
         display_aspect_probe=None,
         content_display_aspect_probe=None,
         contain_runtime=None,
+        adaptive_bezel_runtime=None,
+        executable="retroarch",
+        presentation_config_provider=None,
     ):
-        self.command = "retroarch"
+        if not isinstance(executable, str) or not executable.strip():
+            raise ValueError("RetroArch executable must be a non-empty string.")
+        self.command = os.path.expanduser(executable.strip())
+        self.presentation_config_provider = presentation_config_provider
+        self.adaptive_bezel_runtime = adaptive_bezel_runtime or AdaptiveBezelRuntime()
 
         self.overlay_runtime = (
             overlay_runtime
@@ -112,6 +126,8 @@ class RetroArchLauncher:
         )
 
         self._active_process = None
+        self._active_group = None
+        self.cleanup_errors = []
         self._active_primary_config = None
         self._active_contain_config = None
         self._active_cheat_config = None
@@ -123,62 +139,54 @@ class RetroArchLauncher:
         return self._active_process
 
     def _cleanup_active_transients(self):
-        """
-        Clean every one-launch RetroArch runtime artifact.
-
-        Service-owned runtimes clean their internally tracked paths.
-        PrimaryConfigRuntime remains path-owned. CheatRuntime currently
-        has no cleanup API, so its unique generated launch directory is
-        removed explicitly.
-
-        ArchiveRuntime is intentionally excluded because extracted
-        archive content is reusable cache material.
-        """
-        primary_cleanup = getattr(
-            self.primary_config_runtime,
-            "cleanup",
-            None,
-        )
-
-        if callable(primary_cleanup):
-            primary_cleanup(
-                self._active_primary_config
-            )
-
-        for runtime in (
-            self.core_options_runtime,
-            self.session_config,
-            self.overlay_runtime,
-            self.contain_runtime,
-            self.shader_runtime,
-        ):
-            cleanup = getattr(
-                runtime,
-                "cleanup",
-                None,
-            )
-
+        """Try every owner; retain failed resources for retry, never mask launch errors."""
+        self.cleanup_errors = []
+        if self.process_running() or self._probe_running():
+            self.cleanup_errors.append("Runtime resources remain in use by an owned process.")
+            return
+        try:
+            self.primary_config_runtime.cleanup(self._active_primary_config)
+            self._active_primary_config = None
+        except (OSError, RuntimeError) as exc:
+            self.cleanup_errors.append(f"Primary config cleanup: {exc}")
+        except AttributeError:
+            # Older injected runtime adapters may have no cleanup method.
+            pass
+        for runtime in (self.core_options_runtime, self.session_config,
+                        self.overlay_runtime, self.adaptive_bezel_runtime,
+                        self.contain_runtime, self.shader_runtime, getattr(self, "cheat_runtime", None),
+                        getattr(self, "content_display_aspect_probe", None)):
+            cleanup = getattr(runtime, "cleanup", None)
             if callable(cleanup):
-                cleanup()
+                try:
+                    cleanup()
+                    remaining = getattr(runtime, "_created", None)
+                    if isinstance(remaining, list) and remaining:
+                        self.cleanup_errors.append(f"{type(runtime).__name__}: cleanup pending")
+                except (OSError, RuntimeError) as exc:
+                    self.cleanup_errors.append(f"{type(runtime).__name__}: {exc}")
+        if not self.cleanup_errors:
+            self._active_contain_config = None
+            self._active_cheat_config = None
 
-        cheat_config = self._active_cheat_config
+    def _probe_running(self):
+        running = getattr(getattr(self, "content_display_aspect_probe", None), "process_running", None)
+        return callable(running) and running() is True
 
-        if cheat_config:
-            cheat_root = Path(
-                cheat_config
-            ).expanduser().parent
-
-            if cheat_root.name.startswith(
-                "retrovault-cheats-"
-            ):
-                shutil.rmtree(
-                    cheat_root,
-                    ignore_errors=True,
-                )
-
-        self._active_primary_config = None
-        self._active_contain_config = None
-        self._active_cheat_config = None
+    def shutdown(self):
+        """Idempotent orderly shutdown; failure retains ownership for retry."""
+        stop_probe = getattr(self.content_display_aspect_probe, "stop", None)
+        if callable(stop_probe):
+            stop_probe()
+        if self._active_process is not None:
+            if self.process_running():
+                self.stop()
+            else:
+                self.clear_exited_process()
+        self._cleanup_active_transients()
+        if self.cleanup_errors:
+            raise RuntimeError("; ".join(self.cleanup_errors))
+        return True
 
     def process_running(self) -> bool:
         """
@@ -187,10 +195,11 @@ class RetroArchLauncher:
         No process is treated as not running.
         """
 
-        if self._active_process is None:
+        if getattr(self, "_active_process", None) is None:
             return False
 
-        return self._active_process.poll() is None
+        return (self._active_process.poll() is None
+                or self._process_group_exists(getattr(self, "_active_group", None)))
 
     def clear_exited_process(self):
         """
@@ -204,39 +213,19 @@ class RetroArchLauncher:
 
         returncode = self._active_process.poll()
 
-        if returncode is None:
+        if returncode is None or self._process_group_exists(getattr(self, "_active_group", None)):
             return None
 
         process = self._active_process
         self._active_process = None
+        self._active_group = None
         self._cleanup_active_transients()
 
         return process
 
     @staticmethod
-    def _process_group_exists(
-        process_group: int,
-    ) -> bool:
-        """
-        Return True while any process remains in ``process_group``.
-
-        ``Popen.wait()`` only proves that the launcher-owned root
-        process has exited. Wrapper/sandbox descendants can remain in
-        the same process group after that root exits, so lifecycle
-        completion must independently observe the group itself.
-        """
-
-        try:
-            os.killpg(
-                process_group,
-                0,
-            )
-        except ProcessLookupError:
-            return False
-        except PermissionError:
-            return True
-
-        return True
+    def _process_group_exists(process_group):
+        return group_exists(process_group)
 
     @classmethod
     def _wait_for_process_group_exit(
@@ -274,109 +263,50 @@ class RetroArchLauncher:
         return True
 
     def stop(self) -> bool:
-        """
-        Terminate and fully drain the process group owned by the
-        active RetroArch launch.
-
-        RetroArch may be reached through wrapper/sandbox processes
-        such as Flatpak/bwrap. The wrapper can exit immediately after
-        SIGTERM while emulator descendants remain alive in the same
-        process group. Therefore root-process reaping and process-group
-        drainage are separate lifecycle requirements.
-        """
-
         process = self._active_process
-
         if process is None:
             return False
-
-        if process.poll() is not None:
+        if not self.process_running():
+            self.clear_exited_process()
             return False
-
-        try:
-            process_group = os.getpgid(
-                process.pid
-            )
-        except (
-            ProcessLookupError,
-            OSError,
-        ):
-            return False
-
-        try:
-            os.killpg(
-                process_group,
-                signal.SIGTERM,
-            )
-        except ProcessLookupError:
-            pass
-
-        try:
-            process.wait(
-                timeout=5.0
-            )
-        except subprocess.TimeoutExpired:
+        group = getattr(self, "_active_group", None)
+        if group is None:
+            # Compatibility for process adapters not created by launch().
             try:
-                os.killpg(
-                    process_group,
-                    signal.SIGKILL,
-                )
+                group = os.getpgid(process.pid)
             except ProcessLookupError:
-                pass
-
-            process.wait(
-                timeout=5.0
-            )
-
-        group_exited = (
-            self._wait_for_process_group_exit(
-                process_group,
-                timeout=2.0,
-            )
-        )
-
-        if not group_exited:
-            try:
-                os.killpg(
-                    process_group,
-                    signal.SIGKILL,
-                )
-            except ProcessLookupError:
-                pass
-
-            group_exited = (
-                self._wait_for_process_group_exit(
-                    process_group,
-                    timeout=5.0,
-                )
-            )
-
-        if not group_exited:
-            raise RuntimeError(
-                "RetroArch process group did not "
-                "terminate completely."
-            )
-
+                return False
+        terminate_group(process, group, self._wait_for_process_group_exit)
         self._active_process = None
+        self._active_group = None
         self._cleanup_active_transients()
-
         return True
-
 
     def launch(
         self,
         profile: LaunchProfile,
     ):
+        if self.process_running() or self._probe_running():
+            return {"success": False, "error": "RetroArch process is already running."}
         if self._active_process is not None:
-            if self._active_process.poll() is None:
-                return {
-                    "success": False,
-                    "error": (
-                        "RetroArch process is already running."
-                    ),
-                }
+            self.clear_exited_process()
+        if self.cleanup_errors:
+            self._cleanup_active_transients()
+        if self.cleanup_errors:
+            return {"success": False, "error": "; ".join(self.cleanup_errors)}
 
-            self._active_process = None
+        requested_platform = getattr(profile, "platform_id", "")
+        known_platform = (
+            requested_platform.strip()
+            if isinstance(requested_platform, str)
+            and requested_platform.strip() in PlatformPresentationPolicyRegistry.canonical_platform_ids()
+            else None
+        )
+        prerequisites = LaunchValidator(self.command, profile.core).validate(
+            profile.rom, platform_id=known_platform
+        )
+        if not prerequisites["ready"]:
+            return {"success": False, "error": " ".join(LaunchDiagnostics().explain(prerequisites))}
 
         # Canonical RetroVault production presentation authority.
         #
@@ -401,6 +331,12 @@ class RetroArchLauncher:
             in canonical_platform_ids
         )
 
+        try:
+            launch_config = (self.presentation_config_provider() if self.presentation_config_provider
+                             else ConfigLoader().load())
+        except (OSError, ValueError) as error:
+            return {"success": False, "error": str(error)}
+
         production_package = None
 
         if is_canonical_platform:
@@ -408,14 +344,11 @@ class RetroArchLauncher:
 
             try:
                 production_package = (
-                    CanonicalProductionPackageResolver.resolve(
+                    LaunchPresentationResolver(config=launch_config).select(
                         platform_id=platform_id,
-                        core_identity=(
-                            canonical_libretro_core_identity(
-                                profile.core
-                            )
-                        ),
-                    )
+                        core_identity=canonical_libretro_core_identity(profile.core),
+                        requested=PresentationProfile(overlay=profile.overlay, shader=profile.shader),
+                    ).package
                 )
             except (
                 OSError,
@@ -425,6 +358,15 @@ class RetroArchLauncher:
                     "success": False,
                     "error": str(error),
                 }
+
+        try:
+            from services.presentation.visual_tuning import shader_parameters
+            adjustments = dict(getattr(profile, 'visual_tuning', ()) or ())
+            if adjustments and production_package is None:
+                raise ValueError('CRT adjustments require a validated production package.')
+            tuning_parameters = shader_parameters(platform_id, adjustments)
+        except (TypeError, ValueError) as error:
+            return {'success': False, 'error': str(error)}
 
         try:
             runtime_rom = (
@@ -449,8 +391,11 @@ class RetroArchLauncher:
         primary_config = None
 
         try:
+            configured_primary = profile.config or launch_config.get("retroarch", {}).get("primary_config", "")
+            primary_source = {"source": configured_primary} if configured_primary else {}
             primary_config = (
                 self.primary_config_runtime.create(
+                    **primary_source,
                     overlay=(
                         production_package.overlay
                         if production_package is not None
@@ -458,6 +403,8 @@ class RetroArchLauncher:
                     ),
                 )
             )
+            if configured_primary and not primary_config:
+                raise ValueError("Explicit primary configuration was not isolated.")
             self._active_primary_config = primary_config
         except (OSError, ValueError) as exc:
             self._cleanup_active_transients()
@@ -504,7 +451,12 @@ class RetroArchLauncher:
                 self.session_config.create(
                     core_options_path=(
                         core_options_config
-                    )
+                    ),
+                    shader_enabled=bool(
+                        production_package.shader
+                        if production_package is not None
+                        else profile.shader
+                    ),
                 )
             )
         except (
@@ -518,21 +470,10 @@ class RetroArchLauncher:
                 "error": str(error),
             }
 
-        if session_config:
-            command.extend(
-                [
-                    "--appendconfig",
-                    session_config,
-                ]
-            )
+        append_configs = []
 
-        if profile.config:
-            command.extend(
-                [
-                    "--config",
-                    profile.config,
-                ]
-            )
+        if session_config:
+            append_configs.append(session_config)
 
         launch_overlay = (
             production_package.overlay
@@ -564,12 +505,7 @@ class RetroArchLauncher:
                     "error": str(error),
                 }
 
-            command.extend(
-                [
-                    "--appendconfig",
-                    append_config,
-                ]
-            )
+            append_configs.append(append_config)
 
         startup_contain_config = None
 
@@ -594,61 +530,64 @@ class RetroArchLauncher:
                     )
                 )
 
-                if display_aspect is None:
-                    probe_prefix_args = []
+                probe_prefix_args = []
 
-                    if primary_config:
-                        probe_prefix_args.extend(
-                            [
-                                "--config",
-                                primary_config,
-                            ]
-                        )
+                if primary_config:
+                    probe_prefix_args.extend(
+                        [
+                            "--config",
+                            primary_config,
+                        ]
+                    )
 
-                    probe_append_configs = []
+                probe_append_configs = []
 
-                    if session_config:
-                        probe_append_configs.append(
-                            session_config
-                        )
+                if session_config:
+                    probe_append_configs.append(
+                        session_config
+                    )
 
-                    if launch_overlay:
-                        probe_append_configs.append(
-                            append_config
-                        )
+                if launch_overlay:
+                    probe_append_configs.append(
+                        append_config
+                    )
 
-                    runtime_shader = launch_shader or None
+                runtime_shader = launch_shader or None
 
-                    if launch_shader:
-                        parameters = (
-                            self.shader_runtime
-                            .parameters_for_overlay(
-                                launch_overlay
-                            )
-                        )
-
-                        if parameters:
-                            runtime_shader = (
-                                self.shader_runtime.resolve(
-                                    launch_shader,
-                                    parameters,
-                                )
-                            )
-
-                    display_aspect = (
-                        self.content_display_aspect_probe.acquire(
-                            command=self.command,
-                            core=profile.core,
-                            content=runtime_rom,
-                            prefix_args=tuple(
-                                probe_prefix_args
-                            ),
-                            append_configs=tuple(
-                                probe_append_configs
-                            ),
-                            shader=runtime_shader,
+                if launch_shader:
+                    parameters = (
+                        self.shader_runtime
+                        .parameters_for_overlay(
+                            launch_overlay
                         )
                     )
+
+                    parameters.update(tuning_parameters)
+                    if parameters:
+                        runtime_shader = (
+                            self.shader_runtime.resolve(
+                                launch_shader,
+                                parameters,
+                            )
+                        )
+
+                runtime_display_aspect = (
+                    self.content_display_aspect_probe.acquire(
+                        command=self.command,
+                        core=profile.core,
+                        content=runtime_rom,
+                        prefix_args=tuple(
+                            probe_prefix_args
+                        ),
+                        append_configs=tuple(
+                            probe_append_configs
+                        ),
+                        shader=runtime_shader,
+                    )
+                )
+
+                if runtime_display_aspect is not None:
+                    display_aspect = runtime_display_aspect
 
                 startup_contain_config = (
                     self.contain_runtime.create_for_aspect(
@@ -657,6 +596,18 @@ class RetroArchLauncher:
                     )
                 )
                 self._active_contain_config = startup_contain_config
+                geometry = glass_profile.contain_aspect(
+                    display_aspect.width, display_aspect.height,
+                )
+                fitted_overlay = self.adaptive_bezel_runtime.create(
+                    package=production_package, glass=glass, geometry=geometry,
+                )
+                if fitted_overlay != launch_overlay:
+                    # The probe used the original package; the visible launch
+                    # gets a frame constructed from the same final geometry.
+                    append_configs[append_configs.index(append_config)] = (
+                        self.overlay_runtime.create(fitted_overlay)
+                    )
             except (
                 OSError,
                 TypeError,
@@ -690,20 +641,15 @@ class RetroArchLauncher:
                     "error": str(error),
                 }
 
-            command.extend(
-                [
-                    "--appendconfig",
-                    cheat_config,
-                ]
-            )
+            append_configs.append(cheat_config)
 
         if startup_contain_config:
-            command.extend(
-                [
-                    "--appendconfig",
-                    startup_contain_config,
-                ]
-            )
+            append_configs.append(startup_contain_config)
+
+        # RetroArch replaces repeated --appendconfig arguments. Its CLI
+        # accepts the ordered layers as one pipe-delimited argument.
+        if append_configs:
+            command.extend(["--appendconfig", "|".join(append_configs)])
 
         if launch_shader:
             runtime_shader = launch_shader
@@ -716,6 +662,7 @@ class RetroArchLauncher:
                     )
                 )
 
+                parameters.update(tuning_parameters)
                 if parameters:
                     runtime_shader = (
                         self.shader_runtime.resolve(
@@ -749,6 +696,10 @@ class RetroArchLauncher:
             )
 
             self._active_process = process
+            self._active_group = process.pid
+            if not self.process_running():
+                self.clear_exited_process()
+                return {"success": False, "error": "RetroArch exited during startup."}
 
             return {
                 "success": True,

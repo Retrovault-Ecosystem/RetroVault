@@ -23,6 +23,7 @@ def test_launcher_builds_exact_core_rom_command():
     with patch(
         "services.retroarch.launcher.subprocess.Popen"
     ) as popen:
+        popen.return_value.poll.return_value = None
         result = launcher.launch(
             profile
         )
@@ -45,7 +46,7 @@ def test_launcher_builds_exact_core_rom_command():
     }
 
 
-def test_launcher_appends_config_after_rom():
+def test_launcher_isolates_explicit_primary_config():
     launcher = RetroArchLauncher(
         session_config=FakeSessionConfig(),
         primary_config_runtime=FakePrimaryConfigRuntime(),
@@ -61,17 +62,14 @@ def test_launcher_appends_config_after_rom():
     with patch(
         "services.retroarch.launcher.subprocess.Popen"
     ) as popen:
+        popen.return_value.poll.return_value = None
         result = launcher.launch(
             profile
         )
 
     expected = [
-        "retroarch",
-        "-L",
-        "/cores/snes9x_libretro.so",
-        "/roms/game.sfc",
-        "--config",
-        "/configs/retrovault.cfg",
+        "retroarch", "--config", "/runtime/primary.cfg",
+        "-L", "/cores/snes9x_libretro.so", "/roms/game.sfc",
     ]
 
     popen.assert_called_once_with(
@@ -103,6 +101,7 @@ def test_launcher_reports_process_spawn_failure():
             "process spawn failed"
         ),
     ) as popen:
+        popen.return_value.poll.return_value = None
         result = launcher.launch(
             profile
         )
@@ -139,6 +138,7 @@ def test_launcher_appends_shader_after_rom():
     with patch(
         "services.retroarch.launcher.subprocess.Popen"
     ) as popen:
+        popen.return_value.poll.return_value = None
         result = launcher.launch(
             profile
         )
@@ -180,17 +180,18 @@ def test_launcher_composes_config_and_shader():
     with patch(
         "services.retroarch.launcher.subprocess.Popen"
     ) as popen:
+        popen.return_value.poll.return_value = None
         result = launcher.launch(
             profile
         )
 
     expected = [
         "retroarch",
+        "--config",
+        "/runtime/primary.cfg",
         "-L",
         "/cores/snes9x_libretro.so",
         "/roms/game.sfc",
-        "--config",
-        "/configs/retrovault.cfg",
         "--set-shader",
         "/shaders/presets/crt.slangp",
     ]
@@ -215,8 +216,8 @@ class FakePrimaryConfigRuntime:
     production --config contract explicitly.
     """
 
-    def create(self, *, overlay=None):
-        return None
+    def create(self, *, source=None, overlay=None):
+        return "/runtime/primary.cfg" if source else None
 
 
 class FakeSessionConfig:
@@ -229,7 +230,7 @@ class FakeSessionConfig:
     production session contract explicitly.
     """
 
-    def create(self, core_options_path=None):
+    def create(self, core_options_path=None, *, shader_enabled=False):
         return ""
 
 
@@ -271,6 +272,7 @@ def test_launcher_appends_overlay_runtime_config():
     with patch(
         "services.retroarch.launcher.subprocess.Popen"
     ) as popen:
+        popen.return_value.poll.return_value = None
         result = launcher.launch(
             profile
         )
@@ -322,17 +324,18 @@ def test_launcher_composes_config_overlay_and_shader():
     with patch(
         "services.retroarch.launcher.subprocess.Popen"
     ) as popen:
+        popen.return_value.poll.return_value = None
         result = launcher.launch(
             profile
         )
 
     expected = [
         "retroarch",
+        "--config",
+        "/runtime/primary.cfg",
         "-L",
         "/cores/snes9x_libretro.so",
         "/roms/game.sfc",
-        "--config",
-        "/configs/retrovault.cfg",
         "--appendconfig",
         "/runtime/overlay.cfg",
         "--set-shader",
@@ -378,6 +381,7 @@ def test_launcher_reports_overlay_runtime_failure():
     with patch(
         "services.retroarch.launcher.subprocess.Popen"
     ) as popen:
+        popen.return_value.poll.return_value = None
         result = launcher.launch(
             profile
         )
@@ -451,6 +455,7 @@ def test_launcher_shader_without_runtime_parameters_passes_through():
     with patch(
         "services.retroarch.launcher.subprocess.Popen"
     ) as popen:
+        popen.return_value.poll.return_value = None
         result = launcher.launch(
             profile
         )
@@ -510,6 +515,7 @@ def test_launcher_wraps_selected_shader_when_overlay_has_parameters():
     with patch(
         "services.retroarch.launcher.subprocess.Popen"
     ) as popen:
+        popen.return_value.poll.return_value = None
         result = launcher.launch(
             profile
         )
@@ -573,6 +579,7 @@ def test_launcher_does_not_synthesize_shader_for_overlay_only():
     with patch(
         "services.retroarch.launcher.subprocess.Popen"
     ) as popen:
+        popen.return_value.poll.return_value = None
         result = launcher.launch(
             profile
         )
@@ -618,6 +625,7 @@ def test_launcher_reports_shader_runtime_failure():
     with patch(
         "services.retroarch.launcher.subprocess.Popen"
     ) as popen:
+        popen.return_value.poll.return_value = None
         result = launcher.launch(
             profile
         )
@@ -653,6 +661,7 @@ def test_launcher_passes_explicit_archive_member_to_runtime():
     with patch(
         "services.retroarch.launcher.subprocess.Popen"
     ) as popen:
+        popen.return_value.poll.return_value = None
         process = Mock()
         process.poll.return_value = None
         popen.return_value = process
@@ -696,6 +705,7 @@ def test_launcher_preserves_automatic_archive_selection_by_default():
     with patch(
         "services.retroarch.launcher.subprocess.Popen"
     ) as popen:
+        popen.return_value.poll.return_value = None
         process = Mock()
         process.poll.return_value = None
         popen.return_value = process
@@ -894,7 +904,7 @@ def test_launcher_applies_clean_session_before_presentation(
     calls = []
 
     class SessionConfig:
-        def create(self, core_options_path=None):
+        def create(self, core_options_path=None, *, shader_enabled=False):
             calls.append(
                 "session"
             )
@@ -932,6 +942,7 @@ def test_launcher_applies_clean_session_before_presentation(
             return rom
 
     class Process:
+        pid = 99999999
         @staticmethod
         def poll():
             return None
@@ -985,15 +996,11 @@ def test_launcher_applies_clean_session_before_presentation(
 
     command = captured["command"]
 
-    session_index = command.index(
-        "/tmp/session.cfg"
-    )
-
-    overlay_index = command.index(
-        "/tmp/overlay.cfg"
-    )
-
-    assert session_index < overlay_index
+    assert command.count("--appendconfig") == 1
+    assert command[command.index("--appendconfig") + 1].split("|") == [
+        "/tmp/session.cfg",
+        "/tmp/overlay.cfg",
+    ]
 
     assert calls[:3] == [
         "content",
@@ -1016,7 +1023,7 @@ def test_launcher_clean_session_is_game_name_independent(
     generated = []
 
     class SessionConfig:
-        def create(self, core_options_path=None):
+        def create(self, core_options_path=None, *, shader_enabled=False):
             generated.append(
                 "session"
             )
@@ -1031,9 +1038,11 @@ def test_launcher_clean_session_is_game_name_independent(
             return rom
 
     class Process:
-        @staticmethod
-        def poll():
-            return 0
+        pid = 99999999
+        returncode = None
+
+        def poll(self):
+            return self.returncode
 
     commands = []
 
@@ -1083,6 +1092,7 @@ def test_launcher_clean_session_is_game_name_independent(
 
         assert result["success"] is True
 
+        launcher.active_process.returncode = 0
         launcher.clear_exited_process()
 
     assert generated == [
@@ -1118,6 +1128,7 @@ def test_launch_injects_core_visible_area_policy_before_process(
     created = {}
 
     class Process:
+        pid = 99999999
         def poll(self):
             return None
 
@@ -1160,6 +1171,7 @@ def test_launch_injects_core_visible_area_policy_before_process(
     profile.overlay = ""
     profile.cheat_file = ""
     profile.shader = ""
+    profile.visual_tuning = ()
 
     result = launcher.launch(
         profile
@@ -1251,6 +1263,7 @@ def test_launcher_forwards_platform_identity_to_core_options(
         def create(
             self,
             core_options_path=None,
+            shader_enabled=False,
         ):
             return None
 
@@ -1322,6 +1335,7 @@ def test_launcher_maps_empty_platform_identity_to_legacy_none(
         def create(
             self,
             core_options_path=None,
+            shader_enabled=False,
         ):
             return None
 
@@ -1380,10 +1394,12 @@ def test_a3n3b4_legacy_overlay_only_contract_is_unchanged(
         def create(
             self,
             core_options_path=None,
+            shader_enabled=False,
         ):
             return None
 
     class Process:
+        pid = 99999999
         def poll(self):
             return None
 
@@ -1437,10 +1453,12 @@ def test_a3n3b4_legacy_shader_only_contract_is_unchanged(
         def create(
             self,
             core_options_path=None,
+            shader_enabled=False,
         ):
             return None
 
     class Process:
+        pid = 99999999
         def poll(self):
             return None
 
@@ -1487,10 +1505,12 @@ def test_a3n3b4_non_string_platform_keeps_legacy_contract(
         def create(
             self,
             core_options_path=None,
+            shader_enabled=False,
         ):
             return None
 
     class Process:
+        pid = 99999999
         def poll(self):
             return None
 
@@ -1539,10 +1559,12 @@ def test_a3n3b4_unknown_string_platform_keeps_legacy_contract(
         def create(
             self,
             core_options_path=None,
+            shader_enabled=False,
         ):
             return None
 
     class Process:
+        pid = 99999999
         def poll(self):
             return None
 
@@ -1602,10 +1624,12 @@ def test_a3n3b4_canonical_identity_without_assets_preserves_core_policy_path(
         def create(
             self,
             core_options_path=None,
+            shader_enabled=False,
         ):
             return None
 
     class Process:
+        pid = 99999999
         def poll(self):
             return None
 
@@ -1700,6 +1724,7 @@ def test_a3n3b4_ready_partial_launchprofile_package_does_not_override_canonical_
 
     result = launcher.launch(profile)
 
+    assert isinstance(observed.pop("config"), dict)
     assert observed == {
         "platform_id": "platform.nintendo.nes",
         "core_identity": "fceumm",
@@ -1772,7 +1797,7 @@ def test_ready_platform_rejects_foreign_core_package_before_archive(
     )
 
     assert result["success"] is False
-    assert result["error"] == "Platform/core presentation policy mismatch."
+    assert result["error"] == "Core fceumm is not eligible for platform.sega.genesis."
     assert calls == []
 
 
@@ -1828,6 +1853,7 @@ def test_a3n3b4_ready_platform_ignores_foreign_launchprofile_package_metadata(
 
     result = launcher.launch(profile)
 
+    assert isinstance(observed.pop("config"), dict)
     assert observed == {
         "platform_id": "platform.nintendo.nes",
         "core_identity": "fceumm",
@@ -1960,6 +1986,7 @@ def test_a3n3b4_valid_nes_package_passes_gate_before_archive(
         def create(
             self,
             core_options_path=None,
+            shader_enabled=False,
         ):
             calls.append("session")
             return None
@@ -1990,6 +2017,7 @@ def test_a3n3b4_valid_nes_package_passes_gate_before_archive(
             )
 
     class Process:
+        pid = 99999999
         def poll(self):
             return None
 
@@ -2086,6 +2114,7 @@ def test_a3n3b4_valid_snes_package_passes_gate_before_archive(
         def create(
             self,
             core_options_path=None,
+            shader_enabled=False,
         ):
             return None
 
@@ -2113,6 +2142,7 @@ def test_a3n3b4_valid_snes_package_passes_gate_before_archive(
             )
 
     class Process:
+        pid = 99999999
         def poll(self):
             return None
 
@@ -2214,6 +2244,7 @@ def test_ready_nes_production_package_accepts_absolute_core_path(
         def create(
             self,
             core_options_path=None,
+            shader_enabled=False,
         ):
             return None
 
@@ -2241,6 +2272,7 @@ def test_ready_nes_production_package_accepts_absolute_core_path(
             )
 
     class Process:
+        pid = 99999999
         def poll(self):
             return None
 
@@ -2359,6 +2391,7 @@ def test_ready_snes_production_package_accepts_absolute_core_path(
         def create(
             self,
             core_options_path=None,
+            shader_enabled=False,
         ):
             return None
 
@@ -2386,6 +2419,7 @@ def test_ready_snes_production_package_accepts_absolute_core_path(
             )
 
     class Process:
+        pid = 99999999
         def poll(self):
             return None
 
@@ -2462,10 +2496,12 @@ def test_wayland_primary_runtime_precedes_core_and_append_configs(
         def create(
             self,
             core_options_path=None,
+            shader_enabled=False,
         ):
             return "/runtime/session.cfg"
 
     class Process:
+        pid = 99999999
         def poll(self):
             return None
 
@@ -2520,7 +2556,7 @@ def test_wayland_primary_runtime_precedes_core_and_append_configs(
     )
 
 
-def test_launchprofile_config_preserves_existing_config_semantics_with_primary_runtime(
+def test_launchprofile_config_is_source_for_one_isolated_primary(
     monkeypatch,
 ):
     from models.launch_profile import LaunchProfile
@@ -2529,17 +2565,20 @@ def test_launchprofile_config_preserves_existing_config_semantics_with_primary_r
     )
 
     class PrimaryRuntime:
-        def create(self, *, overlay=None):
+        def create(self, *, source=None, overlay=None):
+            assert source == "/user/extra.cfg"
             return "/runtime/primary.cfg"
 
     class SessionConfig:
         def create(
             self,
             core_options_path=None,
+            shader_enabled=False,
         ):
             return "/runtime/session.cfg"
 
     class Process:
+        pid = 99999999
         def poll(self):
             return None
 
@@ -2589,20 +2628,8 @@ def test_launchprofile_config_preserves_existing_config_semantics_with_primary_r
         "/roms/game.bin",
     ]
 
-    # Preserve the launcher's pre-existing LaunchProfile.config
-    # contract. It remains --config; this repair must not silently
-    # reinterpret it as --appendconfig.
-    assert [
-        "--config",
-        "/user/extra.cfg",
-    ] == command[
-        command.index(
-            "/user/extra.cfg"
-        ) - 1:
-        command.index(
-            "/user/extra.cfg"
-        ) + 1
-    ]
+    assert command.count("--config") == 1
+    assert "/user/extra.cfg" not in command
 
     assert [
         "--appendconfig",
@@ -2882,6 +2909,7 @@ def test_stop_escalates_when_wrapper_exits_before_process_group(
     )
 
     class Process:
+        pid = 99999999
         pid = 12345
 
         def __init__(self):
@@ -2987,6 +3015,7 @@ def test_stop_does_not_escalate_when_complete_group_exits(
     )
 
     class Process:
+        pid = 99999999
         pid = 12345
 
         def __init__(self):
@@ -3058,6 +3087,7 @@ def test_stop_refuses_to_cleanup_if_process_group_survives_sigkill(
     )
 
     class Process:
+        pid = 99999999
         pid = 12345
 
         def __init__(self):
@@ -3143,6 +3173,7 @@ def test_a3n5e_cleanup_owns_all_one_launch_runtime_services(
     launcher.core_options_runtime = ServiceRuntime()
     launcher.session_config = ServiceRuntime()
     launcher.overlay_runtime = ServiceRuntime()
+    launcher.adaptive_bezel_runtime = ServiceRuntime()
     launcher.contain_runtime = ServiceRuntime()
     launcher.shader_runtime = ServiceRuntime()
 
@@ -3170,9 +3201,10 @@ def test_a3n5e_cleanup_owns_all_one_launch_runtime_services(
         encoding="utf-8",
     )
 
-    launcher._active_cheat_config = str(
-        cheat_config
-    )
+    from services.retroarch.cheat_runtime import CheatRuntimeConfig
+    launcher.cheat_runtime = CheatRuntimeConfig(runtime_root=tmp_path)
+    launcher.cheat_runtime._created.append(cheat_root)
+    launcher._active_cheat_config = str(cheat_config)
 
     launcher._cleanup_active_transients()
 
@@ -3185,6 +3217,7 @@ def test_a3n5e_cleanup_owns_all_one_launch_runtime_services(
         launcher.core_options_runtime,
         launcher.session_config,
         launcher.overlay_runtime,
+        launcher.adaptive_bezel_runtime,
         launcher.contain_runtime,
         launcher.shader_runtime,
     ):
@@ -3218,6 +3251,7 @@ def test_a3n5e_cleanup_preserves_archive_cache(
     launcher.core_options_runtime = ServiceRuntime()
     launcher.session_config = ServiceRuntime()
     launcher.overlay_runtime = ServiceRuntime()
+    launcher.adaptive_bezel_runtime = ServiceRuntime()
     launcher.contain_runtime = ServiceRuntime()
     launcher.shader_runtime = ServiceRuntime()
 
@@ -3361,3 +3395,304 @@ def test_a3n5e_all_post_primary_failure_paths_route_through_universal_cleanup():
         contains_cleanup(node)
         for node in handlers
     )
+
+
+def test_a4c_loaded_core_display_aspect_supersedes_launch_profile_hint_before_contain(
+    monkeypatch,
+):
+    """
+    Final presentation geometry must follow the display aspect reported
+    after real content is loaded, not a pre-launch LaunchProfile hint.
+
+    The hint remains useful as fallback metadata, but it must not prevent
+    the content-loaded core from supplying authoritative runtime geometry.
+    """
+    from models.launch_profile import LaunchProfile
+    from services.retroarch.launcher import RetroArchLauncher
+
+    runtime_aspect = 8 / 7
+    probe = A7ContentLoadedDisplayAspectProbe(
+        ratio=runtime_aspect
+    )
+    contain = A7StartupContainRuntime()
+
+    class ArchiveRuntime:
+        def resolve(
+            self,
+            rom,
+            member=None,
+        ):
+            return rom
+
+    class CoreOptions:
+        def create(
+            self,
+            core,
+            platform_id=None,
+        ):
+            return None
+
+    class SessionConfig:
+        def create(
+            self,
+            core_options_path=None,
+            shader_enabled=False,
+        ):
+            return None
+
+    class Process:
+        pid = 99999999
+        pid = 43210
+
+        def poll(self):
+            return None
+
+    monkeypatch.setattr(
+        "services.retroarch.launcher.subprocess.Popen",
+        lambda *args, **kwargs: Process(),
+    )
+
+    launcher = RetroArchLauncher(
+        executable="/custom/retroarch",
+        display_aspect_probe=A7StartupDisplayAspectProbe(),
+        content_display_aspect_probe=probe,
+        contain_runtime=contain,
+        archive_runtime=ArchiveRuntime(),
+        core_options_runtime=CoreOptions(),
+        session_config=SessionConfig(),
+    )
+
+    profile = LaunchProfile(
+        game="Generic Runtime Aspect Authority",
+        rom="/roms/runtime-authority.nes",
+        core="/cores/fceumm_libretro.so",
+        platform_id="platform.nintendo.nes",
+        display_aspect_width=4.0,
+        display_aspect_height=3.0,
+    )
+
+    result = launcher.launch(profile)
+
+    assert result["success"] is True
+
+    assert result["command"][0] == "/custom/retroarch"
+    assert probe.calls[0]["command"] == "/custom/retroarch"
+    assert len(probe.calls) == 1
+
+    assert len(contain.calls) == 1
+
+    resolved = contain.calls[0]["display_aspect"]
+
+    assert resolved.width == runtime_aspect
+    assert resolved.height == 1.0
+    assert resolved.ratio == runtime_aspect
+
+
+def test_production_layers_reach_retroarch_as_one_ordered_argument(tmp_path, monkeypatch):
+    from pathlib import Path
+    from services.retroarch.session_config import RetroArchSessionConfig
+    from services.retroarch.core_options_runtime import CoreOptionsRuntimeConfig
+    from services.retroarch.overlay_runtime import OverlayRuntimeConfig
+    from services.retroarch.shader_runtime import ShaderRuntimeConfig
+    from services.retroarch.contain_runtime import ContainRuntimeConfig
+
+    from services.presentation.production_package import ProductionPresentationPackage
+    from services.retroarch.adaptive_bezel_runtime import AdaptiveBezelRuntime
+    root = Path(__file__).resolve().parents[1] / "retrovault/nes/classic"
+    base = root / "RetroVault_NES_Classic"
+    package = ProductionPresentationPackage(
+        platform_id="platform.nintendo.nes",
+        overlay=str(base.with_suffix(".cfg")),
+        shader=str(root / "RetroVault_NES_Classic_CRT.slangp"),
+        runtime_descriptor=str(base.with_suffix(".runtime.cfg")),
+        production_manifest=str(base.with_suffix(".production.json")),
+    )
+    monkeypatch.setattr(
+        "services.retroarch.launcher.CanonicalProductionPackageResolver.resolve",
+        lambda **kwargs: package,
+    )
+    cheat = tmp_path / "cheats.cfg"
+    cheat.write_text('cheevos_enable = "false"\n')
+    archive = Mock()
+    archive.resolve.return_value = "/roms/game.nes"
+    cheats = Mock()
+    cheats.create.return_value = str(cheat)
+    probe = A7ContentLoadedDisplayAspectProbe(ratio=1.219)
+    process = Mock()
+    process.poll.return_value = None
+    monkeypatch.setattr(
+        "services.retroarch.launcher.subprocess.Popen",
+        lambda *args, **kwargs: process,
+    )
+    launcher = RetroArchLauncher(
+        primary_config_runtime=FakePrimaryConfigRuntime(),
+        archive_runtime=archive,
+        cheat_runtime=cheats,
+        core_options_runtime=CoreOptionsRuntimeConfig(tmp_path),
+        session_config=RetroArchSessionConfig(tmp_path),
+        overlay_runtime=OverlayRuntimeConfig(tmp_path),
+        shader_runtime=ShaderRuntimeConfig(tmp_path),
+        contain_runtime=ContainRuntimeConfig(tmp_path),
+        adaptive_bezel_runtime=AdaptiveBezelRuntime(tmp_path),
+        content_display_aspect_probe=probe,
+    )
+    result = launcher.launch(LaunchProfile(
+        game="Layer authority", rom="/roms/game.nes",
+        core="/cores/fceumm_libretro.so",
+        platform_id="platform.nintendo.nes", cheat_file="/cheats/game.cht",
+    ))
+    assert result["success"], result
+    command = result["command"]
+    assert command.count("--appendconfig") == 1
+    layers = command[command.index("--appendconfig") + 1].split("|")
+    assert len(layers) == 4
+    assert layers[2] == str(cheat)
+    assert probe.calls[0]["append_configs"][0] == layers[0]
+    assert probe.calls[0]["append_configs"][1] != layers[1]
+    assert package.overlay in Path(probe.calls[0]["append_configs"][1]).read_text()
+    fitted = launcher.adaptive_bezel_runtime._created[0]
+    assert str(fitted / "overlay.cfg") in Path(layers[1]).read_text()
+    from PyQt6.QtGui import QImage
+    artwork = QImage(str(fitted / "artwork.png"))
+    assert artwork.pixelColor(493, 100).alpha() == 0
+    assert artwork.pixelColor(492, 100).alpha() == 255
+    assert artwork.pixelColor(1421, 861).alpha() == 0
+    assert artwork.pixelColor(1422, 861).alpha() == 255
+    session, overlay, _, contain = [Path(p).read_text() for p in layers]
+    assert 'core_options_path = "' in session
+    assert 'video_shader_enable = "true"' in session
+    assert 'input_overlay_enable = "true"' in overlay
+    assert 'custom_viewport_x = "493"' in contain
+    assert 'custom_viewport_y = "100"' in contain
+    assert 'custom_viewport_width = "929"' in contain
+    assert 'custom_viewport_height = "762"' in contain
+    assert 'video_viewport_bias_x = "0.000000"' in contain
+    assert 'video_viewport_bias_y = "0.000000"' in contain
+    assert Path(command[command.index("--set-shader") + 1]).is_file()
+
+
+def test_explicit_primary_is_copied_once_and_cleaned_after_exit(tmp_path, monkeypatch):
+    from pathlib import Path
+    from services.retroarch.primary_config_runtime import PrimaryConfigRuntime
+    monkeypatch.delenv("WAYLAND_DISPLAY", raising=False)
+    source = tmp_path / "user.cfg"
+    source.write_text('video_driver = "vulkan"\nauto_overrides_enable = "true"\n')
+    original = source.read_bytes()
+    runtime = PrimaryConfigRuntime(tmp_path / "runtime")
+    launcher = RetroArchLauncher(
+        executable="/configured/retroarch",
+        primary_config_runtime=runtime,
+        session_config=FakeSessionConfig(),
+    )
+    profile = LaunchProfile("Example", "/roms/example.rom", "/cores/example.so", config=str(source))
+    process = Mock()
+    process.poll.return_value = None
+    with patch("services.retroarch.launcher.subprocess.Popen", return_value=process) as popen:
+        result = launcher.launch(profile)
+    assert result["success"]
+    command = popen.call_args.args[0]
+    assert command[0] == "/configured/retroarch"
+    assert command.count("--config") == 1
+    copied = Path(command[command.index("--config") + 1])
+    assert copied != source
+    assert 'auto_overrides_enable = "false"' in copied.read_text()
+    assert 'video_driver = "vulkan"' in copied.read_text()
+    assert source.read_bytes() == original
+    process.poll.return_value = 0
+    launcher.clear_exited_process()
+    assert not copied.exists()
+    assert source.read_bytes() == original
+
+
+def test_explicit_primary_cannot_fall_back_to_unisolated_config():
+    class UnavailablePrimaryRuntime:
+        def create(self, *, source=None, overlay=None):
+            assert source == "/user/retroarch.cfg"
+            return None
+
+    launcher = RetroArchLauncher(
+        primary_config_runtime=UnavailablePrimaryRuntime(),
+        session_config=FakeSessionConfig(),
+    )
+    profile = LaunchProfile(
+        "Example", "/roms/example.rom", "/cores/example.so",
+        config="/user/retroarch.cfg",
+    )
+    with patch("services.retroarch.launcher.subprocess.Popen") as popen:
+        result = launcher.launch(profile)
+    assert result == {
+        "success": False,
+        "error": "Explicit primary configuration was not isolated.",
+    }
+    popen.assert_not_called()
+    assert launcher.active_process is None
+
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _valid_files_for_runtime_composition_tests(monkeypatch):
+    """These tests isolate composition/process behavior; readiness has real-file tests."""
+    from services.retroarch.validator import LaunchValidator
+    monkeypatch.setattr(LaunchValidator, "check_retroarch", lambda self: True)
+    monkeypatch.setattr(LaunchValidator, "check_core", lambda self: True)
+    monkeypatch.setattr(LaunchValidator, "check_rom", lambda self, rom: True)
+
+
+def test_launcher_uses_one_fresh_config_and_explicit_primary_precedence():
+    primary = Mock()
+    primary.create.return_value = '/runtime/primary.cfg'
+    provider = Mock(return_value={'retroarch': {'primary_config': '/configured.cfg'}})
+    launcher = RetroArchLauncher(primary_config_runtime=primary,
+                                 session_config=FakeSessionConfig(),
+                                 presentation_config_provider=provider)
+    profile = LaunchProfile(game='fixture', rom='/roms/test.nes', core='/cores/fceumm_libretro.so')
+    with patch('services.retroarch.launcher.subprocess.Popen') as popen:
+        popen.return_value.poll.return_value = None
+        assert launcher.launch(profile)['success']
+    provider.assert_called_once()
+    assert primary.create.call_args.kwargs['source'] == '/configured.cfg'
+    launcher._active_process = None
+    launcher._active_group = None
+    profile.config = '/explicit.cfg'
+    with patch('services.retroarch.launcher.subprocess.Popen') as popen:
+        popen.return_value.poll.return_value = None
+        assert launcher.launch(profile)['success']
+    assert primary.create.call_args.kwargs['source'] == '/explicit.cfg'
+    assert provider.call_count == 2
+    launcher._active_process = None
+    launcher._active_group = None
+
+
+def test_direct_launch_rejects_tuning_without_package_before_extraction():
+    archive=Mock()
+    launcher=RetroArchLauncher(archive_runtime=archive)
+    profile=LaunchProfile(game='Game',rom='/game.nes',core='/core.so',
+                          visual_tuning=(('brightness',1.2),))
+    result=launcher.launch(profile)
+    assert not result['success']
+    assert 'production package' in result['error']
+    archive.resolve.assert_not_called()
+
+
+def test_tuning_matches_probe_and_final_shader_without_geometry_override():
+    runtime=FakeShaderRuntime(parameters={'HSM_NON_INTEGER_SCALE':'100.0'})
+    probe=A7ContentLoadedDisplayAspectProbe()
+    launcher=RetroArchLauncher(shader_runtime=runtime,
+        display_aspect_probe=A7StartupDisplayAspectProbe(), content_display_aspect_probe=probe,
+        contain_runtime=A7StartupContainRuntime(),primary_config_runtime=FakePrimaryConfigRuntime(),
+        session_config=FakeSessionConfig())
+    profile=LaunchProfile(game='Game',rom='/game.nes',core='/cores/fceumm_libretro.so',
+        platform_id='platform.nintendo.nes',visual_tuning=(('brightness',1.25),))
+    with patch('services.retroarch.launcher.subprocess.Popen') as popen:
+        popen.return_value.poll.return_value=None
+        result=launcher.launch(profile)
+    assert result['success'],result
+    assert len(runtime.resolve_calls)==2
+    assert runtime.resolve_calls[0]==runtime.resolve_calls[1]
+    assert runtime.resolve_calls[0][1]=={'HSM_NON_INTEGER_SCALE':'100.0','post_br':'1.25'}
+    assert probe.calls[0]['shader']==runtime.runtime_shader
+    assert result['command'][result['command'].index('--set-shader')+1]==runtime.runtime_shader
+    launcher._active_process=None
+    launcher._active_group=None

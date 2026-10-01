@@ -1,3 +1,4 @@
+from services.library.presentation_studio import LibraryPresentationStudioService
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
@@ -17,7 +18,6 @@ from PyQt6.QtWidgets import (
     QWidget,
 )
 
-from services.library.state import game_identity
 
 from services.presentation.service import (
     NativeVisualInstallStatus,
@@ -48,6 +48,7 @@ class NativeVisualsPage(QWidget):
         native_visual_service=None,
         presentation_store=None,
         current_game_provider=None,
+        presentation_resolver_provider=None,
     ):
         super().__init__()
 
@@ -63,6 +64,8 @@ class NativeVisualsPage(QWidget):
         self.current_game_provider = (
             current_game_provider
         )
+
+        self.presentation_resolver_provider = presentation_resolver_provider
 
         self.assets = []
         self.statuses = []
@@ -1253,6 +1256,11 @@ class NativeVisualsPage(QWidget):
 
             return
 
+    def _assignment_service(self):
+        return LibraryPresentationStudioService(
+            self.presentation_store,
+            getattr(self, 'presentation_resolver_provider', None))
+
     def _current_game(
         self,
     ):
@@ -1290,205 +1298,32 @@ class NativeVisualsPage(QWidget):
 
         return value or "—"
 
-    def _refresh_assignment_state(
-        self,
-    ):
-        if self.presentation_store is None:
-            self.default_assignment_value.setText(
-                "Default: —"
-            )
-            self.system_assignment_value.setText(
-                "System: —"
-            )
-            self.game_assignment_value.setText(
-                "Game: —"
-            )
-            self.effective_assignment_value.setText(
-                "Effective: —"
-            )
+    def _refresh_assignment_state(self):
+        labels = (('default', self.default_assignment_value),
+                  ('system', self.system_assignment_value),
+                  ('game', self.game_assignment_value))
+        if self.presentation_store is None or not callable(getattr(self.presentation_store, 'load', None)):
+            for scope, label in labels:
+                label.setText(scope.title() + ': —')
+            self.effective_assignment_value.setText('Effective: —')
             return
-
-        load = getattr(
-            self.presentation_store,
-            "load",
-            None,
-        )
-
-        if not callable(load):
-            self.default_assignment_value.setText(
-                "Default: —"
-            )
-            self.system_assignment_value.setText(
-                "System: —"
-            )
-            self.game_assignment_value.setText(
-                "Game: —"
-            )
-            self.effective_assignment_value.setText(
-                "Effective: —"
-            )
-            return
-
         try:
-            data = load()
-        except (
-            OSError,
-            TypeError,
-            ValueError,
-            RuntimeError,
-        ) as exc:
-            self.default_assignment_value.setText(
-                "Default: unavailable"
-            )
-            self.system_assignment_value.setText(
-                "System: unavailable"
-            )
-            self.game_assignment_value.setText(
-                "Game: unavailable"
-            )
-            self.effective_assignment_value.setText(
-                "Effective: unavailable"
-            )
-            self.status_label.setText(
-                "Unable to read RetroVault visual "
-                f"assignments: {exc}"
-            )
+            state = self._assignment_service().assignment_display_state(self._current_game())
+        except (OSError, TypeError, ValueError, RuntimeError) as exc:
+            for scope, label in labels:
+                label.setText(scope.title() + ': unavailable')
+            self.effective_assignment_value.setText('Effective: unavailable')
+            self.status_label.setText(f'Unable to read RetroVault visual assignments: {exc}')
             return
-
-        default_overlay = (
-            data["default"].overlay
-        )
-
-        system_overlay = ""
-        game_overlay = ""
-        effective_overlay = ""
-
-        game = self._current_game()
-
-        if game is not None:
-            platform_id = str(
-                getattr(
-                    game,
-                    "rvdb_platform_id",
-                    "",
-                )
-                or ""
-            )
-
-            if platform_id:
-                system_profile = data[
-                    "systems"
-                ].get(
-                    platform_id
-                )
-
-                if system_profile is not None:
-                    system_overlay = (
-                        system_profile.overlay
-                    )
-
-            try:
-                identity = game_identity(
-                    game
-                )
-            except ValueError:
-                identity = ""
-
-            if identity:
-                game_profile = data[
-                    "games"
-                ].get(
-                    identity
-                )
-
-                if game_profile is not None:
-                    game_overlay = (
-                        game_profile.overlay
-                    )
-
-            resolver_factory = getattr(
-                self.presentation_store,
-                "resolver",
-                None,
-            )
-
-            if not callable(
-                resolver_factory
-            ):
-                effective_overlay = (
-                    game_overlay
-                    or system_overlay
-                    or default_overlay
-                )
-
-                self.effective_assignment_value.setText(
-                    "Effective: "
-                    + self._assignment_display(
-                        effective_overlay
-                    )
-                )
-
-                resolver_factory = None
-
-            try:
-                if resolver_factory is not None:
-                    effective_overlay = (
-                        resolver_factory()
-                        .resolve(game)
-                        .overlay
-                    )
-            except (
-                OSError,
-                TypeError,
-                ValueError,
-                RuntimeError,
-            ) as exc:
-                self.effective_assignment_value.setText(
-                    "Effective: unavailable"
-                )
-                self.status_label.setText(
-                    "Unable to resolve RetroVault "
-                    f"visual assignment: {exc}"
-                )
-            else:
-                self.effective_assignment_value.setText(
-                    "Effective: "
-                    + self._assignment_display(
-                        effective_overlay
-                    )
-                )
+        for scope, label in labels:
+            label.setText(scope.title() + ': ' + self._assignment_display(state[scope].overlay))
+        if state['error']:
+            self.effective_assignment_value.setText('Effective: unavailable')
+            self.status_label.setText('Unable to resolve RetroVault visual assignment: ' + state['error'])
         else:
-            effective_overlay = (
-                default_overlay
-            )
-
             self.effective_assignment_value.setText(
-                "Effective: "
-                + self._assignment_display(
-                    effective_overlay
-                )
-            )
-
-        self.default_assignment_value.setText(
-            "Default: "
-            + self._assignment_display(
-                default_overlay
-            )
-        )
-
-        self.system_assignment_value.setText(
-            "System: "
-            + self._assignment_display(
-                system_overlay
-            )
-        )
-
-        self.game_assignment_value.setText(
-            "Game: "
-            + self._assignment_display(
-                game_overlay
-            )
-        )
+                ('Launch: ' if state['launch'] else 'Saved: ')
+                + self._assignment_display(state['effective'].overlay))
 
     def assign_default_visual(
         self,
@@ -1501,9 +1336,7 @@ class NativeVisualsPage(QWidget):
             return
 
         try:
-            self.presentation_store.assign_default_overlay(
-                selected.asset.reference
-            )
+            self._assignment_service().assign('overlay', 'default', selected.asset.reference)
         except (
             OSError,
             TypeError,
@@ -1519,7 +1352,7 @@ class NativeVisualsPage(QWidget):
         self._refresh_assignment_state()
 
         self.status_label.setText(
-            "Assigned "
+            "Saved preference: "
             f"{selected.asset.display_name} "
             "as RetroVault default."
         )
@@ -1543,27 +1376,14 @@ class NativeVisualsPage(QWidget):
             )
             return
 
-        platform_id = str(
-            getattr(
-                game,
-                "rvdb_platform_id",
-                "",
-            )
-            or ""
-        )
-
-        if not platform_id:
-            self.status_label.setText(
-                "The selected game does not have "
-                "a canonical RVDB system identity."
-            )
+        try:
+            platform_id = self._assignment_service().assignment_target('system', game)
+        except ValueError as exc:
+            self.status_label.setText(str(exc))
             return
 
         try:
-            self.presentation_store.assign_system_overlay(
-                platform_id,
-                selected.asset.reference,
-            )
+            self._assignment_service().assign('overlay', 'system', selected.asset.reference, game)
         except (
             OSError,
             TypeError,
@@ -1579,7 +1399,7 @@ class NativeVisualsPage(QWidget):
         self._refresh_assignment_state()
 
         self.status_label.setText(
-            "Assigned "
+            "Saved preference: "
             f"{selected.asset.display_name} "
             f"to system {platform_id}."
         )
@@ -1604,7 +1424,7 @@ class NativeVisualsPage(QWidget):
             return
 
         try:
-            identity = game_identity(
+            identity = self._assignment_service().assignment_target('game',
                 game
             )
         except ValueError:
@@ -1615,10 +1435,7 @@ class NativeVisualsPage(QWidget):
             return
 
         try:
-            self.presentation_store.assign_game_overlay(
-                identity,
-                selected.asset.reference,
-            )
+            self._assignment_service().assign('overlay', 'game', selected.asset.reference, game)
         except (
             OSError,
             TypeError,
@@ -1634,7 +1451,7 @@ class NativeVisualsPage(QWidget):
         self._refresh_assignment_state()
 
         self.status_label.setText(
-            "Assigned "
+            "Saved preference: "
             f"{selected.asset.display_name} "
             f'to game "{getattr(game, "name", identity)}".'
         )
@@ -1646,7 +1463,7 @@ class NativeVisualsPage(QWidget):
             return
 
         try:
-            self.presentation_store.clear_default_overlay()
+            self._assignment_service().clear_assignment('overlay', 'default')
         except (
             OSError,
             TypeError,
@@ -1680,26 +1497,14 @@ class NativeVisualsPage(QWidget):
             )
             return
 
-        platform_id = str(
-            getattr(
-                game,
-                "rvdb_platform_id",
-                "",
-            )
-            or ""
-        )
-
-        if not platform_id:
-            self.status_label.setText(
-                "The selected game does not have "
-                "a canonical RVDB system identity."
-            )
+        try:
+            platform_id = self._assignment_service().assignment_target('system', game)
+        except ValueError as exc:
+            self.status_label.setText(str(exc))
             return
 
         try:
-            self.presentation_store.clear_system_overlay(
-                platform_id
-            )
+            self._assignment_service().clear_assignment('overlay', 'system', game)
         except (
             OSError,
             TypeError,
@@ -1735,7 +1540,7 @@ class NativeVisualsPage(QWidget):
             return
 
         try:
-            identity = game_identity(
+            identity = self._assignment_service().assignment_target('game',
                 game
             )
         except ValueError:
@@ -1746,9 +1551,7 @@ class NativeVisualsPage(QWidget):
             return
 
         try:
-            self.presentation_store.clear_game_overlay(
-                identity
-            )
+            self._assignment_service().clear_assignment('overlay', 'game', game)
         except (
             OSError,
             TypeError,

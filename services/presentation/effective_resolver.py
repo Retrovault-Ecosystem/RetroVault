@@ -1,3 +1,4 @@
+from .automation import PresentationAutomationPolicy
 from .assets import PresentationAssetReferenceResolver
 from .composer import PresentationRecommendationComposer
 from .models import PresentationProfile
@@ -68,39 +69,26 @@ class EffectivePresentationResolver:
         self,
         game,
     ) -> PresentationProfile:
-        manual = self.manual_resolver.resolve(
-            game
-        )
-
-        platform_id = str(
-            getattr(
-                game,
-                "rvdb_platform_id",
-                "",
-            )
-            or ""
-        )
-
+        manual = self.manual_resolver.resolve(game)
+        platform_id = str(getattr(game, "rvdb_platform_id", "") or "")
         if not platform_id:
-            return self.asset_resolver.resolve_profile(
-                manual
-            )
-
-        game_id = str(
-            getattr(
-                game,
-                "rvdb_game_id",
-                "",
-            )
-            or ""
-        )
-
+            return self.asset_resolver.resolve_profile(manual)
         effective = self.recommendation_composer.compose(
-            platform_id=platform_id,
-            game_id=game_id,
-            manual=manual,
-        )
+            platform_id=platform_id, game_id=str(getattr(game, "rvdb_game_id", "") or ""), manual=manual)
+        return self.asset_resolver.resolve_profile(effective)
 
-        return self.asset_resolver.resolve_profile(
-            effective
-        )
+    def references_with_sources(self, game):
+        manual, sources = self.manual_resolver.resolve_with_sources(game)
+        platform_id = str(getattr(game, "rvdb_platform_id", "") or "")
+        game_id = str(getattr(game, "rvdb_game_id", "") or "")
+        if not platform_id:
+            return manual, sources
+        automatic_resolver = self.recommendation_composer.recommendation_resolver
+        automatic = automatic_resolver.references(platform_id, game_id)
+        game_recommendation = (automatic_resolver.catalog.recommend_game(game_id)
+                               if game_id else PresentationProfile())
+        for field in sources:
+            if not getattr(manual, field) and getattr(automatic, field):
+                sources[field] = ("game recommendation" if getattr(game_recommendation, field)
+                                  else "platform recommendation")
+        return PresentationAutomationPolicy.compose(manual, automatic), sources

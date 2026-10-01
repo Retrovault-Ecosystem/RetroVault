@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from config.paths import runtime_directory
+
 from pathlib import Path
 import re
 import shutil
@@ -42,12 +44,10 @@ class CheatRuntimeConfig:
     ):
         if runtime_root is None:
             runtime_root = (
-                Path.home()
-                / ".cache"
-                / "retrovault"
-                / "cheat-runtime"
+                runtime_directory("cheat-runtime")
             )
 
+        self._created = []
         self.runtime_root = Path(
             runtime_root
         ).expanduser()
@@ -231,6 +231,7 @@ class CheatRuntimeConfig:
             )
         )
 
+        self._created.append(launch_root)
         database_root = (
             launch_root
             / "database"
@@ -285,3 +286,14 @@ class CheatRuntimeConfig:
         return str(
             config_path
         )
+
+    def cleanup(self):
+        remaining = []
+        for root in self._created:
+            try:
+                shutil.rmtree(root)
+            except FileNotFoundError:
+                pass
+            except OSError:
+                remaining.append(root)
+        self._created = remaining

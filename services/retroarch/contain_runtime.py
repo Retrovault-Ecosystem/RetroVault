@@ -1,3 +1,4 @@
+from config.paths import runtime_directory
 import atexit
 import os
 import tempfile
@@ -11,25 +12,7 @@ from .display_aspect import CoreDisplayAspect
 
 
 def _default_runtime_directory() -> Path:
-    cache_home = os.environ.get(
-        "XDG_CACHE_HOME"
-    )
-
-    if cache_home:
-        root = Path(
-            cache_home
-        ).expanduser()
-    else:
-        root = (
-            Path.home()
-            / ".cache"
-        )
-
-    return (
-        root
-        / "retrovault"
-        / "contain-runtime"
-    )
+    return runtime_directory("contain-runtime")
 
 
 class ContainRuntimeConfig:
@@ -49,8 +32,8 @@ class ContainRuntimeConfig:
     The fixed presentation envelope remains artwork/package authority.
     The supplied display aspect remains emulator/core authority.
 
-    RetroVault only performs proportional CONTAIN between those two
-    authorities.
+    RetroVault performs proportional CONTAIN between those two authorities.
+    RetroArch remains the sole owner of final viewport geometry.
     """
 
     def __init__(
@@ -171,12 +154,15 @@ class ContainRuntimeConfig:
             exist_ok=True,
         )
 
+        # Geometry already contains absolute top-left canvas coordinates.
+        # RetroArch adds bias * unused canvas space to custom X/Y; a
+        # centering bias here would translate the viewport a second time.
         payload = (
             'aspect_ratio_index = "23"\n'
             'video_force_aspect = "true"\n'
             'video_scale_integer = "false"\n'
-            'video_viewport_bias_x = "0.500000"\n'
-            'video_viewport_bias_y = "0.500000"\n'
+            'video_viewport_bias_x = "0.000000"\n'
+            'video_viewport_bias_y = "0.000000"\n'
             f'custom_viewport_x = "{geometry.x}"\n'
             f'custom_viewport_y = "{geometry.y}"\n'
             f'custom_viewport_width = "{geometry.width}"\n'
@@ -192,6 +178,7 @@ class ContainRuntimeConfig:
             dir=self.directory,
             delete=False,
         ) as handle:
+            self._created.append(Path(handle.name))
             handle.write(
                 payload
             )
@@ -204,9 +191,6 @@ class ContainRuntimeConfig:
                 handle.name
             )
 
-        self._created.append(
-            runtime_file
-        )
 
         return str(runtime_file)
 

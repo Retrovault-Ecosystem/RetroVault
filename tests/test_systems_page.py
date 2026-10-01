@@ -1226,3 +1226,14 @@ def test_systems_page_does_not_expose_development_bundle_language():
         "local RVDB data bundle."
         in source
     )
+
+
+def test_recent_counts_local_ids_from_hidden_editions_once(app, service):
+    from types import SimpleNamespace
+    game = SimpleNamespace(rvdb_platform_id="platform.test.alpha", favorite=False,
+                           rom="/roms/preferred.rom", local_file_id="local-file:preferred",
+                           variants=[{"rom": "/roms/hidden.rom", "local_file_id": "local-file:hidden"}])
+    page = SystemsPage(service, games_provider=lambda: [game],
+                       recent_provider=lambda: ["local-file:hidden", "local-file:preferred"])
+    assert page.library_recent_value.text() == "1"
+    assert page.view_recent_button.isEnabled()

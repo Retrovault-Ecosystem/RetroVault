@@ -444,3 +444,42 @@ def test_contain_aspect_rejects_invalid_values():
                 width,
                 height,
             )
+
+
+@pytest.mark.parametrize("profile_class,envelope,aspects", [
+    (MasterPresentationClass.CLASSIC_4_3, (355, 100, 1206, 762), [(4, 3), (8, 7)]),
+    (MasterPresentationClass.WIDESCREEN_16_9, (0, 0, 1920, 1080), [(16, 9), (4, 3)]),
+    (MasterPresentationClass.HANDHELD_NATIVE, (150, 0, 1620, 1080), [(3, 2), (10, 9)]),
+    (MasterPresentationClass.ARCADE_VERTICAL, (656, 0, 608, 1080), [(3, 4), (9, 16)]),
+])
+def test_uniform_fit_preserves_proportions_and_edges_across_aspect_changes(
+    profile_class, envelope, aspects,
+):
+    # These are explicit test fixtures, not newly qualified production profiles.
+    profile = MasterPresentationProfile(
+        profile_class=profile_class, canvas_width=1920, canvas_height=1080,
+        envelope_x=envelope[0], envelope_y=envelope[1],
+        envelope_width=envelope[2], envelope_height=envelope[3],
+        fit_policy=PresentationFitPolicy.CONTAIN,
+    )
+    for width, height in aspects:
+        geometry = profile.contain_aspect(width, height)
+        assert geometry.x >= envelope[0]
+        assert geometry.y >= envelope[1]
+        assert geometry.x + geometry.width <= envelope[0] + envelope[2]
+        assert geometry.y + geometry.height <= envelope[1] + envelope[3]
+        assert abs(geometry.width - geometry.height * width / height) <= 1
+        assert abs(2 * geometry.x + geometry.width - 2 * envelope[0] - envelope[2]) <= 1
+        assert abs(2 * geometry.y + geometry.height - 2 * envelope[1] - envelope[3]) <= 1
+        assert geometry.width == envelope[2] or geometry.height == envelope[3]
+    assert profile.envelope == envelope
+
+
+def test_shared_widescreen_contain_profile_still_preserves_each_content_aspect():
+    profile = MasterPresentationProfileRegistry.require(
+        MasterPresentationClass.WIDESCREEN_16_9,
+    )
+    wide = profile.contain_aspect(16, 9)
+    classic = profile.contain_aspect(4, 3)
+    assert (wide.x, wide.y, wide.width, wide.height) == (0, 0, 1920, 1080)
+    assert (classic.x, classic.y, classic.width, classic.height) == (240, 0, 1440, 1080)

@@ -343,3 +343,60 @@ def test_real_rvdb_sfc_resolves_platform_but_not_unmatched_game(
     )
 
     assert game.rvdb_game_id == ""
+
+
+def test_genesis_scan_selects_production_bezel_from_real_bundle(tmp_path):
+    from pathlib import Path
+    from services.presentation.launch_resolver import LaunchPresentationResolver
+    from services.presentation.models import PresentationProfile
+
+    # Exercise the same metadata boundary as the Library. Supplying a platform
+    # ID directly to the launcher previously hid the missing Genesis metadata.
+    for extension in ('md', 'gen', 'MD'):
+        write_rom(tmp_path, f'Sonic fixture.{extension}')
+    games = RomScanner(rvdb_resolver=real_rvdb_resolver()).scan(Source(str(tmp_path)))
+    assert len(games) == 3
+    root = Path(__file__).resolve().parents[1]
+    resolver = LaunchPresentationResolver(config={'paths': {
+        kind: {'directory': str(root)} for kind in ('overlays', 'shaders')}})
+    for game in games:
+        assert game.rvdb_platform_id == 'platform.sega.genesis'
+        assert game.core == 'genesis_plus_gx_libretro.so'
+        decision = resolver.select(platform_id=game.rvdb_platform_id,
+                                   core_identity='genesis_plus_gx',
+                                   requested=PresentationProfile())
+        assert decision.authority == 'production package'
+        assert decision.selected.overlay.endswith('genesis/classic/RetroVault_Genesis_Classic.cfg')
+        assert decision.package.fixed_glass().width == 1296
+
+
+def test_expansion_formats_use_unique_rvdb_platform_and_leave_bin_ambiguous(tmp_path):
+    import json
+    from services.library.archive_scan_cache import ArchiveScanCache
+    formats = {
+        'platform.nintendo.nes': ['nes'],
+        'platform.nintendo.snes': ['sfc', 'smc', 'bin'],
+        'platform.sega.genesis': ['md', 'gen', 'bin'],
+    }
+    bundle = tmp_path / 'bundle.json'
+    bundle.write_text(json.dumps({'nodes': {
+        identity: {'id': identity, 'type': 'platform', 'name': identity, 'extensions': extensions}
+        for identity, extensions in formats.items()}, 'edges': {}}))
+    source = tmp_path / 'roms'
+    source.mkdir()
+    for extension in ('nes', 'sfc', 'smc', 'md', 'gen', 'bin'):
+        (source / ('Same Title.' + extension)).write_bytes(b'fixture')
+    scanner = RomScanner(rvdb_resolver=RVDBLibraryResolver.from_bundle(bundle),
+                         archive_scan_cache=ArchiveScanCache(tmp_path / 'scan-cache.json'))
+    games = scanner.scan(Source(path=str(source)))
+    by_extension = {game.rom.rsplit('.', 1)[1]: game for game in games}
+    assert len(games) == 6
+    for extension in ('sfc', 'smc'):
+        assert by_extension[extension].rvdb_platform_id == 'platform.nintendo.snes'
+        assert by_extension[extension].core == 'snes9x_libretro.so'
+    for extension in ('md', 'gen'):
+        assert by_extension[extension].rvdb_platform_id == 'platform.sega.genesis'
+        assert by_extension[extension].core == 'genesis_plus_gx_libretro.so'
+    assert by_extension['nes'].rvdb_platform_id == 'platform.nintendo.nes'
+    assert by_extension['bin'].rvdb_platform_id == ''
+    assert by_extension['bin'].core == ''

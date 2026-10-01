@@ -1,5 +1,4 @@
-import os
-import subprocess
+from services.settings.service import SettingsService
 
 from pathlib import Path
 
@@ -13,6 +12,7 @@ from PyQt6.QtGui import (
 )
 from PyQt6.QtWidgets import (
     QFileDialog,
+    QComboBox,
     QFormLayout,
     QFrame,
     QGroupBox,
@@ -33,9 +33,6 @@ from config import (
     ConfigWriter,
 )
 
-from services.library.import_sources import (
-    ImportSourceStore,
-)
 
 
 class ReadyCheckButton(QPushButton):
@@ -254,16 +251,8 @@ class SettingsPage(QWidget):
             self.config_loader.load()
         )
 
-        self.library_source_store = (
-            ImportSourceStore(
-                config_loader=(
-                    self.config_loader
-                ),
-                config_writer=(
-                    self.config_writer
-                ),
-            )
-        )
+        self.settings_service = SettingsService(self.config_loader, self.config_writer)
+        self.library_source_store = self.settings_service.sources
 
         self._build_ui()
         self._populate()
@@ -435,6 +424,15 @@ class SettingsPage(QWidget):
                 self.retroarch_status,
             )
         )
+
+        self.primary_config_edit = QLineEdit()
+        self.primary_config_edit.setPlaceholderText("Automatic discovery (Flatpak, XDG, native)")
+        self._configure_path_editor(self.primary_config_edit)
+        runtime_layout.addWidget(QLabel("RetroArch primary configuration (optional)"))
+        runtime_layout.addWidget(self.primary_config_edit)
+        self.primary_config_status = QLabel()
+        self.primary_config_status.setWordWrap(True)
+        runtime_layout.addWidget(self.primary_config_status)
 
         self.core_directory_status = ReadyCheckButton(
             self.STATUS_CHECK_TEXT
@@ -972,6 +970,33 @@ class SettingsPage(QWidget):
             config_group
         )
 
+        standalone_group = QGroupBox('SNES emulator backend')
+        standalone_layout = QFormLayout(standalone_group)
+        self.snes_backend = QComboBox()
+        self.snes_backend.addItem('RetroArch (default)', 'retroarch')
+        self.snes_backend.addItem('Snes9x GTK standalone — Linux', 'snes9x')
+        self.snes9x_executable = QLineEdit()
+        self.snes9x_executable.setPlaceholderText('Absolute path to snes9x-gtk, or command on PATH')
+        browse_snes9x = QPushButton('Browse…')
+        browse_snes9x.clicked.connect(self._browse_snes9x)
+        native_path = QHBoxLayout()
+        native_path.addWidget(self.snes9x_executable)
+        native_path.addWidget(browse_snes9x)
+        standalone_layout.addRow('SNES backend', self.snes_backend)
+        standalone_layout.addRow('Snes9x executable', native_path)
+        from services.emulators.models import STANDALONE_NOTICE
+        native_note = QLabel(STANDALONE_NOTICE + ' Loose .sfc/.smc files only. '
+                             'Each physical edition has separate native saves; RetroArch saves are not imported.')
+        native_note.setWordWrap(True)
+        standalone_layout.addRow(native_note)
+        save_native = QPushButton('Save SNES Backend')
+        save_native.clicked.connect(self.save_standalone_settings)
+        standalone_layout.addRow(save_native)
+        self.standalone_status = QLabel()
+        self.standalone_status.setWordWrap(True)
+        standalone_layout.addRow(self.standalone_status)
+        layout.addWidget(standalone_group)
+
         layout.addStretch(
             1
         )
@@ -983,6 +1008,21 @@ class SettingsPage(QWidget):
         shell_layout.addWidget(
             self.settings_scroll
         )
+
+    def _browse_snes9x(self):
+        path, _ = QFileDialog.getOpenFileName(self, 'Select Snes9x GTK executable')
+        if path:
+            self.snes9x_executable.setText(path)
+
+    def save_standalone_settings(self):
+        try:
+            self.config = self.settings_service.save_standalone(
+                self.snes_backend.currentData(), self.snes9x_executable.text())
+        except (OSError, ValueError) as exc:
+            self.standalone_status.setText(f'Unable to save: {exc}')
+            return
+        self.standalone_status.setText('SNES backend saved. Applies on the next launch. '
+                                      'Executable availability does not establish runtime qualification.')
 
     @staticmethod
     def _path_editor_row(
@@ -1226,51 +1266,8 @@ class SettingsPage(QWidget):
             )
 
     @classmethod
-    def _is_retroarch_executable(
-        cls,
-        value,
-    ):
-        path = cls._expanded_path(
-            value
-        )
-
-        if (
-            path is None
-            or not path.is_file()
-            or not os.access(
-                path,
-                os.X_OK,
-            )
-        ):
-            return False
-
-        try:
-            result = subprocess.run(
-                [
-                    str(path),
-                    "--version",
-                ],
-                capture_output=True,
-                text=True,
-                timeout=3,
-                check=False,
-            )
-        except (
-            OSError,
-            subprocess.SubprocessError,
-        ):
-            return False
-
-        output = (
-            result.stdout
-            + "\n"
-            + result.stderr
-        ).lower()
-
-        return (
-            "retroarch" in output
-            and "libretro" in output
-        )
+    def _is_retroarch_executable(cls, value):
+        return SettingsService.is_retroarch_executable(value)
 
     def _validate_retroarch_path(self):
         value = (
@@ -1295,41 +1292,8 @@ class SettingsPage(QWidget):
         return ready
 
     @classmethod
-    def _contains_libretro_core(
-        cls,
-        value,
-    ):
-        path = cls._expanded_path(
-            value
-        )
-
-        if (
-            path is None
-            or not path.is_dir()
-            or not os.access(
-                path,
-                os.R_OK,
-            )
-        ):
-            return False
-
-        patterns = (
-            "*_libretro.so",
-            "*_libretro.dylib",
-            "*_libretro.dll",
-        )
-
-        try:
-            for pattern in patterns:
-                if next(
-                    path.rglob(pattern),
-                    None,
-                ) is not None:
-                    return True
-        except OSError:
-            return False
-
-        return False
+    def _contains_libretro_core(cls, value):
+        return SettingsService.contains_core(value)
 
     def _validate_directory_control(
         self,
@@ -1343,18 +1307,7 @@ class SettingsPage(QWidget):
             .strip()
         )
 
-        path = self._expanded_path(
-            value
-        )
-
-        ready = bool(
-            path is not None
-            and path.is_dir()
-            and os.access(
-                path,
-                os.R_OK,
-            )
-        )
+        ready = SettingsService.readable_directory(value)
 
         self._set_path_validation_result(
             button,
@@ -1765,6 +1718,9 @@ class SettingsPage(QWidget):
         self,
         selected_source_id=None,
     ):
+        native = self.config.get('emulation', {})
+        self.snes_backend.setCurrentIndex(max(0, self.snes_backend.findData(native.get('snes_backend', 'retroarch'))))
+        self.snes9x_executable.setText(native.get('snes9x_executable', ''))
         retroarch = (
             self.config
             .get(
@@ -1789,6 +1745,15 @@ class SettingsPage(QWidget):
                 "",
             )
         )
+
+        primary = retroarch.get("primary_config", "")
+        self.primary_config_edit.setText(primary)
+        from services.retroarch.primary_config_runtime import PrimaryConfigRuntime
+        try:
+            selected = PrimaryConfigRuntime().discover_source(primary or None)
+            self.primary_config_status.setText("Selected: " + (str(selected) if selected else "No configuration found"))
+        except (OSError, ValueError) as exc:
+            self.primary_config_status.setText(str(exc))
 
         self.retroarch_edit.setText(
             executable
@@ -2063,6 +2028,8 @@ class SettingsPage(QWidget):
                 )
             )
 
+        self.primary_config_edit.setText(retroarch.get("primary_config", ""))
+
         self.retroarch_edit.setText(
             str(
                 executable
@@ -2304,208 +2271,22 @@ class SettingsPage(QWidget):
             self._validate_overlay_directory()
 
     def save_runtime_settings(self):
-        executable = (
-            self.retroarch_edit
-            .text()
-            .strip()
-        )
-
-        core_directory = (
-            self.core_directory_edit
-            .text()
-            .strip()
-        )
-
-        library_path = (
-            self.library_path_edit
-            .text()
-            .strip()
-        )
-
-        artwork_directory = (
-            self.artwork_directory_edit
-            .text()
-            .strip()
-        )
-
-        overlay_directory = (
-            self.overlay_directory_edit
-            .text()
-            .strip()
-        )
-
-        if not self._validate_retroarch_path():
-            self.save_status.setText(
-                "RetroArch executable is invalid"
-            )
-            return
-
-        if not self._validate_core_directory():
-            self.save_status.setText(
-                "RetroArch core directory is invalid"
-            )
-            return
-
-        if not self._validate_library_directory():
-            self.save_status.setText(
-                "Library path is not a readable directory"
-            )
-            return
-
-        self._validate_artwork_directory()
-
-        if not self._validate_overlay_directory():
-            self.save_status.setText(
-                "Overlay path is not a readable directory"
-            )
-            return
-
-        library_directory = (
-            Path(
-                library_path
-            )
-            .expanduser()
-        )
-
-        if not (
-            library_path
-            and library_directory.is_dir()
-            and library_directory.exists()
-        ):
-            self.save_status.setText(
-                "Library path is not a readable directory"
-            )
-            return
-
-        sources = (
-            self.config
-            .get(
-                "library",
-                {},
-            )
-            .get(
-                "sources",
-                [],
-            )
-        )
-
-        updated_sources = [
-            dict(source)
-            for source in sources
-        ]
-
-        editable_index = next(
-            (
-                index
-                for index, source in enumerate(
-                    updated_sources
-                )
-                if source.get(
-                    "enabled",
-                    False,
-                )
-            ),
-            (
-                0
-                if updated_sources
-                else None
-            ),
-        )
-
-        if editable_index is None:
-            self.save_status.setText(
-                "At least one library source is required"
-            )
-            return
-
-        updated_sources[
-            editable_index
-        ][
-            "path"
-        ] = library_path
-
-        overrides = {
-            "retroarch": {
-                "executable": executable,
-                "cores": {
-                    "directory": core_directory,
-                },
-            },
-            "library": {
-                "sources": updated_sources,
-            },
-            "paths": {
-                "artwork": {
-                    "directory": artwork_directory,
-                },
-                "overlays": {
-                    "directory": overlay_directory,
-                },
-            },
-        }
-
+        values = {name: edit.text().strip() for name, edit in (
+            ('executable', self.retroarch_edit),
+            ('primary_config', self.primary_config_edit),
+            ('core_directory', self.core_directory_edit),
+            ('library_path', self.library_path_edit),
+            ('artwork_directory', self.artwork_directory_edit),
+            ('overlay_directory', self.overlay_directory_edit))}
         try:
-            self.config_writer.update(
-                overrides
-            )
-        except ValueError as exc:
-            self.save_status.setText(
-                str(exc)
-            )
+            result = self.settings_service.save(values)
+        except (OSError, ValueError) as exc:
+            self.save_status.setText(str(exc))
             return
-
-        self.config = (
-            self.config_loader.load()
-        )
-
+        self.config = result.config
         self._populate()
-
-        effective_artwork_directory = (
-            self.config
-            .get(
-                "paths",
-                {},
-            )
-            .get(
-                "artwork",
-                {},
-            )
-            .get(
-                "directory",
-                "",
-            )
-        )
-
-        self.artwork_directory_saved.emit(
-            str(
-                effective_artwork_directory
-                or ""
-            )
-        )
-
-        effective_overlay_directory = (
-            self.config
-            .get(
-                "paths",
-                {},
-            )
-            .get(
-                "overlays",
-                {},
-            )
-            .get(
-                "directory",
-                "",
-            )
-        )
-
-        self.overlay_directory_saved.emit(
-            str(
-                effective_overlay_directory
-                or ""
-            )
-        )
-
-        self.save_status.setText(
-            "Settings saved"
-        )
+        self.artwork_directory_saved.emit(str(self.config.get('paths', {}).get('artwork', {}).get('directory', '') or ''))
+        self.overlay_directory_saved.emit(str(self.config.get('paths', {}).get('overlays', {}).get('directory', '') or ''))
+        self.save_status.setText(result.message)
+        if result.sources_changed:
+            self.library_sources_changed.emit()

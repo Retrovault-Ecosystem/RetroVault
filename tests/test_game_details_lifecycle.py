@@ -115,11 +115,11 @@ def test_launch_request_precedes_core_resolution(
         lambda *_args: order.append("launch_requested")
     )
 
-    details.core_resolver.find = (
-        lambda _core: (
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: (
             order.append("core_resolution")
             or None
-        )
+        ))
     )
 
     details.launch_game()
@@ -137,8 +137,8 @@ def test_missing_core_normalizes_pending_launch(
 ):
     details, lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: None
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: None)
     )
 
     details.launch_game()
@@ -156,12 +156,12 @@ def test_validation_failure_normalizes_pending_launch(
 ):
     details, lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         NotReadyValidator,
     )
 
@@ -184,12 +184,12 @@ def test_failed_launcher_result_reaches_lifecycle(
 ):
     details, lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -220,12 +220,12 @@ def test_successful_launcher_result_reaches_lifecycle(
 ):
     details, lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -276,8 +276,8 @@ def test_standalone_game_details_remains_safe(
         make_game()
     )
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     details.diagnostics.explain = (
@@ -285,7 +285,7 @@ def test_standalone_game_details_remains_safe(
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -306,8 +306,8 @@ def test_launch_hands_canonical_platform_to_lifecycle(
 ):
     details, lifecycle = make_details(app)
 
-    details.core_resolver.find = (
-        lambda _core: None
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: None)
     )
 
     details.launch_game()
@@ -315,3 +315,14 @@ def test_launch_hands_canonical_platform_to_lifecycle(
     lifecycle.launch_requested.assert_called_once_with(
         "platform.nintendo.nes"
     )
+
+
+def _core_resolution_mock(callback):
+    """Keep UI sequencing tests independent of installed host binaries."""
+    from unittest.mock import Mock
+    from services.retroarch.core_resolver import CoreResolution
+    def resolve(name, **kwargs):
+        path = callback(name)
+        return CoreResolution("resolved" if path else "missing", path=path,
+                              message="Required core is missing: " + str(name))
+    return Mock(side_effect=resolve)

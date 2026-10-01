@@ -202,7 +202,7 @@ def test_writer_replaces_lists_atomically(
             "library": {
                 "sources": [
                     {
-                        "id": "old",
+                        "id": "old", "name": "Old", "type": "local", "enabled": True, "path": "/old",
                     },
                 ],
             },
@@ -214,7 +214,7 @@ def test_writer_replaces_lists_atomically(
             "library": {
                 "sources": [
                     {
-                        "id": "new",
+                        "id": "new", "name": "New", "type": "local", "enabled": True, "path": "/new",
                     },
                 ],
             },
@@ -233,7 +233,7 @@ def test_writer_replaces_lists_atomically(
         "sources"
     ] == [
         {
-            "id": "new",
+            "id": "new", "name": "New", "type": "local", "enabled": True, "path": "/new",
         },
     ]
 

@@ -1,3 +1,4 @@
+from config.paths import runtime_directory
 import atexit
 import os
 import tempfile
@@ -6,25 +7,7 @@ from typing import Mapping
 
 
 def _default_runtime_directory() -> Path:
-    cache_home = os.environ.get(
-        "XDG_CACHE_HOME"
-    )
-
-    if cache_home:
-        root = Path(
-            cache_home
-        ).expanduser()
-    else:
-        root = (
-            Path.home()
-            / ".cache"
-        )
-
-    return (
-        root
-        / "retrovault"
-        / "shader-runtime"
-    )
+    return runtime_directory("shader-runtime")
 
 
 class ShaderRuntimeConfig:
@@ -231,7 +214,7 @@ class ShaderRuntimeConfig:
                 name
             )
 
-            if value is None:
+            if value is None or any(c in str(value) for c in "\r\n\x00"):
                 raise ValueError(
                     "Shader runtime parameter "
                     f"value cannot be null: {name}"
@@ -272,6 +255,7 @@ class ShaderRuntimeConfig:
             dir=self.directory,
             delete=False,
         ) as handle:
+            self._created.append(Path(handle.name))
             handle.write(
                 payload
             )
@@ -284,9 +268,6 @@ class ShaderRuntimeConfig:
                 handle.name
             )
 
-        self._created.append(
-            runtime_file
-        )
 
         return str(runtime_file)
 

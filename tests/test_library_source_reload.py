@@ -489,3 +489,65 @@ def test_reload_sources_preserves_reloaded_metadata_on_existing_identity():
     assert existing.description == "Description"
     assert existing.developer == "Developer"
     assert existing.publisher == "Publisher"
+
+
+def test_refresh_updates_edition_projection_without_replacing_representative():
+    from services.library.models import Game
+    service = make_service()
+    original = Game("Example (USA)", "NES", 0, "", "", rom="/roms/Example (USA).nes")
+    service.games = [original]
+    service._physical_games = [original]
+
+    class Builder:
+        include_europe = True
+
+        def build(self, sources):
+            games = [Game("Example (USA)", "NES", 0, "", "", rom=original.rom)]
+            if self.include_europe:
+                games.append(Game("Example (Europe)", "NES", 0, "", "",
+                                  rom="/roms/Example (Europe).nes"))
+            return games
+
+    builder = Builder()
+    service.builder = builder
+    service.reload_sources()
+    assert service.games[0] is original
+    assert original.canonical_title == "Example"
+    assert len(original.variants) == 2
+    assert any(game is original for game in service._physical_games)
+    builder.include_europe = False
+    service.reload_sources()
+    assert service.games[0] is original
+    assert len(original.variants) == 1
+    assert service._physical_games == [original]
+
+
+def test_failed_projection_restores_physical_visible_and_object_state():
+    import pytest
+    from services.library.models import Game
+    service = make_service()
+    original = Game("Before", "NES", 0, "", "", rom="/roms/game.nes")
+    original.variants = [{"rom": original.rom}]
+    service.games = [original]
+    service._physical_games = [original]
+    old_games, old_physical, old_sources = service.games, service._physical_games, service.sources
+
+    class Builder:
+        def build(self, sources):
+            return [original]
+
+    class BrokenCanonicalizer:
+        def canonicalize(self, games):
+            games[0].name = "Partial update"
+            games[0].variants.append({"rom": "/roms/invalid.nes"})
+            raise ValueError("projection failed")
+
+    service.builder = Builder()
+    service.canonicalizer = BrokenCanonicalizer()
+    with pytest.raises(ValueError, match="projection failed"):
+        service.reload_sources()
+    assert service.games is old_games
+    assert service._physical_games is old_physical
+    assert service.sources is old_sources
+    assert original.name == "Before"
+    assert original.variants == [{"rom": original.rom}]

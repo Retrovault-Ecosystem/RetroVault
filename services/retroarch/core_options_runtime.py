@@ -1,3 +1,4 @@
+from config.paths import runtime_directory
 import atexit
 import os
 import tempfile
@@ -12,25 +13,7 @@ from services.retroarch.core_identity import (
 
 
 def _default_runtime_directory() -> Path:
-    cache_home = os.environ.get(
-        "XDG_CACHE_HOME"
-    )
-
-    if cache_home:
-        root = Path(
-            cache_home
-        ).expanduser()
-    else:
-        root = (
-            Path.home()
-            / ".cache"
-        )
-
-    return (
-        root
-        / "retrovault"
-        / "core-options-runtime"
-    )
+    return runtime_directory("core-options-runtime")
 
 
 class CoreOptionsRuntimeConfig:
@@ -161,6 +144,7 @@ class CoreOptionsRuntimeConfig:
             dir=self.directory,
             delete=False,
         ) as handle:
+            self._created.append(Path(handle.name))
             for key, value in policy.items():
                 escaped = self._config_value(
                     value
@@ -179,9 +163,6 @@ class CoreOptionsRuntimeConfig:
                 handle.name
             )
 
-        self._created.append(
-            runtime_file
-        )
 
         return str(
             runtime_file

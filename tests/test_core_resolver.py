@@ -85,7 +85,7 @@ def test_find_returns_matching_core(
     )
 
     expected.write_text(
-        "",
+        "core fixture",
         encoding="utf-8",
     )
 

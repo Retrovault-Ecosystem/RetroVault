@@ -58,8 +58,13 @@ class PresentationRecommendationComposer:
                 "PresentationProfile."
             )
 
+        return self.recommendation_resolver.asset_resolver.resolve_profile(
+            self.references(platform_id=platform_id, game_id=game_id, manual=manual)
+        )
+
+    def references(self, *, platform_id, manual, game_id=""):
         automatic = (
-            self.recommendation_resolver.resolve(
+            self.recommendation_resolver.references(
                 platform_id,
                 game_id,
             )

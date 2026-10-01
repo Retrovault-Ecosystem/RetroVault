@@ -65,6 +65,11 @@ class NativeShaderDeployment:
     destination_preset: Path
 
     @property
+    def assignment_reference(self):
+        """Installed reference; portable_reference remains the package-source locator."""
+        return "retro-vault://shaders/retrovault/" + self.relative_preset.as_posix()
+
+    @property
     def portable_reference(self):
         return (
             "retro-vault://shaders/"

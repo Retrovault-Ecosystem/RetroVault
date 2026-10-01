@@ -1,3 +1,5 @@
+
+from config.paths import runtime_directory
 import hashlib
 import shutil
 import subprocess
@@ -43,10 +45,7 @@ class ArchiveRuntime:
             cache_root
             if cache_root is not None
             else (
-                Path.home()
-                / ".cache"
-                / "retrovault"
-                / "archive-runtime"
+                runtime_directory("archive-runtime")
             )
         )
 

@@ -1,3 +1,4 @@
+from services.library.presentation_studio import LibraryPresentationStudioService
 from pathlib import Path
 
 from PyQt6.QtCore import (
@@ -21,7 +22,6 @@ from config import ConfigLoader
 from services.assets import (
     AssetOrganizer,
 )
-from services.library.state import game_identity
 from services.overlays import (
     OverlayService,
 )
@@ -371,7 +371,7 @@ class OverlaysPage(QWidget):
         details.addSpacing(8)
 
         assignment_label = QLabel(
-            "RetroVault Presentation Assignment"
+            "Saved Presentation Preferences — qualified platform packages control launch visuals"
         )
         assignment_label.setObjectName(
             "OverlaysAssignmentTitle"
@@ -988,6 +988,11 @@ class OverlaysPage(QWidget):
             )
         )
 
+    def _assignment_service(self):
+        return LibraryPresentationStudioService(
+            self.presentation_store,
+            getattr(self, 'presentation_resolver_provider', None))
+
     def _current_game(
         self,
     ):
@@ -1008,9 +1013,7 @@ class OverlaysPage(QWidget):
             return
 
         try:
-            self.presentation_store.assign_default_overlay(
-                overlay
-            )
+            self._assignment_service().assign('overlay', 'default', overlay)
         except (
             OSError,
             ValueError,
@@ -1022,7 +1025,7 @@ class OverlaysPage(QWidget):
             return
 
         self.status_label.setText(
-            "Assigned selected overlay as "
+            "Saved selected overlay preference as "
             "RetroVault default."
         )
 
@@ -1046,27 +1049,14 @@ class OverlaysPage(QWidget):
             )
             return
 
-        platform_id = str(
-            getattr(
-                game,
-                "rvdb_platform_id",
-                "",
-            )
-            or ""
-        )
-
-        if not platform_id:
-            self.status_label.setText(
-                "The selected game does not have "
-                "a canonical RVDB system identity."
-            )
+        try:
+            platform_id = self._assignment_service().assignment_target('system', game)
+        except ValueError as exc:
+            self.status_label.setText(str(exc))
             return
 
         try:
-            self.presentation_store.assign_system_overlay(
-                platform_id,
-                overlay,
-            )
+            self._assignment_service().assign('overlay', 'system', overlay, game)
         except (
             OSError,
             ValueError,
@@ -1078,7 +1068,7 @@ class OverlaysPage(QWidget):
             return
 
         self.status_label.setText(
-            "Assigned selected overlay to "
+            "Saved selected overlay preference to "
             f"system {platform_id}."
         )
 
@@ -1103,14 +1093,11 @@ class OverlaysPage(QWidget):
             return
 
         try:
-            identity = game_identity(
+            identity = self._assignment_service().assignment_target('game',
                 game
             )
 
-            self.presentation_store.assign_game_overlay(
-                identity,
-                overlay,
-            )
+            self._assignment_service().assign('overlay', 'game', overlay, game)
         except (
             OSError,
             ValueError,
@@ -1122,6 +1109,6 @@ class OverlaysPage(QWidget):
             return
 
         self.status_label.setText(
-            "Assigned selected overlay to "
+            "Saved selected overlay preference to "
             f"{game.name}."
         )

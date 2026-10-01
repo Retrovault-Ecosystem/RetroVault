@@ -1,6 +1,8 @@
-import copy
 import json
 import os
+import tempfile
+from .loader import _merge_config
+from .validation import validate_config
 from pathlib import Path
 
 from .loader import (
@@ -8,49 +10,6 @@ from .loader import (
 )
 
 
-def _merge_config(
-    base,
-    override,
-):
-    if not (
-        isinstance(base, dict)
-        and isinstance(
-            override,
-            dict,
-        )
-    ):
-        return copy.deepcopy(
-            override
-        )
-
-    result = copy.deepcopy(
-        base
-    )
-
-    for key, value in (
-        override.items()
-    ):
-        if (
-            key in result
-            and isinstance(
-                result[key],
-                dict,
-            )
-            and isinstance(
-                value,
-                dict,
-            )
-        ):
-            result[key] = _merge_config(
-                result[key],
-                value,
-            )
-        else:
-            result[key] = copy.deepcopy(
-                value
-            )
-
-    return result
 
 
 class ConfigWriter:
@@ -106,24 +65,18 @@ class ConfigWriter:
             data
         )
 
+        validate_config(data)
+
         self.runtime_file.parent.mkdir(
             parents=True,
             exist_ok=True,
         )
 
-        temporary = (
-            self.runtime_file.parent
-            / (
-                self.runtime_file.name
-                + ".tmp"
-            )
-        )
-
-        payload = json.dumps(
-            data,
-            indent=2,
-            sort_keys=True,
-        ) + "\n"
+        payload = json.dumps(data, indent=2, sort_keys=True) + "\n"
+        fd, name = tempfile.mkstemp(prefix=self.runtime_file.name + '.', suffix='.tmp',
+                                    dir=self.runtime_file.parent)
+        os.close(fd)
+        temporary = Path(name)
 
         try:
             with temporary.open(

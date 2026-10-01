@@ -662,8 +662,7 @@ def test_settings_page_can_save_retroarch_runtime_overrides(
     )
 
     assert (
-        page.save_status.text()
-        == "Settings saved"
+        page.save_status.text().startswith("Settings saved")
     )
 
 
@@ -1091,8 +1090,7 @@ def test_settings_page_can_save_library_path_override(
     )
 
     assert (
-        page.save_status.text()
-        == "Settings saved"
+        page.save_status.text().startswith("Settings saved")
     )
 
 
@@ -4332,8 +4330,7 @@ def test_settings_page_can_save_artwork_directory_override(
     )
 
     assert (
-        page.save_status.text()
-        == "Settings saved"
+        page.save_status.text().startswith("Settings saved")
     )
 
 
@@ -4414,8 +4411,7 @@ def test_settings_page_allows_missing_artwork_directory(
     )
 
     assert (
-        page.save_status.text()
-        == "Settings saved"
+        page.save_status.text().startswith("Settings saved")
     )
 
 
@@ -4660,8 +4656,7 @@ def test_successful_save_emits_effective_artwork_directory(
     page.save_runtime_settings()
 
     assert (
-        page.save_status.text()
-        == "Settings saved"
+        page.save_status.text().startswith("Settings saved")
     )
 
     assert emitted == [
@@ -4901,8 +4896,7 @@ def test_settings_save_preserves_additional_library_sources(
     page.save_runtime_settings()
 
     assert (
-        page.save_status.text()
-        == "Settings saved"
+        page.save_status.text().startswith("Settings saved")
     )
 
     saved = json.loads(
@@ -5385,3 +5379,58 @@ def test_settings_library_source_browser_has_multi_source_room():
     assert source_list.maximumHeight() > source_list.minimumHeight()
 
     page.close()
+
+
+def test_empty_library_can_save_primary_config_and_add_first_source(tmp_path):
+    _app()
+    executable = _make_valid_retroarch(tmp_path / 'retroarch')
+    defaults = tmp_path / 'defaults.yaml'
+    defaults.write_text(yaml.safe_dump({
+        'retroarch': {'executable': str(executable), 'cores': {'directory': ''}},
+        'library': {'sources': []},
+        'paths': {'overlays': {'directory': ''}, 'shaders': {'directory': ''},
+                  'artwork': {'directory': ''}}}))
+    runtime = tmp_path / 'runtime.json'
+    primary = tmp_path / 'chosen.cfg'
+    primary.write_text('video_driver = "gl"\n')
+    page = SettingsPage(config_loader=ConfigLoader(defaults, runtime))
+    page.primary_config_edit.setText(str(primary))
+    page.save_runtime_settings()
+    saved = json.loads(runtime.read_text())
+    assert saved['library']['sources'] == []
+    assert saved['retroarch']['primary_config'] == str(primary)
+    assert 'next launch' in page.save_status.text()
+    roms = tmp_path / 'roms'
+    roms.mkdir()
+    changed = []
+    page.library_sources_changed.connect(lambda: changed.append(True))
+    page.library_path_edit.setText(str(roms))
+    page.save_runtime_settings()
+    assert json.loads(runtime.read_text())['library']['sources'][0]['path'] == str(roms)
+    assert changed == [True]
+    replacement = _make_valid_retroarch(tmp_path / 'retroarch-new')
+    page.retroarch_edit.setText(str(replacement))
+    page.save_runtime_settings()
+    assert 'Restart RetroVault' in page.save_status.text()
+    page.save_runtime_settings()
+    assert 'Restart RetroVault' in page.save_status.text()
+    page.deleteLater()
+
+
+def test_settings_reports_write_permission_error_without_reset(tmp_path, monkeypatch):
+    _app()
+    executable = _make_valid_retroarch(tmp_path / 'retroarch')
+    defaults = tmp_path / 'defaults.yaml'
+    defaults.write_text(yaml.safe_dump({
+        'retroarch': {'executable': str(executable), 'cores': {'directory': ''}},
+        'library': {'sources': []}, 'paths': {}}))
+    runtime = tmp_path / 'runtime.json'
+    runtime.write_text('{"extension": "preserve"}')
+    page = SettingsPage(config_loader=ConfigLoader(defaults, runtime))
+    def denied(*args):
+        raise OSError('permission denied')
+    monkeypatch.setattr(page.config_writer, 'update', denied)
+    page.save_runtime_settings()
+    assert 'permission denied' in page.save_status.text()
+    assert runtime.read_text() == '{"extension": "preserve"}'
+    page.deleteLater()

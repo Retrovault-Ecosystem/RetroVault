@@ -386,7 +386,7 @@ def test_default_shader_assignment_persists_selected_preset(
     )
 
     assert page.status_label.text() == (
-        "Assigned selected shader as "
+        "Saved selected shader preference as "
         "RetroVault default."
     )
 

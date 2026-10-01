@@ -86,10 +86,16 @@ class PresentationCompositionFactory:
 
         return value or None
 
-    def build(
-        self,
-    ) -> EffectivePresentationResolver:
+    def build_launch(self):
+        from .launch_resolver import LaunchPresentationResolver
         config = self.config_loader.load()
+        return LaunchPresentationResolver(intent_resolver=self.build(config=config), config=config,
+            visual_tuning=self.presentation_store.load().get("visual_tuning", {}))
+
+    def build(
+        self, *, config=None,
+    ) -> EffectivePresentationResolver:
+        config = self.config_loader.load() if config is None else config
 
         if not isinstance(config, dict):
             raise ValueError(

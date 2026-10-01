@@ -3,7 +3,7 @@ from pathlib import Path
 
 def test_game_details_preserves_effective_overlay_for_launch_profile():
     source = Path(
-        "ui/library/details/game_details.py"
+        "controllers/game_launch_controller.py"
     ).read_text(
         encoding="utf-8"
     )
@@ -15,7 +15,7 @@ def test_game_details_preserves_effective_overlay_for_launch_profile():
 
 def test_game_details_has_no_content_specific_presentation_fix():
     source = Path(
-        "ui/library/details/game_details.py"
+        "controllers/game_launch_controller.py"
     ).read_text(
         encoding="utf-8"
     ).casefold()

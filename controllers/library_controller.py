@@ -11,6 +11,7 @@ class LibraryController:
         rvdb_resolver=None,
         bulk_importer=None,
         import_source_store=None,
+        library_enabled=True,
     ):
 
         self.library = LibraryService(
@@ -31,7 +32,9 @@ class LibraryController:
             else ImportSourceStore()
         )
 
-        self.library.load()
+        self.library_enabled = library_enabled
+        if library_enabled:
+            self.library.load()
 
 
     def get_games(self):
@@ -47,6 +50,7 @@ class LibraryController:
         source_name="Bulk Import",
     ):
 
+        self._require_library()
         discovered = (
             self.bulk_importer
             .import_directory(
@@ -81,8 +85,12 @@ class LibraryController:
         }
 
 
-    def reload_sources(self):
+    def _require_library(self):
+        if not getattr(self, "library_enabled", True):
+            raise ValueError("RVDB unavailable. Install a validated bundle and restart before scanning.")
 
+    def reload_sources(self):
+        self._require_library()
         return self.library.reload_sources()
 
 
@@ -198,3 +206,6 @@ class LibraryController:
             name,
             game,
         )
+
+    def platform_statistics(self, platform_id):
+        return self.library.platform_statistics(platform_id)

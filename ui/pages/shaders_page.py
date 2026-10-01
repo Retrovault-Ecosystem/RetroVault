@@ -1,3 +1,4 @@
+from services.library.presentation_studio import LibraryPresentationStudioService
 from pathlib import Path
 
 from PyQt6.QtCore import Qt
@@ -12,7 +13,6 @@ from PyQt6.QtWidgets import (
 )
 
 from config import ConfigLoader
-from services.library.state import game_identity
 from services.shaders import (
     ShaderService,
 )
@@ -334,7 +334,7 @@ class ShadersPage(QWidget):
         details.addSpacing(8)
 
         assignment_label = QLabel(
-            "RetroVault Presentation Assignment"
+            "Saved Presentation Preferences — qualified platform packages control launch visuals"
         )
         assignment_label.setObjectName(
             "ShadersAssignmentTitle"
@@ -584,6 +584,11 @@ class ShadersPage(QWidget):
             )
         )
 
+    def _assignment_service(self):
+        return LibraryPresentationStudioService(
+            self.presentation_store,
+            getattr(self, 'presentation_resolver_provider', None))
+
     def _current_game(
         self,
     ):
@@ -604,9 +609,7 @@ class ShadersPage(QWidget):
             return
 
         try:
-            self.presentation_store.assign_default_shader(
-                shader
-            )
+            self._assignment_service().assign('shader', 'default', shader)
         except (
             OSError,
             ValueError,
@@ -618,7 +621,7 @@ class ShadersPage(QWidget):
             return
 
         self.status_label.setText(
-            "Assigned selected shader as "
+            "Saved selected shader preference as "
             "RetroVault default."
         )
 
@@ -642,27 +645,14 @@ class ShadersPage(QWidget):
             )
             return
 
-        platform_id = str(
-            getattr(
-                game,
-                "rvdb_platform_id",
-                "",
-            )
-            or ""
-        )
-
-        if not platform_id:
-            self.status_label.setText(
-                "The selected game does not have "
-                "a canonical RVDB system identity."
-            )
+        try:
+            platform_id = self._assignment_service().assignment_target('system', game)
+        except ValueError as exc:
+            self.status_label.setText(str(exc))
             return
 
         try:
-            self.presentation_store.assign_system_shader(
-                platform_id,
-                shader,
-            )
+            self._assignment_service().assign('shader', 'system', shader, game)
         except (
             OSError,
             ValueError,
@@ -674,7 +664,7 @@ class ShadersPage(QWidget):
             return
 
         self.status_label.setText(
-            "Assigned selected shader to "
+            "Saved selected shader preference to "
             f"system {platform_id}."
         )
 
@@ -699,14 +689,11 @@ class ShadersPage(QWidget):
             return
 
         try:
-            identity = game_identity(
+            identity = self._assignment_service().assignment_target('game',
                 game
             )
 
-            self.presentation_store.assign_game_shader(
-                identity,
-                shader,
-            )
+            self._assignment_service().assign('shader', 'game', shader, game)
         except (
             OSError,
             ValueError,
@@ -718,6 +705,6 @@ class ShadersPage(QWidget):
             return
 
         self.status_label.setText(
-            "Assigned selected shader to "
+            "Saved selected shader preference to "
             f"{game.name}."
         )

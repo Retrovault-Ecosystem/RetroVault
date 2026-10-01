@@ -1,0 +1,38 @@
+{
+  "NES": {
+    "file": "retrovault/nes/classic/RetroVault_NES_Classic_1080p.png",
+    "sha256": "60ef56a330ae0661e3ca4e83f2fb2daa3e071a13b0720fa808ad252fed1d7807",
+    "changed_bounds": [
+      618,
+      907,
+      1300,
+      941
+    ],
+    "alpha_unchanged": true,
+    "outside_branding_unchanged": true
+  },
+  "SNES": {
+    "file": "retrovault/snes/classic/RetroVault_SNES_Classic_1080p.png",
+    "sha256": "c13afba3eb9cf7bdf7192e061ee48d9f3b87ad3720982a116446b068ffd9e169",
+    "changed_bounds": [
+      1119,
+      879,
+      1189,
+      1011
+    ],
+    "alpha_unchanged": true,
+    "outside_branding_unchanged": true
+  },
+  "GENESIS": {
+    "file": "design/genesis-model1/Genesis_Model1_branded.png",
+    "sha256": "d8fec1572c3ae07dbdba7b81f17c7c4a97cf70bcbfe20c61373c180a6890fc71",
+    "changed_bounds": [
+      525,
+      769,
+      1147,
+      860
+    ],
+    "alpha_unchanged": true,
+    "outside_branding_unchanged": true
+  }
+}

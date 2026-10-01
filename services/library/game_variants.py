@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import re
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from enum import Enum
 from pathlib import Path
 from typing import Iterable
@@ -35,7 +35,7 @@ class GameVariant:
     """
     One playable ROM edition belonging to a canonical game family.
 
-    `rom` remains the durable Library path. `archive_member` is empty
+    `rom` is the current launch location; `local_file_id` owns persistence. `archive_member` is empty
     for a loose ROM and contains the authoritative archive member path
     for ZIP/7z-style multi-edition content.
     """
@@ -52,6 +52,7 @@ class GameVariant:
 
     labels: tuple[str, ...] = ()
     preferred: bool = False
+    local_file_id: str = ""
 
     @property
     def display_name(self) -> str:
@@ -891,7 +892,7 @@ class GameFamilyResolver:
 
         if members:
             return tuple(
-                VariantClassifier.classify(
+                replace(VariantClassifier.classify(
                     member,
                     rom=rom,
                     archive_member=member,
@@ -899,7 +900,7 @@ class GameFamilyResolver:
                         member
                         == preferred_member
                     ),
-                )
+                ), local_file_id=getattr(game, "local_file_id", ""))
                 for member in members
             )
 
@@ -916,8 +917,84 @@ class GameFamilyResolver:
         )
 
         return (
-            VariantClassifier.classify(
+            replace(VariantClassifier.classify(
                 source_name,
                 rom=rom,
-            ),
+            ), local_file_id=getattr(game, "local_file_id", "")),
         )
+
+
+def normalize_variant_category(value):
+    """
+    Normalize A.7 variant category representations to the
+    stable internal keys consumed by the grouped launcher.
+
+    A.7 records may contain VariantCategory enum values,
+    enum names, raw semantic values, or professional UI titles.
+    """
+
+    raw = getattr(
+        value,
+        "value",
+        value,
+    )
+
+    raw = str(
+        raw or ""
+    ).strip()
+
+    normalized = (
+        raw.casefold()
+        .replace("&", "and")
+        .replace("/", " ")
+        .replace("_", " ")
+        .replace("-", " ")
+    )
+
+    normalized = " ".join(
+        normalized.split()
+    )
+
+    aliases = {
+        "standard": "standard",
+        "standard edition": "standard",
+
+        "revision": "revision",
+        "revisions": "revision",
+
+        "translation": "translation",
+        "translations": "translation",
+        "translations and languages": "translation",
+        "language": "translation",
+        "languages": "translation",
+
+        "region": "region",
+        "regional": "region",
+        "regional edition": "region",
+        "regional editions": "region",
+
+        "hack": "hack",
+        "hacks": "hack",
+        "mod": "hack",
+        "mods": "hack",
+        "hacks and mods": "hack",
+
+        "prototype": "prototype",
+        "prototypes": "prototype",
+        "beta": "prototype",
+        "betas": "prototype",
+        "prototypes and betas": "prototype",
+
+        "unlicensed": "unlicensed",
+        "aftermarket": "unlicensed",
+        "unlicensed aftermarket": "unlicensed",
+
+        "other": "other",
+        "other variant": "other",
+        "other variants": "other",
+    }
+
+    return aliases.get(
+        normalized,
+        "other",
+    )

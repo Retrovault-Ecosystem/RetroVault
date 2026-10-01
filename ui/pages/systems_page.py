@@ -1,3 +1,4 @@
+from services.library.library_service import LibraryService
 from PyQt6.QtCore import Qt, pyqtSignal
 from PyQt6.QtWidgets import (
     QFrame,
@@ -946,203 +947,25 @@ class SystemsPage(QWidget):
             str(platform_id)
         )
 
-    def _show_library_counts(
-        self,
-        platform_id: str,
-    ) -> None:
-        if self.games_provider is None:
-            self.library_games_value.setText(
-                self.EMPTY
-            )
-            self.library_favorites_value.setText(
-                self.EMPTY
-            )
-            self.library_recent_value.setText(
-                self.EMPTY
-            )
-            self.library_collections_value.setText(
-                self.EMPTY
-            )
-            self.view_library_button.setEnabled(
-                False
-            )
-            self.view_favorites_button.setEnabled(
-                False
-            )
-            self.view_recent_button.setEnabled(
-                False
-            )
-            self.view_collections_button.setEnabled(
-                False
-            )
-            return
-
-        try:
-            games = list(
-                self.games_provider()
-            )
-        except Exception:
-            self.library_games_value.setText(
-                self.EMPTY
-            )
-            self.library_favorites_value.setText(
-                self.EMPTY
-            )
-            self.library_recent_value.setText(
-                self.EMPTY
-            )
-            self.library_collections_value.setText(
-                self.EMPTY
-            )
-            self.view_library_button.setEnabled(
-                False
-            )
-            self.view_favorites_button.setEnabled(
-                False
-            )
-            self.view_recent_button.setEnabled(
-                False
-            )
-            self.view_collections_button.setEnabled(
-                False
-            )
-            return
-
-        matching = [
-            game
-            for game in games
-            if str(
-                getattr(
-                    game,
-                    "rvdb_platform_id",
-                    "",
-                )
-                or ""
-            )
-            == platform_id
-        ]
-
-        self.library_games_value.setText(
-            str(
-                len(matching)
-            )
-        )
-
-        self.view_library_button.setEnabled(
-            bool(matching)
-        )
-
-        collection_names_provider = getattr(
-            self,
-            "collection_names_provider",
-            None,
-        )
-        collection_games_provider = getattr(
-            self,
-            "collection_games_provider",
-            None,
-        )
-
-        collection_count = 0
-
-        if (
-            collection_names_provider is not None
-            and collection_games_provider is not None
-        ):
-            try:
-                for collection_name in (
-                    collection_names_provider()
-                ):
-                    collection_games = list(
-                        collection_games_provider(
-                            collection_name
-                        )
-                    )
-
-                    if any(
-                        str(
-                            getattr(
-                                game,
-                                "rvdb_platform_id",
-                                "",
-                            )
-                            or ""
-                        )
-                        == platform_id
-                        for game in collection_games
-                    ):
-                        collection_count += 1
-            except Exception:
-                collection_count = 0
-
-        self.library_collections_value.setText(
-            str(collection_count)
-        )
-        self.view_collections_button.setEnabled(
-            collection_count > 0
-        )
-
-        favorite_count = sum(
-            bool(
-                getattr(
-                    game,
-                    "favorite",
-                    False,
-                )
-            )
-            for game in matching
-        )
-
-        self.library_favorites_value.setText(
-            str(favorite_count)
-        )
-
-        self.view_favorites_button.setEnabled(
-            favorite_count > 0
-        )
-
-        if self.recent_provider is None:
-            self.library_recent_value.setText(
-                self.EMPTY
-            )
-            self.view_recent_button.setEnabled(
-                False
-            )
-            return
-
-        try:
-            recent_identities = {
-                str(identity)
-                for identity in self.recent_provider()
-            }
-        except Exception:
-            self.library_recent_value.setText(
-                self.EMPTY
-            )
-            self.view_recent_button.setEnabled(
-                False
-            )
-            return
-
-        recent_count = sum(
-            str(
-                getattr(
-                    game,
-                    "rom",
-                    "",
-                )
-                or ""
-            )
-            in recent_identities
-            for game in matching
-        )
-
-        self.library_recent_value.setText(
-            str(recent_count)
-        )
-        self.view_recent_button.setEnabled(
-            recent_count > 0
-        )
+    def _show_library_counts(self, platform_id: str) -> None:
+        provider = getattr(self, 'statistics_provider', None)
+        if provider is not None:
+            stats = provider(platform_id)
+        else:
+            stats = LibraryService.query_platform_statistics(
+                platform_id, games_provider=self.games_provider,
+                recent_provider=self.recent_provider,
+                collection_names_provider=getattr(self, 'collection_names_provider', None),
+                collection_games_provider=getattr(self, 'collection_games_provider', None))
+        for key, label, button in (
+            ('games', self.library_games_value, self.view_library_button),
+            ('favorites', self.library_favorites_value, self.view_favorites_button),
+            ('recent', self.library_recent_value, self.view_recent_button),
+            ('collections', self.library_collections_value, self.view_collections_button)):
+            count = stats[key]
+            label.setText(self.EMPTY if count is None else str(count))
+            label.setToolTip(stats.get('errors', {}).get(key, ''))
+            button.setEnabled(count is not None and count > 0)
 
     @classmethod
     def _display_values(

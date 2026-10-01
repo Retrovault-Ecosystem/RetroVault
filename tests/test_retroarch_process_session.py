@@ -24,7 +24,7 @@ class FakeSessionConfig:
     composition is tested independently.
     """
 
-    def create(self, core_options_path=None):
+    def create(self, core_options_path=None, *, shader_enabled=False):
         return ""
 
 
@@ -323,7 +323,7 @@ def test_stop_does_not_terminate_already_exited_process():
 
     assert launcher.stop() is False
     process.terminate.assert_not_called()
-    assert launcher.active_process is process
+    assert launcher.active_process is None
 
 
 def test_launch_starts_retroarch_in_its_own_process_session():
@@ -387,7 +387,7 @@ def test_stop_terminates_complete_owned_process_group():
     ):
         assert launcher.stop() is True
 
-    getpgid.assert_called_once_with(43210)
+    getpgid.assert_not_called()  # Captured when the new session was created.
 
     import signal
 
@@ -422,13 +422,11 @@ def test_stop_returns_false_if_owned_process_group_is_gone():
     ):
         launcher.launch(profile)
 
-    with patch(
-        "services.retroarch.launcher.os.getpgid",
-        side_effect=ProcessLookupError,
-    ):
+    process.poll.return_value = 0
+    with patch.object(launcher, "_process_group_exists", return_value=False):
         assert launcher.stop() is False
+    assert launcher.active_process is None
 
-    assert launcher.active_process is process
 
 def test_stop_reaps_owned_launch_root_after_group_signal(monkeypatch):
     """stop() must synchronously reap its launcher-owned Popen root."""
@@ -504,3 +502,15 @@ def test_stop_reaps_owned_launch_root_after_group_signal(monkeypatch):
     ]
 
     assert launcher._active_process is None
+
+
+import pytest
+
+
+@pytest.fixture(autouse=True)
+def _valid_files_for_runtime_composition_tests(monkeypatch):
+    """These tests isolate composition/process behavior; readiness has real-file tests."""
+    from services.retroarch.validator import LaunchValidator
+    monkeypatch.setattr(LaunchValidator, "check_retroarch", lambda self: True)
+    monkeypatch.setattr(LaunchValidator, "check_core", lambda self: True)
+    monkeypatch.setattr(LaunchValidator, "check_rom", lambda self, rom: True)

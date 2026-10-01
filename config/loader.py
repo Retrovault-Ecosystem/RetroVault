@@ -5,6 +5,9 @@ from pathlib import Path
 
 import yaml
 
+from .paths import config_file
+from .validation import validate_config
+
 
 DEFAULT_CONFIG_FILE = (
     Path(__file__).resolve().parent
@@ -13,25 +16,7 @@ DEFAULT_CONFIG_FILE = (
 
 
 def _default_runtime_file() -> Path:
-    xdg_config_home = os.environ.get(
-        "XDG_CONFIG_HOME"
-    )
-
-    if xdg_config_home:
-        config_home = Path(
-            xdg_config_home
-        ).expanduser()
-    else:
-        config_home = (
-            Path.home()
-            / ".config"
-        )
-
-    return (
-        config_home
-        / "retrovault"
-        / "runtime.json"
-    )
+    return config_file('runtime.json')
 
 
 def _merge_config(
@@ -104,9 +89,10 @@ class ConfigLoader:
             "r",
             encoding="utf-8",
         ) as file:
-            data = yaml.safe_load(
-                file
-            )
+            try:
+                data = yaml.safe_load(file)
+            except yaml.YAMLError as exc:
+                raise ValueError(f"Invalid defaults YAML: {self.default_file}: {exc}") from exc
 
         if data is None:
             return {}
@@ -158,7 +144,7 @@ class ConfigLoader:
             self._load_runtime_override()
         )
 
-        return _merge_config(
-            defaults,
-            runtime,
-        )
+        try:
+            return validate_config(_merge_config(defaults, runtime))
+        except ValueError as exc:
+            raise ValueError(f"Invalid configuration ({self.default_file}, {self.runtime_file}): {exc}") from exc

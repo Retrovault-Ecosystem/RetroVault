@@ -82,8 +82,8 @@ def make_game():
 
 
 def make_ready(details):
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     details.diagnostics.explain = (
@@ -128,12 +128,12 @@ def test_launch_uses_resolved_system_shader(
     details.show_game(make_game())
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         make_ready(details),
     )
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     details.launcher.launch = (
@@ -195,12 +195,12 @@ def test_launch_uses_game_shader_precedence(
     details.show_game(game)
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         make_ready(details),
     )
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     details.launcher.launch = (
@@ -232,12 +232,12 @@ def test_launch_without_provider_preserves_no_shader(
     details.show_game(make_game())
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         make_ready(details),
     )
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     details.launcher.launch = (
@@ -280,12 +280,12 @@ def test_provider_is_resolved_at_launch_time(
     details.show_game(make_game())
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         make_ready(details),
     )
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     details.launcher.launch = (
@@ -333,12 +333,12 @@ def test_presentation_load_failure_falls_back_cleanly(
     details.show_game(make_game())
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         make_ready(details),
     )
 
-    details.core_resolver.find = (
-        lambda _core: "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so")
     )
 
     details.launcher.launch = (
@@ -387,13 +387,13 @@ def test_resolved_overlay_reaches_launch_profile(
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         make_ready(details),
     )
 
-    details.core_resolver.find = (
-        lambda _core:
-        "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core:
+        "/cores/fceumm_libretro.so")
     )
 
     details.launcher.launch = (
@@ -446,13 +446,13 @@ def test_presentation_resolves_shader_and_overlay_together(
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         make_ready(details),
     )
 
-    details.core_resolver.find = (
-        lambda _core:
-        "/cores/fceumm_libretro.so"
+    details.core_resolver.resolve = (
+        _core_resolution_mock(lambda _core:
+        "/cores/fceumm_libretro.so")
     )
 
     details.launcher.launch = (
@@ -529,9 +529,9 @@ def test_presentation_load_failure_is_reported_to_user(
         artwork="",
     )
 
-    details.core_resolver.find = Mock(
+    details.core_resolver.resolve = _core_resolution_mock(Mock(
         return_value="/cores/fceumm_libretro.so"
-    )
+    ))
 
     class ReadyValidator:
         def __init__(
@@ -553,7 +553,7 @@ def test_presentation_load_failure_is_reported_to_user(
             }
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -580,8 +580,7 @@ def test_presentation_load_failure_is_reported_to_user(
     )
 
     assert (
-        "The game will continue without "
-        "the assigned shader or overlay."
+        "The game may still use its system's default visuals."
         in message
     )
 
@@ -660,9 +659,9 @@ def test_cheat_selection_occurs_before_presentation_and_launch(
         return_value=""
     )
 
-    details.core_resolver.find = Mock(
+    details.core_resolver.resolve = _core_resolution_mock(Mock(
         return_value="/cores/nes.so"
-    )
+    ))
 
     class Presentation:
         shader = ""
@@ -686,16 +685,14 @@ def test_cheat_selection_occurs_before_presentation_and_launch(
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details."
-        "LaunchValidator.validate",
+        "controllers.game_launch_controller.LaunchValidator.validate",
         lambda self, rom: {
             "ready": True,
         },
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details."
-        "LaunchDiagnostics.explain",
+        "controllers.game_launch_controller.LaunchDiagnostics.explain",
         lambda self, result: [],
     )
 
@@ -1013,3 +1010,37 @@ def test_game_details_header_starts_at_top_after_context_reset():
     )
 
     details.close()
+
+
+def test_launch_validation_uses_the_shared_launcher_executable(app, monkeypatch):
+    from services.retroarch.launcher import RetroArchLauncher
+    launcher = RetroArchLauncher(executable="/selected/retroarch")
+    launcher.launch = Mock(return_value={"success": True})
+    details = GameDetails(launcher=launcher)
+    details.show_game(make_game())
+    details.core_resolver.resolve = _core_resolution_mock(lambda core: "/cores/fceumm_libretro.so")
+    captured = []
+
+    class Validator:
+        def __init__(self, executable, core):
+            captured.append(executable)
+
+        def validate(self, rom):
+            return {"ready": True, "retroarch": True, "core": True, "rom": True}
+
+    monkeypatch.setattr("controllers.game_launch_controller.LaunchValidator", Validator)
+    details.launch_game()
+    assert captured == ["/selected/retroarch"]
+    launcher.launch.assert_called_once()
+    details.close()
+
+
+def _core_resolution_mock(callback):
+    """Keep UI sequencing tests independent of installed host binaries."""
+    from unittest.mock import Mock
+    from services.retroarch.core_resolver import CoreResolution
+    def resolve(name, **kwargs):
+        path = callback(name)
+        return CoreResolution("resolved" if path else "missing", path=path,
+                              message="Required core is missing: " + str(name))
+    return Mock(side_effect=resolve)

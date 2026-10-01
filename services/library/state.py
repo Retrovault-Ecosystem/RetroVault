@@ -1,48 +1,15 @@
+from config.paths import config_file
 import json
 import os
 from pathlib import Path
 
 
 def _default_state_file() -> Path:
-    xdg_config_home = os.environ.get(
-        "XDG_CONFIG_HOME"
-    )
-
-    if xdg_config_home:
-        config_home = Path(
-            xdg_config_home
-        ).expanduser()
-    else:
-        config_home = (
-            Path.home()
-            / ".config"
-        )
-
-    return (
-        config_home
-        / "retrovault"
-        / "library-state.json"
-    )
+    return config_file('library-state.json')
 
 
-def game_identity(game) -> str:
-    rom = getattr(
-        game,
-        "rom",
-        "",
-    )
 
-    if not rom:
-        raise ValueError(
-            "Cannot persist Library state "
-            "for a game without a ROM path."
-        )
-
-    return str(
-        Path(rom)
-        .expanduser()
-        .resolve(strict=False)
-    )
+from services.library.identity import game_identity, family_identities
 
 
 class LibraryState:
@@ -79,6 +46,11 @@ class LibraryState:
                 "RetroVault Library state "
                 "must contain a JSON object."
             )
+
+        if type(data.get("version", 1)) is not int or data.get("version", 1) not in (1, 2):
+            raise ValueError("Unsupported RetroVault Library state version.")
+        if set(data) - {"version", "favorites", "recent"}:
+            raise ValueError("Unsupported RetroVault Library state fields.")
 
         favorites = data.get(
             "favorites",
@@ -140,6 +112,7 @@ class LibraryState:
         }
 
     def _write(self, data):
+        data = dict(data, version=2)
         self.state_file.parent.mkdir(
             parents=True,
             exist_ok=True,
@@ -255,9 +228,7 @@ class LibraryState:
                 identity
             )
         else:
-            favorites.discard(
-                identity
-            )
+            favorites.difference_update(family_identities(game))
 
         data["favorites"] = sorted(
             favorites
@@ -290,3 +261,16 @@ class LibraryState:
             )
 
         return games
+
+    def validate_identity_migration(self):
+        self._read()
+
+    def migrate_identities(self, mapping):
+        from services.library.identity_migration import backup_original, mapped_list
+        data = self._read()
+        migrated = {key: mapped_list(data[key], mapping) for key in ("favorites", "recent")}
+        if self.state_file.exists():
+            raw = json.loads(self.state_file.read_text(encoding="utf-8"))
+            if migrated != data or raw.get("version") != 2:
+                backup_original(self.state_file)
+                self._write(migrated)

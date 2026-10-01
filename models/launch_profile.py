@@ -33,3 +33,6 @@ class LaunchProfile:
     # platform presentation envelope.
     display_aspect_width: float | None = None
     display_aspect_height: float | None = None
+
+    # Semantic, package-validated adjustments; never raw geometry parameters.
+    visual_tuning: tuple[tuple[str, float | None], ...] = ()

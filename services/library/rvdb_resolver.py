@@ -146,6 +146,10 @@ class RVDBLibraryResolver:
                         game
                     )
 
+    def platforms(self):
+        """Canonical folder vocabulary for local artwork resolution."""
+        return tuple(self._platforms)
+
     def platforms_for_extension(
         self,
         extension: str,
@@ -191,12 +195,7 @@ class RVDBLibraryResolver:
             name
         )
 
-        return list(
-            self._name_map.get(
-                key,
-                []
-            )
-        )
+        return list({p.id: p for p in self._name_map.get(key, [])}.values())
 
     def platform_for_name(
         self,
@@ -236,11 +235,8 @@ class RVDBLibraryResolver:
             [],
         )
 
-        return [
-            game
-            for game in matches
-            if platform_id in game.platforms
-        ]
+        return list({game.id: game for game in matches
+                     if platform_id in game.platforms}.values())
 
     def game_for_name(
         self,
@@ -263,6 +259,23 @@ class RVDBLibraryResolver:
             return None
 
         return matches[0]
+
+    def game_for_rom_name(self, name, platform_id):
+        """Exact knowledge first; only recognized retail release tags may fall back."""
+        from services.library.game_variants import VariantClassifier
+        matches = self.games_for_name(name, platform_id)
+        if matches:
+            return matches[0] if len(matches) == 1 else None
+        # Bracketed dump/modification flags are deliberately not identity evidence.
+        if "[" in name or "]" in name:
+            return None
+        variant = VariantClassifier.classify(name + ".nes")
+        if variant.category.value not in {"standard", "region", "revision"}:
+            return None
+        title = VariantClassifier.canonical_title(name)
+        if title == name:
+            return None
+        return self.game_for_name(title, platform_id)
 
     def supported_cores(
         self,

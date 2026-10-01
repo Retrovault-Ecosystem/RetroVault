@@ -41,10 +41,10 @@ ARTWORK = (
 EXPECTED_GLASS = ProductionGlass(
     canvas_width=1920,
     canvas_height=1080,
-    x=330,
-    y=90,
-    width=1260,
-    height=900,
+    x=312,
+    y=80,
+    width=1296,
+    height=770,
 )
 
 
@@ -137,20 +137,20 @@ def test_genesis_artwork_and_runtime_geometry_qualification_remain_separate_auth
 
     # Artwork authority owns the transparent physical aperture.
     assert geometry["aperture"] == {
-        "x": 330,
-        "y": 90,
-        "width": 1260,
-        "height": 900,
+        "x": 312,
+        "y": 80,
+        "width": 1296,
+        "height": 770,
     }
 
     # Runtime qualification now records a real Genesis Plus GX
     # reference result. It is qualification evidence only; the
     # runtime policy remains loaded-content/core driven.
     assert geometry["viewport"] == {
-        "x": 330,
-        "y": 126,
-        "width": 1260,
-        "height": 827,
+        "x": 373,
+        "y": 80,
+        "width": 1173,
+        "height": 770,
     }
     assert geometry["aspect_ratio_index"] == 23
     assert geometry["integer_scaling"] is False
@@ -193,10 +193,10 @@ def test_genesis_artwork_and_runtime_geometry_qualification_remain_separate_auth
     assert manifest["geometry"][
         "qualified_reference_viewport"
     ] == {
-        "x": 330,
-        "y": 126,
-        "width": 1260,
-        "height": 827,
+        "x": 373,
+        "y": 80,
+        "width": 1173,
+        "height": 770,
     }
 
     assert manifest["geometry"][
@@ -228,16 +228,16 @@ def test_genesis_runtime_geometry_qualification_supports_n5c_activation():
 
     assert geometry["status"] == "runtime_geometry_qualified"
     assert geometry["aperture"] == {
-        "x": 330,
-        "y": 90,
-        "width": 1260,
-        "height": 900,
+        "x": 312,
+        "y": 80,
+        "width": 1296,
+        "height": 770,
     }
     assert geometry["viewport"] == {
-        "x": 330,
-        "y": 126,
-        "width": 1260,
-        "height": 827,
+        "x": 373,
+        "y": 80,
+        "width": 1173,
+        "height": 770,
     }
     assert geometry["runtime_geometry_policy"] == (
         "derive_per_loaded_content_display_aspect"
@@ -247,8 +247,8 @@ def test_genesis_runtime_geometry_qualification_supports_n5c_activation():
         is False
     )
 
-    assert state["presentation_policy_state"] == "unconfigured"
-    assert state["production_package_complete"] is False
+    assert state["presentation_policy_state"] == "ready"
+    assert state["production_package_complete"] is True
     assert state["production_ready"] is True
     assert state["live_calibration_complete"] is True
 

@@ -56,9 +56,7 @@
     "physical_runtime_geometry_qualified": true,
     "notes": [
       "This qualification records Genesis compatibility with the reusable CLASSIC_4_3 display contract.",
-      "It does not make Genesis a READY production presentation policy.",
       "The 1440x1080 Master safe envelope is a reusable containment envelope, not a forced emulator framebuffer size.",
-      "Concrete Genesis RetroArch viewport coordinates remain package-owned and unqualified until the physical geometry/runtime validation boundary.",
       "Artwork must adapt to technically correct content; game content must not be cropped, stretched, or distorted merely to fill artwork.",
       "No title, ROM, archive, or per-game geometry identity participates in this qualification."
     ]
@@ -70,16 +68,16 @@
       "height": 1080
     },
     "aperture": {
-      "x": 330,
-      "y": 90,
-      "width": 1260,
-      "height": 900
+      "x": 312,
+      "y": 80,
+      "width": 1296,
+      "height": 770
     },
     "viewport": {
-      "x": 330,
-      "y": 126,
-      "width": 1260,
-      "height": 827
+      "x": 373,
+      "y": 80,
+      "width": 1173,
+      "height": 770
     },
     "aspect_ratio_index": 23,
     "integer_scaling": false,
@@ -87,10 +85,9 @@
     "viewport_bias_y": 0.5,
     "crop_overscan": false,
     "notes": [
-      "Physical geometry is intentionally unset in A.3-N.5-A.",
-      "NES geometry must not be copied.",
-      "SNES geometry must not be copied.",
-      "Genesis geometry must be derived and validated in A.3-N.5-B before production activation."
+      "Physical aperture follows the approved Genesis Model 1 artwork on a 1920x1080 canvas.",
+      "The existing adaptive bezel renderer fits the inner frame to the contained core-reported aspect; controls and branding remain fixed.",
+      "Reference viewport is qualification evidence, never a per-title runtime override."
     ],
     "runtime_geometry_policy": "derive_per_loaded_content_display_aspect",
     "qualification": {
@@ -103,22 +100,22 @@
       "profile_class": "classic_4_3",
       "fit_policy": "contain",
       "physical_glass": {
-        "x": 330,
-        "y": 90,
-        "width": 1260,
-        "height": 900
+        "x": 312,
+        "y": 80,
+        "width": 1296,
+        "height": 770
       },
       "qualified_reference_viewport": {
-        "x": 330,
-        "y": 126,
-        "width": 1260,
-        "height": 827
+        "x": 373,
+        "y": 80,
+        "width": 1173,
+        "height": 770
       },
       "qualified_reference_margins": {
-        "left": 0,
-        "right": 0,
-        "top": 36,
-        "bottom": 37
+        "left": 61,
+        "right": 62,
+        "top": 0,
+        "bottom": 0
       },
       "runtime_geometry_policy": "derive_per_loaded_content_display_aspect",
       "aspect_ratio_index": 23,
@@ -131,8 +128,8 @@
     }
   },
   "production_state": {
-    "presentation_policy_state": "unconfigured",
-    "production_package_complete": false,
+    "presentation_policy_state": "ready",
+    "production_package_complete": true,
     "production_ready": true,
     "live_calibration_complete": true,
     "policy_activation": true

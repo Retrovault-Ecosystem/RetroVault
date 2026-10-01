@@ -50,7 +50,7 @@
     "crt_preset": "RetroVault_SNES_Classic_CRT.slangp"
   },
   "sha256": {
-    "overlay_png": "48605c31ded058dce6c1e3b4800ccdb6bc9e25517d48a3d16156fac10b5e1f6c",
+    "overlay_png": "c13afba3eb9cf7bdf7192e061ee48d9f3b87ad3720982a116446b068ffd9e169",
     "overlay_descriptor": "8ca2dc2ab8c701b17a1634d250e74b50f1763429f2b923cfe3ff15712721fd37",
     "runtime_descriptor": "4fff3ec0aafd9f87f09ba6b0aaee5fcde84e7291c8c033b6f6c2555b952f7efb",
     "shader_contract": "b4fe9dd33c21c7916895c30215850855836d8c524caabd980bddc9bbf755ad04",
@@ -74,5 +74,26 @@
     "y": 0.06574074074074074,
     "width": 0.54375,
     "height": 0.725
+  },
+  "right_panel_gap_repair": {
+    "status": "user_visual_approved",
+    "destination": [
+      1482,
+      58,
+      160,
+      810
+    ],
+    "source": [
+      278,
+      58,
+      160,
+      810
+    ],
+    "operation": "horizontal RGBA mirror of complete left gray panel and adjacent rim transitions",
+    "unchanged": "All pixels outside destination and the complete gameplay viewport including its alpha"
+  },
+  "branding_revision": {
+    "date": "2026-09-29",
+    "change": "Bottom platform trademark symbol changed to registered mark; RetroVault legal symbol removed; purple rules and all viewport pixels preserved."
   }
 }

@@ -61,7 +61,12 @@ class PresentationResolver:
         self,
         game,
     ) -> PresentationProfile:
+        return self.resolve_with_sources(game)[0]
+
+    def resolve_with_sources(self, game):
         result = self.default
+        sources = {field: "default" if getattr(result, field) else "none"
+                   for field in ("shader", "overlay", "artwork")}
 
         platform_id = str(
             getattr(
@@ -78,6 +83,7 @@ class PresentationResolver:
             )
 
             if system_profile is not None:
+                sources.update({field: "platform" for field in sources if getattr(system_profile, field)})
                 result = self._merge(
                     result,
                     system_profile,
@@ -96,9 +102,10 @@ class PresentationResolver:
             )
 
             if game_profile is not None:
+                sources.update({field: "game" for field in sources if getattr(game_profile, field)})
                 result = self._merge(
                     result,
                     game_profile,
                 )
 
-        return result
+        return result, sources

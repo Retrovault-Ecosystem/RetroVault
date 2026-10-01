@@ -1390,12 +1390,12 @@ def test_successful_process_spawn_records_played_game(
 
     monkeypatch.setattr(
         view.details.core_resolver,
-        "find",
-        lambda core: "/cores/nestopia_libretro.so",
+        "resolve",
+        _core_resolution_mock(lambda core: "/cores/nestopia_libretro.so"),
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         FakeLaunchValidator,
     )
 
@@ -1445,12 +1445,12 @@ def test_process_spawn_failure_does_not_record_played_game(
 
     monkeypatch.setattr(
         view.details.core_resolver,
-        "find",
-        lambda core: "/cores/nestopia_libretro.so",
+        "resolve",
+        _core_resolution_mock(lambda core: "/cores/nestopia_libretro.so"),
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         FakeLaunchValidator,
     )
 
@@ -1496,8 +1496,8 @@ def test_validation_failure_does_not_record_played_game(
 
     monkeypatch.setattr(
         view.details.core_resolver,
-        "find",
-        lambda core: "/cores/nestopia_libretro.so",
+        "resolve",
+        _core_resolution_mock(lambda core: "/cores/nestopia_libretro.so"),
     )
 
     class NotReadyValidator(
@@ -1506,7 +1506,7 @@ def test_validation_failure_does_not_record_played_game(
         ready = False
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         NotReadyValidator,
     )
 
@@ -1554,12 +1554,12 @@ def test_successful_launch_without_played_handler_is_safe(
 
     monkeypatch.setattr(
         view.details.core_resolver,
-        "find",
-        lambda core: "/cores/nestopia_libretro.so",
+        "resolve",
+        _core_resolution_mock(lambda core: "/cores/nestopia_libretro.so"),
     )
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         FakeLaunchValidator,
     )
 
@@ -2505,3 +2505,14 @@ def test_ordinary_toolbar_filter_remains_display_name_based():
     assert _visible_game_names(view) == [
         "Mega Man 2"
     ]
+
+
+def _core_resolution_mock(callback):
+    """Keep UI sequencing tests independent of installed host binaries."""
+    from unittest.mock import Mock
+    from services.retroarch.core_resolver import CoreResolution
+    def resolve(name, **kwargs):
+        path = callback(name)
+        return CoreResolution("resolved" if path else "missing", path=path,
+                              message="Required core is missing: " + str(name))
+    return Mock(side_effect=resolve)

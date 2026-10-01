@@ -1,3 +1,5 @@
+from pathlib import Path
+
 import pytest
 
 from services.presentation.production_package_resolver import (
@@ -5,8 +7,13 @@ from services.presentation.production_package_resolver import (
 )
 
 
+ROOT = Path(__file__).resolve().parents[1]
+CONFIG = {"paths": {kind: {"directory": str(ROOT)} for kind in ("overlays", "shaders")}}
+
+
 def test_ready_nes_uses_canonical_platform_package():
     package = CanonicalProductionPackageResolver.resolve(
+        config=CONFIG,
         platform_id="platform.nintendo.nes",
         core_identity="fceumm",
     )
@@ -25,6 +32,7 @@ def test_ready_nes_uses_canonical_platform_package():
 
 def test_ready_snes_uses_canonical_platform_package():
     package = CanonicalProductionPackageResolver.resolve(
+        config=CONFIG,
         platform_id="platform.nintendo.snes",
         core_identity="snes9x",
     )
@@ -41,15 +49,16 @@ def test_ready_snes_uses_canonical_platform_package():
     )
 
 
-def test_genesis_ready_resolver_resolves_deployed_package():
+def test_genesis_ready_resolver_resolves_configured_package():
     """
-    A.3-N.5-D deploys the qualified Genesis production package.
+    Resolve repository package fixtures independently of host-installed assets.
 
     Once the canonical assets exist, the READY platform must
     resolve the exact production package rather than retaining
     the pre-deployment missing-package expectation.
     """
     package = CanonicalProductionPackageResolver.resolve(
+        config=CONFIG,
         platform_id="platform.sega.genesis",
         core_identity="genesis_plus_gx",
     )
@@ -57,25 +66,25 @@ def test_genesis_ready_resolver_resolves_deployed_package():
     assert package.platform_id == "platform.sega.genesis"
 
     assert package.overlay == (
-        "/opt/retropie/configs/all/retroarch/overlays/"
+        str(ROOT) + "/"
         "retrovault/genesis/classic/"
         "RetroVault_Genesis_Classic.cfg"
     )
 
     assert package.shader == (
-        "/opt/retropie/configs/all/retroarch/shaders/"
+        str(ROOT) + "/"
         "retrovault/genesis/classic/"
         "RetroVault_Genesis_Classic_CRT.slangp"
     )
 
     assert package.runtime_descriptor == (
-        "/opt/retropie/configs/all/retroarch/overlays/"
+        str(ROOT) + "/"
         "retrovault/genesis/classic/"
         "RetroVault_Genesis_Classic.runtime.cfg"
     )
 
     assert package.production_manifest == (
-        "/opt/retropie/configs/all/retroarch/overlays/"
+        str(ROOT) + "/"
         "retrovault/genesis/classic/"
         "RetroVault_Genesis_Classic.production.json"
     )
@@ -92,15 +101,16 @@ def test_genesis_ready_resolver_resolves_deployed_package():
     ) == (
         1920,
         1080,
-        330,
-        90,
-        1260,
-        900,
+        312,
+        80,
+        1296,
+        770,
     )
 
 def test_unknown_platform_remains_outside_production_authority():
     assert (
         CanonicalProductionPackageResolver.resolve(
+            config=CONFIG,
             platform_id="legacy.custom.platform",
             core_identity="fceumm",
         )
@@ -111,6 +121,7 @@ def test_unknown_platform_remains_outside_production_authority():
 def test_ready_platform_rejects_foreign_core():
     with pytest.raises(ValueError):
         CanonicalProductionPackageResolver.resolve(
+            config=CONFIG,
             platform_id="platform.nintendo.nes",
             core_identity="snes9x",
         )

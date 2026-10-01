@@ -1,3 +1,4 @@
+from config.paths import runtime_directory
 import atexit
 import os
 import tempfile
@@ -5,25 +6,7 @@ from pathlib import Path
 
 
 def _default_runtime_directory() -> Path:
-    cache_home = os.environ.get(
-        "XDG_CACHE_HOME"
-    )
-
-    if cache_home:
-        root = Path(
-            cache_home
-        ).expanduser()
-    else:
-        root = (
-            Path.home()
-            / ".cache"
-        )
-
-    return (
-        root
-        / "retrovault"
-        / "session-runtime"
-    )
+    return runtime_directory("session-runtime")
 
 
 class RetroArchSessionConfig:
@@ -82,6 +65,8 @@ class RetroArchSessionConfig:
     def create(
         self,
         core_options_path=None,
+        *,
+        shader_enabled=False,
     ):
         self.directory.mkdir(
             parents=True,
@@ -89,6 +74,15 @@ class RetroArchSessionConfig:
         )
 
         payload = self.BASELINE
+
+        # --set-shader selects a preset but does not enable the shader
+        # pipeline. Keep inherited presets cleared, then opt in only when
+        # the launcher supplies an explicit preset.
+        if shader_enabled:
+            payload = payload.replace(
+                'video_shader_enable = "false"',
+                'video_shader_enable = "true"',
+            )
 
         if core_options_path:
             path = (
@@ -116,6 +110,7 @@ class RetroArchSessionConfig:
             dir=self.directory,
             delete=False,
         ) as handle:
+            self._created.append(Path(handle.name))
             handle.write(
                 payload
             )
@@ -128,9 +123,6 @@ class RetroArchSessionConfig:
                 handle.name
             )
 
-        self._created.append(
-            runtime_file
-        )
 
         return str(runtime_file)
 

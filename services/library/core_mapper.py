@@ -84,11 +84,11 @@ class CoreMapper:
         self,
         platform,
     ):
+        if not isinstance(platform, str):
+            return ""
         platform_id = (
-            PLATFORM_ALIASES.get(
-                platform,
-                "",
-            )
+            platform if platform in PlatformPresentationPolicyRegistry.canonical_platform_ids()
+            else PLATFORM_ALIASES.get(platform, "")
         )
 
         if not platform_id:

@@ -64,6 +64,12 @@ def test_probe_builds_verbose_log_command_and_returns_runtime_aspect(
     def popen(command, **kwargs):
         captured["command"] = list(command)
         captured["kwargs"] = kwargs
+        layers = command[command.index("--appendconfig") + 1].split("|")
+        captured["headless_path"] = Path(layers[-1])
+        captured["headless"] = Path(layers[-1]).read_text()
+        save_directory = Path(layers[-1]).parent / "FCEUmm"
+        save_directory.mkdir()
+        (save_directory / "probe.srm").write_bytes(b"probe-only")
 
         log_path = Path(
             command[
@@ -127,9 +133,16 @@ def test_probe_builds_verbose_log_command_and_returns_runtime_aspect(
 
     assert command.count(
         "--appendconfig"
-    ) == 2
-
-    assert "--set-shader" in command
+    ) == 1
+    layers = command[command.index("--appendconfig") + 1].split("|")
+    assert layers[:2] == ["/session.cfg", "/overlay.cfg"]
+    assert len(layers) == 3
+    for setting in ('video_driver = "null"', 'audio_driver = "null"',
+                    'input_driver = "null"', 'video_shader_enable = "false"',
+                    'input_overlay_enable = "false"', 'config_save_on_exit = "false"'):
+        assert setting in captured["headless"]
+    assert not captured["headless_path"].parent.exists()
+    assert "--set-shader" not in command
     assert "--verbose" in command
     assert "--log-file" in command
 

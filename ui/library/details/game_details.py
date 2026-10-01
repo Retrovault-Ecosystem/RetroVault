@@ -1,4 +1,4 @@
-import copy
+from controllers.game_launch_controller import GameLaunchController
 from PyQt6.QtWidgets import (
     QWidget,
     QLabel,
@@ -18,20 +18,10 @@ from PyQt6.QtCore import Qt
 
 from pathlib import Path
 
-from models.launch_profile import LaunchProfile
 
-from config import ConfigLoader
 
-from services.retroarch import (
-    CoreResolver,
-    LaunchDiagnostics,
-    LaunchValidator,
-)
 
-from services.retroarch.launcher import RetroArchLauncher
-from services.retroarch.archive_runtime import ArchiveRuntime
 from services.retroarch.archive_variant import ArchiveVariantFormatter
-from services.cheats import CheatService
 from ui.library.widgets.game_edition_launcher import GameEditionLauncher
 from ui.library.widgets.cheat_studio import CheatStudio
 
@@ -70,6 +60,7 @@ class GameDetails(QWidget):
         process_lifecycle=None,
         archive_runtime=None,
         cheat_service=None,
+        launch_controller=None,
     ):
 
         super().__init__()
@@ -110,40 +101,12 @@ class GameDetails(QWidget):
         )
 
 
-        self.config = ConfigLoader().load()
-
-
-        self.core_resolver = CoreResolver(
-            self.config
-        )
-
-
-        self.launcher = (
-            launcher
-            if launcher is not None
-            else RetroArchLauncher()
-        )
-
-        self.process_lifecycle = (
-            process_lifecycle
-        )
-
-        self.archive_runtime = (
-            archive_runtime
-            if archive_runtime is not None
-            else ArchiveRuntime()
-        )
-
-        self.cheat_service = (
-            cheat_service
-            if cheat_service is not None
-            else CheatService()
-        )
-
-
-        self.diagnostics = LaunchDiagnostics()
-
-
+        self.launch_controller = launch_controller or GameLaunchController(
+            launcher=launcher, process_lifecycle=process_lifecycle,
+            archive_runtime=archive_runtime, cheat_service=cheat_service)
+        for name in ('config', 'core_resolver', 'launcher', 'process_lifecycle',
+                     'archive_runtime', 'cheat_service', 'diagnostics'):
+            setattr(self, name, getattr(self.launch_controller, name))
 
         outer = QVBoxLayout(
             self
@@ -264,6 +227,7 @@ class GameDetails(QWidget):
             "Select a game"
         )
 
+        self.title.setTextFormat(Qt.TextFormat.PlainText)
         self.title.setObjectName(
             "LibraryDetailsTitle"
         )
@@ -279,6 +243,7 @@ class GameDetails(QWidget):
 
 
         self.metadata = QLabel()
+        self.metadata.setTextFormat(Qt.TextFormat.PlainText)
 
         self.metadata.setObjectName(
             "LibraryDetailsMetadata"
@@ -765,7 +730,7 @@ class GameDetails(QWidget):
                 ]
             )
 
-        self.description.setText(
+        self.description.setPlainText(
             "\n".join(
                 profile_lines
             )
@@ -1022,36 +987,9 @@ class GameDetails(QWidget):
         )
 
 
-    def _process_session_running(
-        self,
-    ) -> bool:
-        if self.launcher is None:
-            return False
-
-        process_running = getattr(
-            self.launcher,
-            "process_running",
-            None,
-        )
-
-        if process_running is None:
-            return False
-
-        try:
-            running = process_running()
-        except (
-            OSError,
-            RuntimeError,
-        ):
-            return False
-
-        if not isinstance(
-            running,
-            bool,
-        ):
-            return False
-
-        return running
+    def _process_session_running(self) -> bool:
+        self.launch_controller.launcher = self.launcher
+        return self.launch_controller._process_session_running()
 
 
     def sync_process_session(
@@ -1092,8 +1030,8 @@ class GameDetails(QWidget):
             return
 
         try:
-            self.process_lifecycle.stop_requested()
-        except RuntimeError as exc:
+            self.launch_controller.stop()
+        except (OSError, RuntimeError) as exc:
             self._set_launch_status(
                 f"Unable to stop game: {exc}"
             )
@@ -1128,123 +1066,13 @@ class GameDetails(QWidget):
         )
 
 
-    def _launch_target_from_variant(
-        self,
-        variant,
-    ):
-        """
-        Build a launch-time game view for a selected physical edition.
-
-        The canonical Library object remains untouched. Presentation
-        resolution, core selection, validation and launch all receive
-        the selected edition's ROM while inheriting canonical metadata
-        that is shared by the game family.
-        """
-
-        if (
-            self.current_game is None
-            or not isinstance(
-                variant,
-                dict,
-            )
-        ):
-            return self.current_game
-
-        from copy import copy
-
-        launch_game = copy(
-            self.current_game
-        )
-
-        variant_name = str(
-            variant.get(
-                "name",
-                "",
-            )
-            or ""
-        ).strip()
-
-        variant_rom = str(
-            variant.get(
-                "rom",
-                "",
-            )
-            or ""
-        ).strip()
-
-        variant_source = str(
-            variant.get(
-                "source",
-                "",
-            )
-            or ""
-        ).strip()
-
-        if variant_name:
-            launch_game.name = (
-                variant_name
-            )
-
-        if variant_rom:
-            launch_game.rom = (
-                variant_rom
-            )
-
-        if variant_source:
-            launch_game.source = (
-                variant_source
-            )
-
-        launch_game.variant_category = (
-            GameEditionLauncher
-            ._category_key(
-                variant.get(
-                    "category",
-                    "other",
-                )
-            )
-        )
-
-        launch_game.variant_label = str(
-            variant.get(
-                "label",
-                "",
-            )
-            or ""
-        )
-
-        launch_game.variant_region = str(
-            variant.get(
-                "region",
-                "",
-            )
-            or ""
-        )
-
-        launch_game.variant_language = str(
-            variant.get(
-                "language",
-                "",
-            )
-            or ""
-        )
-
-        launch_game.variant_revision = str(
-            variant.get(
-                "revision",
-                "",
-            )
-            or ""
-        )
-
-        launch_game.is_primary_variant = bool(
-            variant.get(
-                "preferred",
-                False,
-            )
-        )
-
-        return launch_game
+    def _launch_target_from_variant(self, variant):
+        # Compatibility entry point for callers inspecting an edition before launch.
+        self.launch_controller.current_game = self.current_game
+        try:
+            return self.launch_controller._launch_target_from_variant(variant)
+        finally:
+            self.launch_controller.current_game = None
 
 
     def _select_cheats(
@@ -1267,394 +1095,26 @@ class GameDetails(QWidget):
         )
 
 
-    def _cheat_runtime_file(
-        self,
-        cheats,
-    ):
-        if not cheats:
-            return ""
-
-        return self.cheat_service.runtime_file(
-            cheats
-        )
+    def _cheat_runtime_file(self, cheats):
+        return self.launch_controller._cheat_runtime_file(cheats)
 
 
     def launch_game(self):
-
-
-        if not self.current_game:
-
-            return
-
-        if self._process_session_running():
-            self._set_launch_status(
-                "Unable to launch: another game session is running."
-            )
-            self._refresh_launch_button()
-            return
-
-        selected_variant = (
-            self._select_game_edition()
+        controller = self.launch_controller
+        for name in ('config', 'core_resolver', 'launcher', 'process_lifecycle',
+                     'archive_runtime', 'cheat_service', 'diagnostics'):
+            setattr(controller, name, getattr(self, name))
+        self._launch_session_active = controller.launch(
+            self.current_game,
+            choose_edition=self._select_game_edition,
+            choose_archive=self._select_archive_member,
+            choose_cheats=self._select_cheats,
+            status=self._set_launch_status,
+            warning=lambda title, message: QMessageBox.warning(self, title, message),
+            played=self.played_handler,
+            presentation_provider=self.presentation_resolver_provider,
         )
-
-        if selected_variant is None:
-            self._set_launch_status(
-                "Launch cancelled."
-            )
-            return
-
-        launch_game = (
-            self._launch_target_from_variant(
-                selected_variant
-            )
-        )
-
-        if launch_game is None:
-            return
-
-        self._set_launch_status(
-            f'Preparing "{launch_game.name}"...'
-        )
-
-        archive_member = ""
-
-        if (
-            Path(
-                launch_game.rom
-            ).suffix.lower()
-            == ".7z"
-        ):
-            try:
-                archive_member = (
-                    self._select_archive_member(
-                        launch_game.rom
-                    )
-                )
-            except (
-                OSError,
-                ValueError,
-            ) as exc:
-                message = (
-                    "Unable to inspect archive variants: "
-                    f"{exc}"
-                )
-                QMessageBox.warning(
-                    self,
-                    "Archive Inspection Failed",
-                    (
-                        "RetroVault could not inspect "
-                        "the archive variants.\n\n"
-                        f"{exc}"
-                    ),
-                )
-                self._set_launch_status(
-                    message
-                )
-                return
-
-            if archive_member is None:
-                self._set_launch_status(
-                    "Launch cancelled."
-                )
-                return
-
-        cheat_game = launch_game
-        runtime_rom = ""
-
-        if archive_member:
-            try:
-                runtime_rom = (
-                    self.archive_runtime
-                    .resolve(
-                        launch_game.rom,
-                        member=archive_member,
-                    )
-                )
-            except (
-                OSError,
-                ValueError,
-            ) as exc:
-                self._set_launch_status(
-                    "Unable to prepare archive variant: "
-                    f"{exc}"
-                )
-                return
-
-            cheat_game = copy.copy(
-                launch_game
-            )
-            cheat_game.rom = runtime_rom
-
-        try:
-            selected_cheats = (
-                self._select_cheats(
-                    cheat_game,
-                    "",
-                )
-            )
-        except (
-            OSError,
-            ValueError,
-        ) as exc:
-            self._set_launch_status(
-                "Unable to load Cheat Studio: "
-                f"{exc}"
-            )
-            return
-
-        if selected_cheats is None:
-            self._set_launch_status(
-                "Launch cancelled."
-            )
-            return
-
-        try:
-            cheat_file = (
-                self._cheat_runtime_file(
-                    selected_cheats
-                )
-            )
-        except (
-            OSError,
-            ValueError,
-        ) as exc:
-            self._set_launch_status(
-                "Unable to prepare cheats: "
-                f"{exc}"
-            )
-            return
-
-        if self.process_lifecycle is not None:
-            self.process_lifecycle.launch_requested(
-                getattr(
-                    launch_game,
-                    "rvdb_platform_id",
-                    "",
-                )
-            )
-
-
-
-        core_path = self.core_resolver.find(
-
-            launch_game.core
-
-        )
-
-
-
-        if not core_path:
-
-
-            message = (
-                "Unable to launch: required emulator core "
-                "is missing."
-            )
-
-            QMessageBox.warning(
-                self,
-                "Emulator Core Missing",
-                (
-                    "RetroVault could not start this game "
-                    "because its required emulator core "
-                    "could not be found.\n\n"
-                    f"Required core: "
-                    f"{launch_game.core}"
-                ),
-            )
-
-            self._set_launch_status(
-                message
-            )
-
-            if self.process_lifecycle is not None:
-                self.process_lifecycle.launch_failed()
-
-            return
-
-
-
-        shader = ""
-        overlay = ""
-
-        if (
-            self.presentation_resolver_provider
-            is not None
-        ):
-            try:
-                resolver = (
-                    self.presentation_resolver_provider()
-                )
-                presentation = resolver.resolve(
-                    launch_game
-                )
-                shader = presentation.shader
-                overlay = presentation.overlay
-            except (
-                OSError,
-                ValueError,
-            ) as exc:
-                QMessageBox.warning(
-                    self,
-                    "Visual Presentation Unavailable",
-                    (
-                        "RetroVault could not load "
-                        "the selected visual presentation.\n\n"
-                        "The game will continue without "
-                        "the assigned shader or overlay.\n\n"
-                        f"{exc}"
-                    ),
-                )
-
-        profile = LaunchProfile(
-
-            game=launch_game.name,
-
-            rom=(
-                runtime_rom
-                or launch_game.rom
-            ),
-
-            core=core_path,
-
-            overlay=overlay,
-
-            shader=shader,
-
-            archive_member=(
-                ""
-                if runtime_rom
-                else archive_member
-            ),
-
-            cheat_file=cheat_file
-
-        )
-
-        profile.platform_id = str(
-            getattr(
-                launch_game,
-                "rvdb_platform_id",
-                "",
-            )
-            or ""
-        ).strip()
-
-
-
-        validator = LaunchValidator(
-
-            self.config["retroarch"]["executable"],
-
-            profile.core
-
-        )
-
-
-
-        result = validator.validate(
-
-            profile.rom
-
-        )
-
-
-
-        print(
-
-            self.diagnostics.explain(
-                result
-            )
-
-        )
-
-
-
-        if not result["ready"]:
-
-            messages = self.diagnostics.explain(
-                result
-            )
-
-            self._set_launch_status(
-                "Unable to launch: "
-                + " ".join(messages)
-            )
-
-            if self.process_lifecycle is not None:
-                self.process_lifecycle.launch_failed()
-
-            return
-
-
-
-        launch_result = self.launcher.launch(
-
-            profile
-
-        )
-
-
-        if self.process_lifecycle is not None:
-            self.process_lifecycle.launch_result(
-                launch_result
-            )
-
-        if launch_result.get(
-            "success",
-            False,
-        ):
-            self._launch_session_active = True
-            self._refresh_launch_button()
-
-            self._set_launch_status(
-                f'Running "{self.current_game.name}".'
-            )
-        else:
-            self._launch_session_active = False
-            error = str(
-                launch_result.get(
-                    "error",
-                    "Unknown launch error.",
-                )
-            ).strip()
-
-            if not error:
-                error = "Unknown launch error."
-
-            self._set_launch_status(
-                f"Unable to launch: {error}"
-            )
-
-        if (
-            launch_result.get(
-                "success",
-                False,
-            )
-            and self.played_handler is not None
-        ):
-
-            try:
-
-                self.played_handler(
-                    self.current_game
-                )
-
-            except (
-                OSError,
-                ValueError,
-            ) as exc:
-
-                QMessageBox.warning(
-                    self,
-                    "Recently Played Update Failed",
-                    (
-                        "RetroVault started the game, but "
-                        "could not update Recently Played."
-                        "\n\n"
-                        f"{exc}"
-                    ),
-                )
+        self._refresh_launch_button()
 
     def _refresh_collection_button(
         self,
@@ -1763,6 +1223,15 @@ class GameDetails(QWidget):
             and not self._launch_session_active
             and not process_running
         )
+
+        from services.emulators.models import selected_backend, SNES9X, STANDALONE_NOTICE
+        try:
+            backend = selected_backend(self.launch_controller.config_loader.load(),
+                                       getattr(self.current_game, 'rvdb_platform_id', ''))
+            self.launch_button.setText('▶ Launch with Snes9x' if backend == SNES9X else '▶ Launch Game')
+            self.launch_button.setToolTip(STANDALONE_NOTICE if backend == SNES9X else 'Launch with RetroArch')
+        except (OSError, ValueError):
+            self.launch_button.setToolTip('Unable to read emulator backend settings')
 
         self.launch_button.setEnabled(
             launch_enabled

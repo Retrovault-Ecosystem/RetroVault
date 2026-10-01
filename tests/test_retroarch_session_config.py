@@ -272,3 +272,13 @@ def test_session_config_does_not_own_presentation_viewport_geometry(
 
     for key in forbidden:
         assert key not in payload
+
+
+def test_explicit_shader_enables_pipeline_without_inheriting_a_preset(tmp_path):
+    runtime = RetroArchSessionConfig(tmp_path)
+    enabled = Path(runtime.create(shader_enabled=True)).read_text()
+    assert 'video_shader_enable = "true"' in enabled
+    assert 'video_shader_enable = "false"' not in enabled
+    assert 'video_shader = ""' in enabled
+    # A later shader-free launch returns to the clean baseline.
+    assert Path(runtime.create()).read_text() == runtime.BASELINE

@@ -228,9 +228,7 @@ def test_save_persists_overlay_directory(
         == str(selected)
     )
     assert emitted == [str(selected)]
-    assert page.save_status.text() == (
-        "Settings saved"
-    )
+    assert page.save_status.text().startswith("Settings saved")
 
 
 def test_invalid_overlay_directory_blocks_save(

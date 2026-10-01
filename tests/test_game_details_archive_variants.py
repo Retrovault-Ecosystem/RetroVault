@@ -276,7 +276,9 @@ def test_selected_archive_variant_reaches_launch_profile(
         "command": [],
     }
 
+    played = Mock()
     details = GameDetails(
+        played_handler=played,
         archive_runtime=archive_runtime,
         launcher=launcher,
     )
@@ -284,10 +286,12 @@ def test_selected_archive_variant_reaches_launch_profile(
         str(archive)
     )
 
+    details.current_game.local_file_id = "local-file:container"
+
     monkeypatch.setattr(
         details.core_resolver,
-        "find",
-        lambda _core: "/cores/fceumm_libretro.so",
+        "resolve",
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so"),
     )
 
     class ReadyValidator:
@@ -303,7 +307,7 @@ def test_selected_archive_variant_reaches_launch_profile(
             }
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -335,6 +339,12 @@ def test_selected_archive_variant_reaches_launch_profile(
     assert profile.archive_member == ""
     assert profile.core == "/cores/fceumm_libretro.so"
 
+    played.assert_called_once()
+    recorded = played.call_args.args[0]
+    assert recorded.rom == str(archive)
+    assert recorded.local_file_id == "local-file:container"
+    assert recorded.rom != str(runtime_rom)
+
 
 def test_non_archive_launch_profile_has_no_archive_member(
     tmp_path,
@@ -360,8 +370,8 @@ def test_non_archive_launch_profile_has_no_archive_member(
 
     monkeypatch.setattr(
         details.core_resolver,
-        "find",
-        lambda _core: "/cores/fceumm_libretro.so",
+        "resolve",
+        _core_resolution_mock(lambda _core: "/cores/fceumm_libretro.so"),
     )
 
     class ReadyValidator:
@@ -377,7 +387,7 @@ def test_non_archive_launch_profile_has_no_archive_member(
             }
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -571,10 +581,10 @@ def test_zero_playable_members_preserves_runtime_launch_path(
 
     monkeypatch.setattr(
         details.core_resolver,
-        "find",
-        Mock(
+        "resolve",
+        _core_resolution_mock(Mock(
             return_value="/cores/fceumm_libretro.so"
-        ),
+        )),
     )
 
     class ReadyValidator:
@@ -590,7 +600,7 @@ def test_zero_playable_members_preserves_runtime_launch_path(
             }
 
     monkeypatch.setattr(
-        "ui.library.details.game_details.LaunchValidator",
+        "controllers.game_launch_controller.LaunchValidator",
         ReadyValidator,
     )
 
@@ -954,3 +964,47 @@ def test_archive_inspection_failure_is_reported_to_user(
     lifecycle.launch_failed.assert_not_called()
     lifecycle.launch_result.assert_not_called()
     launcher.launch.assert_not_called()
+
+
+@pytest.mark.parametrize("success", [True, False])
+def test_selected_physical_edition_is_recorded_only_after_success(tmp_path, monkeypatch, success):
+    from services.library.canonicalization import LibraryCanonicalizer
+    usa, japan = tmp_path / "Example (USA).nes", tmp_path / "Example (Japan).nes"
+    usa.write_bytes(b"USA")
+    japan.write_bytes(b"Japan")
+    games = [_game(str(usa)), _game(str(japan))]
+    games[0].local_file_id = "local-file:usa"
+    games[1].local_file_id = "local-file:japan"
+    family = LibraryCanonicalizer().canonicalize(games)[0]
+    selected = next(v for v in family.variants if v["rom"] == str(japan))
+    played, launcher = Mock(), Mock()
+    launcher.launch.return_value = {"success": success, "command": [], "error": "failed"}
+    details = GameDetails(launcher=launcher, played_handler=played)
+    details.current_game = family
+    monkeypatch.setattr(details, "_select_game_edition", lambda: selected)
+    monkeypatch.setattr(details.core_resolver, "resolve", _core_resolution_mock(lambda core: "/cores/fceumm.so"))
+    validator = Mock()
+    validator.return_value.validate.return_value = {"retroarch": True, "core": True, "rom": True, "ready": True}
+    monkeypatch.setattr("controllers.game_launch_controller.LaunchValidator", validator)
+    details.launch_game()
+    assert launcher.launch.call_args.args[0].rom == str(japan)
+    if success:
+        played.assert_called_once()
+        recorded = played.call_args.args[0]
+        assert recorded.local_file_id == "local-file:japan"
+        assert recorded.rom == str(japan)
+    else:
+        played.assert_not_called()
+    assert family.local_file_id == "local-file:usa"
+    assert family.rom == str(usa)
+
+
+def _core_resolution_mock(callback):
+    """Keep UI sequencing tests independent of installed host binaries."""
+    from unittest.mock import Mock
+    from services.retroarch.core_resolver import CoreResolution
+    def resolve(name, **kwargs):
+        path = callback(name)
+        return CoreResolution("resolved" if path else "missing", path=path,
+                              message="Required core is missing: " + str(name))
+    return Mock(side_effect=resolve)

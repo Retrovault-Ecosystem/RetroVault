@@ -208,6 +208,8 @@ class ProcessLifecycleAdapter:
         process = self._session.active_process
 
         if process is None:
+            if self._runtime.state is HardwareRuntimeState.STOP_REQUESTED:
+                self._runtime.process_exited()
             return self.snapshot
 
         if self._session.process_running():
