@@ -1,5 +1,11 @@
 # RetroVault
 
+Current roadmap status: **Milestone #14 and the approved 14-milestone roadmap COMPLETE**.
+See [current milestone](docs/current_milestone.md), the [M14 integration record](docs/milestone14_final_integration.md)
+and [setup instructions](docs/configuration_startup.md) for verified support and limits.
+The overview below includes project direction; it is not a claim that every future feature
+or external integration is currently qualified. No new roadmap is started by M14.
+
 ## The Ultimate Retro Gaming Management Ecosystem
 
 RetroVault is a Linux-first desktop application designed to manage, organize, customize, and enhance retro gaming collections.

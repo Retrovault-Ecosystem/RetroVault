@@ -1,5 +1,15 @@
 # Configuration and startup reproducibility
 
+## Milestone #14 integration status
+
+Milestone #14 closes the approved 14-milestone roadmap. No Milestone #15 has begun.
+See [M14 evidence and limits](milestone14_final_integration.md). RVDB `validate` (or `v`)
+and `build` now return nonzero process status on failure. Build rejects duplicate IDs
+and replaces its output atomically only after successful serialization/flush.
+The existing consumer bundle installation and configuration ordering below are unchanged.
+Standalone settings distinguish a successful save with a failed refresh from a write failure.
+Historical runtime files are not automatically deleted; archive extraction is retained cache.
+
 ## Setup
 
 Use the repository's virtual environment, not a global Python installation with

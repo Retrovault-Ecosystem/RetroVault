@@ -1,6 +1,14 @@
 # RetroVault Current Milestone
 
-Current status: **Milestone #13 — Standalone emulators — COMPLETE AND CLOSED.**
+Current status: **Milestone #14 and the approved 14-milestone roadmap COMPLETE.**
+Final suites: **2,213 RetroVault / 406 RVDB passed**. Clean source-copy RetroVault: **2,213 passed**.
+The user authorized final two-stage closure. No Milestone #15 or post-roadmap work has begun.
+See the [M14 integration record](milestone14_final_integration.md) for current scope,
+evidence, protected contracts, deferred work and the approved protected-checkpoint sequence.
+
+## Milestone #13 closure (historical)
+
+Historical status: **Milestone #13 — Standalone emulators — COMPLETE AND CLOSED.**
 
 The approved native Linux Snes9x GTK SNES adapter is connected to shared session
 ownership, Settings, selected-edition launch/history and capability reporting.

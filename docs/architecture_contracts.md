@@ -1,12 +1,18 @@
 # RetroVault + RVDB architecture contracts
 
-Current implementation reference through **Milestone #12 — Advanced visuals**, 2026-09-30.
+Current reference: [Milestone #14 integration record](milestone14_final_integration.md),
+Milestone #14 and the approved roadmap complete, 2026-10-05. No Milestone #15 has begun.
 
-The six-boundary architecture remains unchanged. Earlier milestone sections retain
-historical evidence; the ownership and presentation contracts below reflect the
-current implementation. Milestones #5/#6 are re-closed following the Genesis
-Library metadata correction and explicit user confirmation of correct operation.
-See `current_milestone.md` and [configuration/startup contracts](configuration_startup.md). Milestone #7 remains complete; Milestone #8 preserves its startup and configuration contracts.
+The existing ownership boundaries remain. The current end-to-end flow includes knowledge,
+local inventory, durable user preferences, presentation intent, isolated runtime configuration,
+RetroArch or qualified native Snes9x execution, shared process ownership/cleanup and UI feedback.
+Owned-process cleanup remains available after failed startup; indicators do not falsely claim
+that startup succeeded. Producer validation/build failures are release failures and bundle
+publication is atomic. See the M14 record for files, evidence and deferred limitations.
+
+The diagrams and milestone sections below retain their original historical context.
+RetroArch-specific diagrams describe that backend, not the entire post-M13 execution surface.
+Production visuals, identity formats, qualification policies and canonical knowledge are unchanged.
 
 ## Ownership and flow
 
