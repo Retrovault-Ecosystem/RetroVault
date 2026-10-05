@@ -5,6 +5,7 @@ from config import ConfigLoader
 from models.launch_profile import LaunchProfile
 from services.library.game_variants import normalize_variant_category
 from services.presentation.launch_resolver import LaunchPresentationResolver
+from services.presentation.hardware_state import HardwareRuntimeState
 from services.retroarch import CoreResolver, LaunchDiagnostics, LaunchValidator
 from services.retroarch.launcher import RetroArchLauncher
 from services.retroarch.archive_runtime import ArchiveRuntime
@@ -67,7 +68,8 @@ class GameLaunchController:
         except (OSError, ValueError, RuntimeError) as exc:
             self.last_result = {'success': False, 'error': str(exc)}
             status(f'Unable to launch: {exc}')
-            if self.process_lifecycle is not None:
+            if (self.process_lifecycle is not None
+                    and self.process_lifecycle.state is HardwareRuntimeState.LAUNCH_REQUESTED):
                 self.process_lifecycle.launch_failed()
             return False
         finally:

@@ -132,3 +132,59 @@ def test_failed_input_cleanup_retains_owner_for_retry(tmp_path, monkeypatch):
     c.cleanup_inputs()
     assert not generated.exists()
     assert not c._pending_cheat_inputs
+
+@pytest.mark.parametrize('initial', ['IDLE', 'EXITED'])
+@pytest.mark.parametrize('step', ['edition', 'config', 'pending'])
+def test_real_lifecycle_contains_preparation_error(tmp_path, initial, step):
+    from services.presentation.hardware_runtime import HardwareRuntimeOrchestrator
+    from services.presentation.hardware_state import HardwareIndicatorPolicy, HardwareRuntimeState
+    from services.presentation.process_lifecycle import ProcessLifecycleAdapter
+    c, game, calls, generated = setup_controller(tmp_path)
+    c.launcher.active_process = None
+    runtime = HardwareRuntimeOrchestrator(HardwareIndicatorPolicy())
+    if initial == 'EXITED':
+        runtime.launch_requested(); runtime.process_exited()
+    c.process_lifecycle = ProcessLifecycleAdapter(runtime, c.launcher)
+    if step == 'edition':
+        calls['choose_edition'] = Mock(side_effect=ValueError('original preparation error'))
+    elif step == 'config':
+        game.rvdb_platform_id = 'platform.nintendo.snes'
+        c.config_loader.load.side_effect = OSError('original preparation error')
+    else:
+        c.core_resolver.resolve.side_effect = RuntimeError('original preparation error')
+    assert c.launch(game, **calls) is False
+    assert c.last_result['error'] == 'original preparation error'
+    assert runtime.state is (HardwareRuntimeState.IDLE if step == 'pending' else HardwareRuntimeState[initial])
+    c.launcher.launch.assert_not_called()
+    calls['played'].assert_not_called()
+    assert not generated.exists()
+    assert not c._launch_in_progress
+
+
+@pytest.mark.parametrize('initial', ['IDLE', 'EXITED'])
+def test_real_lifecycle_cancellation_and_retry(tmp_path, initial):
+    from services.presentation.hardware_runtime import HardwareRuntimeOrchestrator
+    from services.presentation.hardware_state import HardwareIndicatorPolicy, HardwareRuntimeState
+    from services.presentation.process_lifecycle import ProcessLifecycleAdapter
+    c, game, calls, generated = setup_controller(tmp_path)
+    c.launcher.active_process = None
+    runtime = HardwareRuntimeOrchestrator(HardwareIndicatorPolicy())
+    if initial == 'EXITED':
+        runtime.launch_requested(); runtime.process_exited()
+    c.process_lifecycle = ProcessLifecycleAdapter(runtime, c.launcher)
+    choose = calls['choose_edition']
+    calls['choose_edition'] = lambda: None
+    assert not c.launch(game, **calls)
+    assert runtime.state is HardwareRuntimeState[initial]
+    assert not generated.exists()
+    calls['played'].assert_not_called()
+    calls['choose_edition'] = choose
+    def launch(profile):
+        c.launcher.active_process = object()
+        c.launcher.process_running.return_value = True
+        return {'success': True}
+    c.launcher.launch.side_effect = launch
+    assert c.launch(game, **calls)
+    assert runtime.state is HardwareRuntimeState.RUNNING
+    calls['played'].assert_called_once()
+    assert not generated.exists()

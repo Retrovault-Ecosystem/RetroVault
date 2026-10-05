@@ -119,5 +119,14 @@ class SettingsService:
             import sys
             if sys.platform != 'linux':
                 raise ValueError('The Snes9x GTK adapter currently supports native Linux only.')
-        self.config_writer.update({'emulation': values})
-        return self.config_loader.load()
+        config = self.config_loader.load()
+        overrides = {'emulation': values}
+        self.config_writer.update(overrides)
+        refresh_error = ''
+        try:
+            effective = self.config_loader.load()
+        except (OSError, ValueError) as exc:
+            from config.loader import _merge_config
+            effective = _merge_config(config, overrides)
+            refresh_error = str(exc)
+        return SettingsSaveResult(effective, False, False, refresh_error)

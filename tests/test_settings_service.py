@@ -57,3 +57,29 @@ def test_invalid_input_does_not_write(tmp_path, monkeypatch):
     with pytest.raises(ValueError, match='does not exist'):
         svc.save(values)
     assert not runtime.exists()
+
+
+def test_standalone_saved_but_refresh_failed(tmp_path, monkeypatch):
+    svc, _, runtime = service(tmp_path, monkeypatch)
+    runtime.write_text(json.dumps({'extension': {'keep': True}}))
+    load = svc.config_loader.load
+    reads = 0
+    def loading():
+        nonlocal reads
+        reads += 1
+        if reads == 2: raise OSError('reread failed')
+        return load()
+    monkeypatch.setattr(svc.config_loader, 'load', loading)
+    result = svc.save_standalone('retroarch', '')
+    assert result.refresh_error == 'reread failed'
+    assert result.config['emulation']['snes_backend'] == 'retroarch'
+    assert result.config['extension'] == {'keep': True}
+    assert json.loads(runtime.read_text())['emulation']['snes_backend'] == 'retroarch'
+
+
+def test_standalone_write_failure_is_not_saved(tmp_path, monkeypatch):
+    svc, _, runtime = service(tmp_path, monkeypatch)
+    monkeypatch.setattr(svc.config_writer, 'update', Mock(side_effect=OSError('write failed')))
+    with pytest.raises(OSError, match='write failed'):
+        svc.save_standalone('retroarch', '')
+    assert not runtime.exists()

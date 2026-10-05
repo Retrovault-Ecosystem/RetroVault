@@ -1000,7 +1000,7 @@ class GameDetails(QWidget):
 
         A details pane owns launch-status text only for the game it
         launched. Launch availability, however, follows the single
-        shared RetroArch process session across every details pane.
+        shared emulator process session across every details pane.
         """
 
         self._refresh_launch_button()
@@ -1023,10 +1023,7 @@ class GameDetails(QWidget):
     def stop_game(
         self,
     ) -> None:
-        if not self._launch_session_active:
-            return
-
-        if self.process_lifecycle is None:
+        if not self._process_session_running():
             return
 
         try:
@@ -1238,8 +1235,7 @@ class GameDetails(QWidget):
         )
 
         self.stop_button.setEnabled(
-            self._launch_session_active
-            and process_running
+            process_running
         )
 
 

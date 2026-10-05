@@ -483,11 +483,31 @@ def test_poll_completes_requested_stop_after_process_exit():
     assert session.active_process is None
 
 
-def test_stop_request_requires_running_lifecycle():
+def test_stop_request_requires_owned_process():
     adapter, _session = make_adapter()
 
     with pytest.raises(
         RuntimeError,
-        match="running launch lifecycle",
+        match="running owned process",
     ):
+        adapter.stop_requested()
+
+
+def test_failed_startup_owned_process_can_retry_stop():
+    adapter, session = make_adapter()
+    process = Mock(); process.poll.return_value = None
+    adapter.launch_requested()
+    session.active_process = process
+    adapter.launch_result({'success': False, 'error': 'cleanup incomplete'})
+    session.stop = Mock(side_effect=[False, True, True])
+    with pytest.raises(RuntimeError, match='Unable to request'):
+        adapter.stop_requested()
+    assert session.active_process is process
+    adapter.stop_requested()
+    adapter.stop_requested()
+    assert adapter.state is HardwareRuntimeState.IDLE
+    process.poll.return_value = 0
+    adapter.poll()
+    assert session.active_process is None
+    with pytest.raises(RuntimeError, match='owned process'):
         adapter.stop_requested()

@@ -217,10 +217,10 @@ def test_standalone_settings_save_without_retroarch_installation(native, tmp_pat
     writer = ConfigWriter(runtime_file=runtime)
     writer.write({'retroarch': {'executable': '/missing/retroarch'}, 'other_setting': 'preserved'})
     service = SettingsService(loader, writer)
-    config = service.save_standalone('snes9x', request.executable)
+    config = service.save_standalone('snes9x', request.executable).config
     assert config['emulation']['snes_backend'] == 'snes9x'
     assert json.loads(runtime.read_text())['other_setting'] == 'preserved'
-    assert service.save_standalone('retroarch', '/now-missing/snes9x')['emulation']['snes_backend'] == 'retroarch'
+    assert service.save_standalone('retroarch', '/now-missing/snes9x').config['emulation']['snes_backend'] == 'retroarch'
     before = runtime.read_bytes()
     with pytest.raises(ValueError):
         service.save_standalone('snes9x', '/missing/snes9x')

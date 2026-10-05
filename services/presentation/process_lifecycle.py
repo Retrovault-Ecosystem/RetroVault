@@ -45,7 +45,7 @@ class ProcessLifecycleAdapter:
     This adapter deliberately does not:
 
       - launch an emulator
-      - issue reset/stop commands
+      - implement backend termination or issue reset commands
       - create Qt timers
       - sleep or spawn threads
       - render artwork
@@ -166,18 +166,12 @@ class ProcessLifecycleAdapter:
         """
         Request termination of the currently owned emulator process.
 
-        RVV enters STOP_REQUESTED immediately. Process exit remains
+        A running lifecycle enters STOP_REQUESTED after an accepted stop.
+        Failed startup stays IDLE while its owned-process cleanup is retried.
+        Process exit remains
         authoritative: poll() observes the terminated process and
         advances the lifecycle to EXITED.
         """
-
-        if (
-            self._runtime.state
-            is not HardwareRuntimeState.RUNNING
-        ):
-            raise RuntimeError(
-                "Stop requires a running launch lifecycle."
-            )
 
         if (
             self._session.active_process is None
@@ -192,6 +186,15 @@ class ProcessLifecycleAdapter:
                 "Unable to request emulator process stop."
             )
 
+        # Failed startup is deliberately IDLE (indicators off), but the
+        # session can still own a process whose cleanup must be retried.
+        # Do not fabricate a successful RUNNING lifecycle to stop it.
+        if self._runtime.state in {
+            HardwareRuntimeState.IDLE,
+            HardwareRuntimeState.EXITED,
+            HardwareRuntimeState.STOP_REQUESTED,
+        }:
+            return self.snapshot
         return self._runtime.stop_requested()
 
 

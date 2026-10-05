@@ -5434,3 +5434,22 @@ def test_settings_reports_write_permission_error_without_reset(tmp_path, monkeyp
     assert 'permission denied' in page.save_status.text()
     assert runtime.read_text() == '{"extension": "preserve"}'
     page.deleteLater()
+
+
+def test_standalone_feedback_distinguishes_refresh_from_write_failure():
+    _app()
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    from services.settings.service import SettingsSaveResult
+    page = SimpleNamespace(snes_backend=Mock(), snes9x_executable=Mock(),
+                           standalone_status=QLabel(), settings_service=Mock())
+    config = {'emulation': {'snes_backend': 'retroarch'}}
+    page.settings_service.save_standalone.return_value = SettingsSaveResult(config, False, False, 'read failed')
+    SettingsPage.save_standalone_settings(page)
+    assert page.config == config
+    assert 'backend saved' in page.standalone_status.text()
+    assert 'Unable to refresh' in page.standalone_status.text()
+    assert 'Unable to save' not in page.standalone_status.text()
+    page.settings_service.save_standalone.side_effect = OSError('write failed')
+    SettingsPage.save_standalone_settings(page)
+    assert page.standalone_status.text() == 'Unable to save: write failed'

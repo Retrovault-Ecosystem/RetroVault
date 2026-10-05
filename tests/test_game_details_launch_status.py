@@ -598,6 +598,7 @@ def test_stop_failure_remains_user_visible(
 ):
     details, lifecycle = make_details(app)
 
+    details.launcher.process_running = Mock(return_value=True)
     details._launch_session_active = True
     details._refresh_launch_button()
 
@@ -633,7 +634,7 @@ def test_selecting_different_game_during_shared_session_disables_launch(
 
     assert details._launch_session_active is False
     assert details.launch_button.isEnabled() is False
-    assert details.stop_button.isEnabled() is False
+    assert details.stop_button.isEnabled() is True
     assert details.launch_status.text() == (
         "Another game session is running."
     )
@@ -655,7 +656,7 @@ def test_shared_running_process_disables_launch_without_local_ownership(
     details.sync_process_session()
 
     assert details.launch_button.isEnabled() is False
-    assert details.stop_button.isEnabled() is False
+    assert details.stop_button.isEnabled() is True
 
 
 def test_launch_guard_rejects_shared_active_process_before_lifecycle_request(
@@ -901,3 +902,12 @@ def _core_resolution_mock(callback):
         return CoreResolution("resolved" if path else "missing", path=path,
                               message="Required core is missing: " + str(name))
     return Mock(side_effect=resolve)
+
+
+def test_shared_stop_without_indicator_adapter_uses_session_owner(app):
+    details = GameDetails()
+    details.launcher.process_running = Mock(return_value=True)
+    details.launcher.stop = Mock(return_value=True)
+    details.stop_game()
+    details.launcher.stop.assert_called_once_with()
+    assert details.launch_status.text() == 'Stopping game...'

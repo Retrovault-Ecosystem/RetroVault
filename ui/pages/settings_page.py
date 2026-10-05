@@ -1016,13 +1016,17 @@ class SettingsPage(QWidget):
 
     def save_standalone_settings(self):
         try:
-            self.config = self.settings_service.save_standalone(
+            result = self.settings_service.save_standalone(
                 self.snes_backend.currentData(), self.snes9x_executable.text())
         except (OSError, ValueError) as exc:
             self.standalone_status.setText(f'Unable to save: {exc}')
             return
-        self.standalone_status.setText('SNES backend saved. Applies on the next launch. '
-                                      'Executable availability does not establish runtime qualification.')
+        self.config = result.config
+        message = ('SNES backend saved. Applies on the next launch. '
+                   'Executable availability does not establish runtime qualification.')
+        if result.refresh_error:
+            message += f' Unable to refresh saved settings: {result.refresh_error}'
+        self.standalone_status.setText(message)
 
     @staticmethod
     def _path_editor_row(

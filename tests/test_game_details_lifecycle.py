@@ -326,3 +326,91 @@ def _core_resolution_mock(callback):
         return CoreResolution("resolved" if path else "missing", path=path,
                               message="Required core is missing: " + str(name))
     return Mock(side_effect=resolve)
+
+
+@pytest.mark.parametrize('backend', ['retroarch', 'snes9x'])
+def test_failed_startup_stop_recovers_real_owned_child(app, tmp_path, monkeypatch, backend):
+    import subprocess
+    import sys
+    from types import SimpleNamespace
+    from services.emulators.session import EmulatorSession
+    from services.emulators.snes9x import Snes9xLauncher
+    from services.retroarch.launcher import RetroArchLauncher
+    from services.presentation.hardware_runtime import HardwareRuntimeOrchestrator
+    from services.presentation.hardware_state import HardwareIndicatorPolicy, HardwareRuntimeState
+    from services.presentation.process_lifecycle import ProcessLifecycleAdapter
+    from controllers.game_launch_controller import GameLaunchController
+
+    for key in ('XDG_CONFIG_HOME', 'XDG_DATA_HOME', 'XDG_CACHE_HOME', 'XDG_STATE_HOME'):
+        monkeypatch.setenv(key, str(tmp_path / key))
+    program = tmp_path / 'controlled-emulator'
+    program.write_text(f'#!{sys.executable}\nimport time\nprint("Using rewind buffer of 16 MiB", flush=True)\ntime.sleep(60)\n')
+    program.chmod(0o755)
+    rom = tmp_path / 'fixture.sfc'; rom.write_bytes(b'controlled fixture')
+    ra = RetroArchLauncher(executable=str(program))
+    native = Snes9xLauncher(startup_timeout=1)
+    session = EmulatorSession(ra, native)
+    lifecycle = ProcessLifecycleAdapter(HardwareRuntimeOrchestrator(HardwareIndicatorPolicy()), session)
+    config = {'retroarch': {'executable': str(program), 'cores': {'directory': ''}},
+              'emulation': {'snes_backend': backend, 'snes9x_executable': str(program)}}
+    controller = GameLaunchController(launcher=session, process_lifecycle=lifecycle,
+                                      config_loader=SimpleNamespace(load=lambda: config))
+    core = tmp_path / 'snes9x_libretro.so'; core.write_bytes(b'controlled core fixture')
+    controller.core_resolver.resolve = Mock(return_value=SimpleNamespace(path=str(core)))
+    controller.validator_factory = Mock(return_value=ReadyValidator())
+    controller.diagnostics.explain = Mock(return_value=[])
+    adapter = ra if backend == 'retroarch' else native
+    real_launch = adapter.launch
+    def startup_failure(request):
+        result = real_launch(request)
+        assert result['success'], result
+        return {'success': False, 'error': 'injected post-spawn startup failure'}
+    monkeypatch.setattr(adapter, 'launch', startup_failure)
+    game = Game('Fixture', 'SNES', 0, '', 'snes9x', rom=str(rom),
+                local_file_id='local-file:fixture',
+                rvdb_platform_id='platform.nintendo.snes' if backend == 'snes9x' else '')
+    played = Mock()
+    calls = dict(choose_edition=lambda: {'rom': str(rom), 'local_file_id': game.local_file_id},
+                 choose_archive=Mock(), choose_cheats=lambda *args: [], status=Mock(), warning=Mock(), played=played)
+    unrelated = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(60)'], start_new_session=True)
+    details = None
+    try:
+        assert not controller.launch(game, **calls)
+        owned = session.active_process
+        assert owned is not None and owned.poll() is None
+        assert lifecycle.state is HardwareRuntimeState.IDLE
+        played.assert_not_called()
+        # Neither controller nor shared backend coordinator may start another child.
+        assert not controller.launch(game, **calls)
+        assert not session.launch(None)['success']
+        assert not session.launch_standalone(None)['success']
+        assert session.active_process is owned
+        details = GameDetails(launch_controller=controller)
+        details.show_game(game)
+        details.sync_process_session()
+        assert details.stop_button.isEnabled()
+        assert not details.launch_button.isEnabled()
+        with monkeypatch.context() as patch:
+            patch.setattr(adapter, 'stop', Mock(side_effect=RuntimeError('cleanup still blocked')))
+            details.stop_game()
+            assert session.active_process is owned
+            assert details.stop_button.isEnabled()
+        details.stop_game()
+        lifecycle.poll(); details.sync_process_session()
+        assert owned.poll() is not None
+        assert not session.process_running()
+        assert session.active_process is None
+        assert not details.stop_button.isEnabled()
+        assert details.launch_button.isEnabled()
+        details.stop_game()  # repeated UI stop is harmless
+        assert unrelated.poll() is None
+        session.shutdown()
+        # Generated RetroArch configs are transient; native logs/profiles are retained.
+        cache = tmp_path / 'XDG_CACHE_HOME' / 'retrovault'
+        for name in ('primary-runtime', 'session-runtime', 'overlay-runtime', 'shader-runtime',
+                     'contain-runtime', 'core-options-runtime', 'cheat-runtime', 'aspect-probe'):
+            assert not [p for p in (cache / name).rglob('*') if p.is_file()]
+    finally:
+        session.shutdown()
+        unrelated.terminate(); unrelated.wait(timeout=5)
+        if details is not None: details.close()
