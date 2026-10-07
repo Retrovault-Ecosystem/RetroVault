@@ -1,6 +1,10 @@
 # RetroVault
 
-Current roadmap status: **Milestone #14 and the approved 14-milestone roadmap COMPLETE**.
+Current roadmap: **USQE — Usability, Scale and Qualified Expansion**.
+**Milestone #1 decision/documentation baseline complete; #2–#12 unstarted.** See [USQE roadmap](docs/usability_scale_qualified_expansion_roadmap.md) and [decision baseline](docs/usqe_milestone1_decisions.md).
+The original roadmap stays closed and protected; this is not Milestone #15.
+
+Original roadmap status: **Milestone #14 and the approved 14-milestone roadmap COMPLETE**.
 See [current milestone](docs/current_milestone.md), the [M14 integration record](docs/milestone14_final_integration.md)
 and [setup instructions](docs/configuration_startup.md) for verified support and limits.
 The overview below includes project direction; it is not a claim that every future feature
