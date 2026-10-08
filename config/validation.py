@@ -36,6 +36,10 @@ def validate_config(data):
                     string(entry['directory'], f'paths.{key}.directory', path=True)
     if 'library' in data:
         section = mapping(data['library'], 'library')
+        if 'display' in section:
+            from .library_preferences import LibraryPreferences
+            display = mapping(section['display'], 'library.display')
+            LibraryPreferences.from_values({**LibraryPreferences().to_dict(), **display})
         if 'sources' in section:
             sources = section['sources']
             if not isinstance(sources, list):

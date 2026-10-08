@@ -1,3 +1,5 @@
+from config.library_preferences import LibraryPreferences
+from services.library.identity import game_identity
 from services.library.identity import project_identities
 from PyQt6.QtWidgets import (
     QWidget,
@@ -41,9 +43,12 @@ class GalleryView(QWidget):
         launcher=None,
         process_lifecycle=None,
         launch_controller=None,
+        display_preferences=None,
     ):
 
         super().__init__()
+        preferences = LibraryPreferences.from_values(
+            (display_preferences or LibraryPreferences()).to_dict())
 
         self.presentation_store = (
             presentation_store
@@ -190,7 +195,8 @@ class GalleryView(QWidget):
 
         self.grid = GameGrid(
             games,
-            self.details
+            self.details,
+            card_size=preferences.card_size,
         )
 
 
@@ -308,9 +314,10 @@ class GalleryView(QWidget):
         )
 
 
-        self.setLayout(
-            main_layout
-        )
+        self.setLayout(main_layout)
+        self.display_preferences = LibraryPreferences()
+        self.apply_display_preferences(preferences)
+
 
 
 
@@ -925,6 +932,8 @@ class GalleryView(QWidget):
 
     def show_gallery_view(self):
 
+        self.toolbar.view_selector.set_mode("gallery")
+
         self.library_view_stack.setCurrentWidget(
             self.grid
         )
@@ -932,12 +941,16 @@ class GalleryView(QWidget):
 
     def show_details_view(self):
 
+        self.toolbar.view_selector.set_mode("details")
+
         self.library_view_stack.setCurrentWidget(
             self.details_view
         )
 
 
     def show_compact_view(self):
+
+        self.toolbar.view_selector.set_mode("compact")
 
         self.library_view_stack.setCurrentWidget(
             self.compact_view
@@ -1004,3 +1017,38 @@ class GalleryView(QWidget):
             self.details.show_game(
                 game
             )
+
+    def apply_display_preferences(self, preferences):
+        """Apply display state only; never rescan, persist or change game policy."""
+        preferences = LibraryPreferences.from_values(preferences.to_dict())
+        selected = self.details.current_game
+        identity = game_identity(selected) if selected is not None else None
+        scrolls = [self.grid.scroll, self.details_view.list, self.compact_view.list]
+        positions = [(widget.horizontalScrollBar().value(), widget.verticalScrollBar().value())
+                     for widget in scrolls]
+        self.grid.set_card_size(preferences.card_size)
+        sort_text = {'name': 'Name', 'year': 'Year'}[preferences.normal_sort]
+        if self.toolbar.sort.currentText() != sort_text:
+            blocked = self.toolbar.sort.blockSignals(True)
+            self.toolbar.sort.setCurrentText(sort_text)
+            self.toolbar.sort.blockSignals(blocked)
+            lists = [self.details_view.list, self.compact_view.list]
+            prior = [widget.blockSignals(True) for widget in lists]
+            try:
+                self.refresh()
+            finally:
+                for widget, was_blocked in zip(lists, prior):
+                    widget.blockSignals(was_blocked)
+        self.details_view.restore_selection(identity)
+        self.compact_view.restore_selection(identity)
+        {'gallery': self.show_gallery_view, 'details': self.show_details_view,
+         'compact': self.show_compact_view}[preferences.opening_view]()
+        # Recompute the scroll ranges before restoring/clamping positions.
+        for widget, (horizontal, vertical) in zip(scrolls, positions):
+            if widget is self.grid.scroll:
+                self.grid.layout.activate()
+            else:
+                widget.doItemsLayout()
+            widget.horizontalScrollBar().setValue(horizontal)
+            widget.verticalScrollBar().setValue(vertical)
+        self.display_preferences = preferences

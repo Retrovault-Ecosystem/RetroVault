@@ -12,6 +12,9 @@ from PyQt6.QtCore import (
 
 
 
+CARD_SIZES = {"small": (170, 140, 175), "default": (190, 160, 200), "large": (230, 200, 250)}
+
+
 class GameCard(QWidget):
 
 
@@ -19,12 +22,13 @@ class GameCard(QWidget):
 
 
 
-    def __init__(self, game):
+    def __init__(self, game, card_size="default"):
 
         super().__init__()
 
 
         self.game = game
+        self.card_size = card_size
 
         self.setObjectName(
             "LibraryGameCard"
@@ -41,10 +45,7 @@ class GameCard(QWidget):
         )
 
 
-        self.cover.setFixedSize(
-            160,
-            200
-        )
+        self.cover.setFixedSize(*CARD_SIZES[card_size][1:])
 
 
         self.cover.setAlignment(
@@ -162,16 +163,43 @@ class GameCard(QWidget):
 
 
 
-        self.setFixedWidth(
-            190
-        )
+        self.setFixedWidth(CARD_SIZES[card_size][0])
+        self._fit_candidate_labels()
 
 
 
 
 
+
+    def set_card_size(self, card_size):
+        width, cover_width, cover_height = CARD_SIZES[card_size]
+        self.card_size = card_size
+        self.setFixedWidth(width)
+        self.cover.setFixedSize(cover_width, cover_height)
+        self.load_cover()
+        self._fit_candidate_labels()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self._fit_candidate_labels()
+
+    def _fit_candidate_labels(self):
+        if not hasattr(self, "title"):
+            return
+        # Keep approved Default text rendering unchanged. Candidate sizes use
+        # bounded labels and tooltips rather than clipping the middle of a title.
+        if self.card_size == "default":
+            self.title.setText(self.game.name)
+            self.title.setToolTip("")
+            return
+        margins = self.layout().contentsMargins()
+        available = max(1, self.width() - margins.left() - margins.right())
+        self.title.setText(self.title.fontMetrics().elidedText(
+            self.game.name, Qt.TextElideMode.ElideRight, available))
+        self.title.setToolTip(self.game.name)
 
     def load_cover(self):
+        self.cover.clear()
 
 
         if getattr(
@@ -193,9 +221,9 @@ class GameCard(QWidget):
 
                     pixmap.scaled(
 
-                        160,
+                        self.cover.width(),
 
-                        200,
+                        self.cover.height(),
 
                         Qt.AspectRatioMode.KeepAspectRatio,
                         Qt.TransformationMode.SmoothTransformation,

@@ -1,3 +1,4 @@
+from config.library_preferences import LibraryPreferences, CHOICES
 from services.settings.service import SettingsService
 
 from pathlib import Path
@@ -208,6 +209,8 @@ class SettingsPage(QWidget):
 
     """View and manage RetroVault\'s effective runtime configuration."""
 
+    library_preferences_previewed = pyqtSignal(object)
+    library_preferences_applied = pyqtSignal(object)
     library_sources_changed = pyqtSignal()
 
 
@@ -254,6 +257,7 @@ class SettingsPage(QWidget):
         self.settings_service = SettingsService(self.config_loader, self.config_writer)
         self.library_source_store = self.settings_service.sources
 
+        self.applied_library_preferences = LibraryPreferences.from_config(self.config)
         self._build_ui()
         self._populate()
 
@@ -996,6 +1000,7 @@ class SettingsPage(QWidget):
         self.standalone_status.setWordWrap(True)
         standalone_layout.addRow(self.standalone_status)
         layout.addWidget(standalone_group)
+        layout.addWidget(self._build_library_preferences())
 
         layout.addStretch(
             1
@@ -2294,3 +2299,84 @@ class SettingsPage(QWidget):
         self.save_status.setText(result.message)
         if result.sources_changed:
             self.library_sources_changed.emit()
+
+    def _build_library_preferences(self):
+        group = QGroupBox('Library browsing')
+        group.setObjectName('SettingsLibraryGroup')
+        self.library_preferences_group = group
+        layout = QFormLayout(group)
+        self.library_preference_controls = {}
+        labels = {'opening_view': 'Opening Library view', 'card_size': 'Gallery card size',
+                  'normal_sort': 'Normal browsing sort'}
+        applied = self.applied_library_preferences.to_dict()
+        for field, choices in CHOICES.items():
+            control = QComboBox()
+            control.setObjectName('LibraryPreference_' + field)
+            for choice in choices:
+                control.addItem(choice.title(), choice)
+            control.setCurrentIndex(control.findData(applied[field]))
+            label = QLabel(labels[field])
+            label.setBuddy(control)
+            layout.addRow(label, control)
+            self.library_preference_controls[field] = control
+            control.currentIndexChanged.connect(self.preview_library_preferences)
+        hint = QLabel('Changes preview in Library without saving. Visit Library to inspect them, '
+                      'then return here to Apply or Cancel. Recently Played keeps history order.')
+        hint.setWordWrap(True)
+        layout.addRow(hint)
+        buttons = QHBoxLayout()
+        for label, method in [('Apply', self.apply_library_preferences),
+                              ('Cancel preview', self.cancel_library_preferences),
+                              ('Reset to approved defaults', self.reset_library_preferences)]:
+            button = QPushButton(label)
+            button.setObjectName('SettingsPrimaryAction' if label == 'Apply' else 'SettingsSecondaryAction')
+            button.clicked.connect(method)
+            buttons.addWidget(button)
+        layout.addRow(buttons)
+        self.library_preferences_status = QLabel('Using the last applied Library browsing preferences.')
+        self.library_preferences_status.setObjectName('SettingsSaveStatus')
+        self.library_preferences_status.setWordWrap(True)
+        layout.addRow(self.library_preferences_status)
+        return group
+
+    def _library_preference_values(self):
+        return {field: control.currentData() for field, control in self.library_preference_controls.items()}
+
+    def _set_library_preference_controls(self, preferences):
+        for field, value in preferences.to_dict().items():
+            control = self.library_preference_controls[field]
+            previous = control.blockSignals(True)
+            control.setCurrentIndex(control.findData(value))
+            control.blockSignals(previous)
+
+    def preview_library_preferences(self):
+        preferences = LibraryPreferences.from_values(self._library_preference_values())
+        self.library_preferences_previewed.emit(preferences)
+        self.library_preferences_status.setText(
+            'Preview — not saved. Apply to keep these choices.' if preferences != self.applied_library_preferences
+            else 'Preview matches the last applied preferences.')
+
+    def apply_library_preferences(self):
+        try:
+            preferences = LibraryPreferences.from_values(self._library_preference_values())
+            result = self.settings_service.save_library_preferences(preferences.to_dict())
+        except (OSError, ValueError) as exc:
+            self.library_preferences_status.setText(f'Preferences not saved. Preview remains active: {exc}')
+            return
+        self.config = result.config
+        self.applied_library_preferences = preferences
+        self.library_preferences_applied.emit(preferences)
+        message = 'Library browsing preferences saved.'
+        if result.refresh_error:
+            message += f' Unable to refresh saved settings: {result.refresh_error}'
+        self.library_preferences_status.setText(message)
+
+    def cancel_library_preferences(self):
+        self._set_library_preference_controls(self.applied_library_preferences)
+        self.library_preferences_previewed.emit(self.applied_library_preferences)
+        self.library_preferences_status.setText('Preview cancelled. Last applied preferences restored.')
+
+    def reset_library_preferences(self):
+        self._set_library_preference_controls(LibraryPreferences())
+        self.preview_library_preferences()
+        self.library_preferences_status.setText('Approved defaults previewed. Apply to save; Cancel to restore.')

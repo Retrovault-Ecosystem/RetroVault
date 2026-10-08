@@ -14,12 +14,13 @@ from ui.library.widgets.game_card import GameCard
 class GameGrid(QWidget):
 
 
-    def __init__(self, games, details=None):
+    def __init__(self, games, details=None, card_size="default"):
 
         super().__init__()
 
 
         self.details = details
+        self.card_size = card_size
 
         self.setObjectName(
             "LibraryGrid"
@@ -46,7 +47,7 @@ class GameGrid(QWidget):
         )
 
 
-        scroll = QScrollArea()
+        scroll = self.scroll = QScrollArea()
 
         scroll.setObjectName(
             "LibraryGridScroll"
@@ -110,7 +111,7 @@ class GameGrid(QWidget):
 
 
             card = GameCard(
-                game
+                game, card_size=self.card_size
             )
 
 
@@ -143,3 +144,11 @@ class GameGrid(QWidget):
                 col = 0
 
                 row += 1
+
+    def set_card_size(self, card_size):
+        if self.card_size == card_size:
+            return
+        self.card_size = card_size
+        for index in range(self.layout.count()):
+            self.layout.itemAt(index).widget().set_card_size(card_size)
+        self.layout.activate()

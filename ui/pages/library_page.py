@@ -20,9 +20,11 @@ class LibraryPage(GalleryView):
         launcher=None,
         process_lifecycle=None,
         launch_controller=None,
+        display_preferences=None,
     ):
         super().__init__(
             games,
+            display_preferences=display_preferences,
             rvdb_service=rvdb_service,
             favorite_handler=favorite_handler,
             played_handler=played_handler,

@@ -172,3 +172,42 @@ Requested repeat verification: `retest/nes/report.json`, `retest/snes/report.jso
 and `retest/genesis/report.json` each passed a 20-second run, Stop/shutdown,
 persistent-config preservation and complete transient cleanup. Fresh visual
 acceptance remains unconfirmed; process success alone does not establish it.
+
+
+## USQE #2: Library browsing preferences
+
+The implemented Library browsing group in Settings previews three application preferences:
+
+| JSON field | Default | Accepted values |
+| --- | --- | --- |
+| `library.display.opening_view` | `gallery` | `gallery`, `details`, `compact` |
+| `library.display.card_size` | `default` | `small`, `default`, `large` |
+| `library.display.normal_sort` | `name` | `name`, `year` |
+
+Changes preview in memory. Navigate to Library to inspect them, then return to Settings.
+Apply saves through the existing atomic ConfigWriter. Cancel restores the last applied
+preferences without undoing current game selection or search/filter actions. Reset only
+previews approved defaults; Apply is still required. Closing the app discards unsaved preview.
+Ordinary Library view/sort clicks stay session-only and do not change the Settings draft.
+
+Missing values use defaults without writing. Invalid/obsolete display values fall back
+per field; a malformed display section falls back entirely. Submitted values are validated
+strictly. Invalid JSON and unrelated invalid configuration retain their existing errors.
+No migration occurs. Unrelated configuration and unknown fields are preserved.
+
+A failed write retains the previous durable configuration and leaves an explicitly unsaved
+preview available for retry or Cancel. Successful write/failed reread is reported as saved
+with a refresh warning; the successfully written preferences become the applied baseline.
+
+Default Gallery cards remain 190 px wide with a 160×200 artwork area. Small uses
+170 / 140×175; Large uses 230 / 200×250. These are bounded choices, not pixel controls.
+The existing five-column grid remains; narrow views may require horizontal scrolling.
+Artwork retains its aspect ratio. Candidate sizes elide long titles and expose the full
+name in a tooltip; protected Default title rendering remains unchanged.
+
+Name retains the original startup service order until a normal refresh sorts it; Year
+sorts at startup. Normal refresh Name/Year comparison semantics are unchanged, including
+unknown years first. Recently Played retains history order and playlists remain independent.
+
+These settings have no gameplay/presentation/runtime authority. See the
+[Milestone #2 record](usqe_milestone2_customization.md) for evidence and approved closure.

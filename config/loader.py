@@ -145,6 +145,7 @@ class ConfigLoader:
         )
 
         try:
-            return validate_config(_merge_config(defaults, runtime))
+            from .library_preferences import normalize_loaded_preferences
+            return validate_config(normalize_loaded_preferences(_merge_config(defaults, runtime)))
         except ValueError as exc:
             raise ValueError(f"Invalid configuration ({self.default_file}, {self.runtime_file}): {exc}") from exc

@@ -1,6 +1,6 @@
 # RetroVault + RVDB — Usability, Scale and Qualified Expansion (USQE)
 
-Status: approved new 12-milestone roadmap. **USQE #1 is complete as a decision/documentation milestone. USQE #2–#12 are unstarted.**
+Status: approved new 12-milestone roadmap. **USQE #1 is complete as a decision/documentation milestone. USQE #2 is complete; #3–#12 are unstarted.**
 This is a separate roadmap, not Milestone #15. The original 14-milestone roadmap remains permanently closed and protected. No feature implementation is authorized by this document alone.
 
 ## Protected starting checkpoints
@@ -24,7 +24,7 @@ Use existing services, data, profiles and qualification runners. No speculative 
 
 ## Approved sequence and phases
 
-Numbers below belong only to USQE. All statuses except #1 remain **unstarted**.
+Numbers below belong only to USQE. #1 is complete; [#2 implementation and review](usqe_milestone2_customization.md) are approved and complete. #3–#12 remain **unstarted**.
 
 | Phase | # | Milestone | Objective and prerequisite boundary |
 | --- | --- | --- | --- |
@@ -69,4 +69,4 @@ Bring It to Life checkpoints are expected after functional acceptance in #2–#9
 
 The authoritative [USQE #1 decision baseline](usqe_milestone1_decisions.md) separates **APPROVED DECISIONS** from **PENDING EVIDENCE / FUTURE SELECTIONS**, including the qualification matrix and research register. It is the planning input for later milestones, not an implementation of them.
 
-USQE #1 closes only after its authorized documentation commits are published and remote equality/clean worktrees verified. Final documentation-inclusive hashes are reported in the closure response; they are not embedded in their own commits. The protected starting commits remain ancestors. USQE #2 requires explicit user authorization before work begins.
+USQE #1 closed with published documentation checkpoints: RetroVault `4bcfa25110cb4af39b4be5942e27ba53d71cbe9a` and RVDB `871b7f8b467db2ff22e6dbd994cef6af0d6a8d44`. The protected starting commits remain ancestors. The user authorized #2 implementation separately; then approved its implementation report and authorized final closure commit/push. #3 has not been authorized.

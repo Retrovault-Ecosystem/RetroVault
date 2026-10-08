@@ -178,3 +178,9 @@ class ViewSelector(QWidget):
         self._refresh_labels()
 
         self.compact_selected.emit()
+
+    def set_mode(self, mode):
+        """Synchronize programmatic changes without emitting a browsing action."""
+        button = {'gallery': self.gallery, 'details': self.details, 'compact': self.compact}[mode]
+        button.setChecked(True)
+        self._refresh_labels()

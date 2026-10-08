@@ -1,3 +1,4 @@
+from config.library_preferences import LibraryPreferences
 from services.emulators.session import EmulatorSession
 from controllers.game_launch_controller import GameLaunchController
 from config.paths import RVDB_BUNDLE
@@ -255,6 +256,7 @@ class MainWindow(QMainWindow):
 
         library_page = LibraryPage(
             controller.get_games(),
+            display_preferences=LibraryPreferences.from_config(ConfigLoader().load()),
             rvdb_service=rvdb_service,
             favorite_handler=(
                 controller.set_favorite
@@ -478,6 +480,8 @@ class MainWindow(QMainWindow):
         )
 
         settings_page = SettingsPage()
+        settings_page.library_preferences_previewed.connect(library_page.apply_display_preferences)
+        settings_page.library_preferences_applied.connect(library_page.apply_display_preferences)
 
         def library_sources_changed() -> None:
             try:

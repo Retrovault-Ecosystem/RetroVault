@@ -103,3 +103,13 @@ class DetailsView(QWidget):
         self.details.show_game(
             self.games[row]
         )
+
+    def restore_selection(self, identity):
+        from services.library.identity import game_identity
+        previous = self.list.blockSignals(True)
+        try:
+            row = next((i for i, game in enumerate(self.games)
+                        if identity is not None and game_identity(game) == identity), -1)
+            self.list.setCurrentRow(row)
+        finally:
+            self.list.blockSignals(previous)

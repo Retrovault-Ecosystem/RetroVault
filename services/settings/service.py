@@ -130,3 +130,18 @@ class SettingsService:
             effective = _merge_config(config, overrides)
             refresh_error = str(exc)
         return SettingsSaveResult(effective, False, False, refresh_error)
+
+    def save_library_preferences(self, values):
+        from config.library_preferences import LibraryPreferences
+        from config.loader import _merge_config
+        preferences = LibraryPreferences.from_values(values)
+        config = self.config_loader.load()
+        overrides = {'library': {'display': preferences.to_dict()}}
+        self.config_writer.update(overrides)
+        refresh_error = ''
+        try:
+            effective = self.config_loader.load()
+        except (OSError, ValueError) as exc:
+            effective = _merge_config(config, overrides)
+            refresh_error = str(exc)
+        return SettingsSaveResult(effective, False, False, refresh_error)
