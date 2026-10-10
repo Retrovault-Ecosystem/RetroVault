@@ -253,6 +253,15 @@ def test_library_and_playlists_share_persisted_platform_presentation(environment
             playlists_page = window.pages.pages['Playlists']
             assert playlists_page.details.presentation_store is library_page.details.presentation_store
             assert playlists_page.details.presentation_resolver_provider == library_page.details.presentation_resolver_provider
+            # Startup discovery now publishes asynchronously. Retain all existing
+            # presentation/lifecycle assertions after the accepted snapshot arrives.
+            from PyQt6.QtTest import QTest
+            from time import monotonic
+            deadline = monotonic() + 5
+            while not playlists_page.controller.get_games() and monotonic() < deadline:
+                app.processEvents()
+                QTest.qWait(5)
+            assert playlists_page.controller.get_games(), library_page.toolbar.refresh_status.text()
             game = playlists_page.controller.get_games()[0]
             for details in (library_page.details, playlists_page.details):
                 details.show_game(game)

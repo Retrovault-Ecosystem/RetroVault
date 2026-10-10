@@ -1,8 +1,9 @@
 # RetroVault
 
 Current roadmap: **USQE — Usability, Scale and Qualified Expansion**.
-**Milestone #1 complete; Milestone #2 complete; #3–#12 unstarted.** See [USQE roadmap](docs/usability_scale_qualified_expansion_roadmap.md) and [decision baseline](docs/usqe_milestone1_decisions.md).
+**Milestones #1–#3 complete; #4–#12 unstarted.** See [USQE roadmap](docs/usability_scale_qualified_expansion_roadmap.md) and [decision baseline](docs/usqe_milestone1_decisions.md).
 See the [Milestone #2 implementation record](docs/usqe_milestone2_customization.md) for reversible Library browsing preferences and verification.
+See the [Milestone #3 review record](docs/usqe_milestone3_responsive_discovery.md) for background Library discovery, cancellation and verification.
 The original roadmap stays closed and protected; this is not Milestone #15.
 
 Original roadmap status: **Milestone #14 and the approved 14-milestone roadmap COMPLETE**.

@@ -1,3 +1,4 @@
+from ui.library.discovery_jobs import DiscoveryJobs
 from config.library_preferences import LibraryPreferences
 from services.emulators.session import EmulatorSession
 from controllers.game_launch_controller import GameLaunchController
@@ -74,6 +75,11 @@ class MainWindow(QMainWindow):
 
     def shutdown_runtime(self):
         """Stop only this application's owned launch tree and resources."""
+        jobs = getattr(self, 'discovery_jobs', None)
+        if jobs is not None and not jobs.shutdown():
+            self._close_after_discovery = True
+            self.statusBar().showMessage('Cancelling Library discovery before closing…')
+            return False
         try:
             getattr(self, 'emulator_session', self.retroarch_launcher).shutdown()
             controller = getattr(self, "game_launch_controller", None)
@@ -170,6 +176,7 @@ class MainWindow(QMainWindow):
         controller = LibraryController(
             rvdb_resolver=rvdb_resolver,
             library_enabled=rvdb_resolver is not None,
+            load_on_start=False,
         )
 
         self.retroarch_launcher = (
@@ -484,6 +491,10 @@ class MainWindow(QMainWindow):
         settings_page.library_preferences_applied.connect(library_page.apply_display_preferences)
 
         def library_sources_changed() -> None:
+            if hasattr(self, 'discovery_jobs'):
+                self.discovery_jobs.request('refresh')
+                settings_page.save_status.setText('Library source saved. Background refresh requested.')
+                return
             try:
                 games = controller.reload_sources()
             except (
@@ -515,6 +526,9 @@ class MainWindow(QMainWindow):
         )
 
         def artwork_directory_changed(directory):
+            if hasattr(self, 'discovery_jobs'):
+                self.discovery_jobs.request('refresh')
+                return
             library_page.set_games(controller.refresh_artwork(directory))
             playlists_page.refresh_collections(
                 select_name=playlists_page.selected_collection())
@@ -569,7 +583,19 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(
             container
         )
-        if rvdb_resolver is None or not controller.get_games():
+        self.discovery_jobs = DiscoveryJobs(controller, self)
+        library_page.bind_discovery_jobs(self.discovery_jobs)
+        self.discovery_jobs.failed.connect(settings_page.save_status.setText)
+        self.discovery_jobs.idle.connect(self._discovery_shutdown_ready)
+        startup_sources = ConfigLoader().load().get('library', {}).get('sources', [])
+        if rvdb_resolver is not None and any(source.get('enabled') for source in startup_sources):
+            QTimer.singleShot(0, lambda: self.discovery_jobs.request('startup'))
+        if rvdb_resolver is None or not any(source.get('enabled') for source in startup_sources):
             self.pages.show_page("Settings")
         if rvdb_resolver is None:
             self.statusBar().showMessage("RVDB unavailable. Install a validated bundle and restart; Library scanning is disabled.")
+
+    def _discovery_shutdown_ready(self):
+        if getattr(self, '_close_after_discovery', False):
+            self._close_after_discovery = False
+            self.close()

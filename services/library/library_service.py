@@ -1076,3 +1076,75 @@ class LibraryService:
             platform_id, games_provider=self.get_games, recent_provider=self.recent,
             collection_names_provider=self.collection_names,
             collection_games_provider=self.collection_games)
+
+    def discovery_request(self, kind, directory=None):
+        from config import ConfigLoader
+        from services.library.discovery import DiscoveryRequest
+        if kind not in ('startup', 'refresh', 'import'):
+            raise ValueError('Unknown Library discovery operation.')
+        return DiscoveryRequest(kind, directory, ConfigLoader().load(),
+                                self.identity_registry.load(),
+                                tuple(deepcopy(self._physical_games)),
+                                self.builder.scanner.rvdb_resolver, self.identity_registry)
+
+    def publish_discovery(self, result, source_store):
+        """Application-thread-only commit; workers never mutate this service."""
+        from config import ConfigLoader
+        from services.library.discovery import relevant_config
+        request = result.request
+        current = ConfigLoader().load()
+        if relevant_config(current) != relevant_config(request.config):
+            raise ValueError('Library sources or artwork configuration changed; refresh again.')
+        if self.identity_registry.load() != request.registry_data:
+            raise ValueError('Library identity registry changed; refresh again.')
+        stores = [store for store in (self.state, self.collections, self.presentation_store)
+                  if callable(getattr(store, 'validate_identity_migration', None))]
+        for store in stores:
+            store.validate_identity_migration()
+        # All heavy discovery/projection has finished on detached objects.
+        # Existing per-file atomic/retryable semantics remain; no cross-file rollback claim.
+        persisted = None
+        try:
+            if request.kind == 'import':
+                persisted = source_store.persist_directory(request.directory)
+            self.identity_registry.commit(result.registry_data)
+            migrate_stores(result.registry_data['legacy_paths'], *stores)
+            self.state.apply(result.physical)
+            self._project_favorites(result.visible)
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise RuntimeError('Library update not published. Source/identity migration writes may '
+                               f'already be saved; retry the update. {exc}') from exc
+        # Stage all fallible copies before updating any live object references.
+        try:
+            previous = {game_identity(game): game for game in self.games}
+            visible, replacements, updates = [], {}, []
+            for game in result.visible:
+                identity = game_identity(game)
+                survivor = previous.get(identity)
+                if survivor is not None:
+                    values = {field.name: deepcopy(getattr(game, field.name))
+                              for field in fields(Game)}
+                    updates.append((survivor, values))
+                    game = survivor
+                replacements[identity] = game
+                visible.append(game)
+            physical = [replacements.get(game_identity(game), game)
+                        for game in result.physical]
+            sources = SourceManager(config=current)
+        except (OSError, ValueError, RuntimeError) as exc:
+            raise RuntimeError('Library update not published. Source/identity migration writes may '
+                               f'already be saved; retry the update. {exc}') from exc
+        for survivor, values in updates:
+            for name, value in values.items():
+                setattr(survivor, name, value)
+        self._physical_games = physical
+        self.games = visible
+        self.sources = sources
+        warning = ''
+        try:
+            result.archive_cache.flush()
+        except OSError as exc:
+            warning = f' Library updated; archive cache unavailable: {exc}'
+        return dict(games=tuple(visible), startup=request.kind == 'startup',
+                    discovered=result.discovered, persisted=persisted,
+                    added_count=result.added_count, skipped_count=result.skipped_count, warning=warning)

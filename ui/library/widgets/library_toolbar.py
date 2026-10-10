@@ -22,6 +22,7 @@ class LibraryToolbar(QWidget):
     random_requested = pyqtSignal()
     refresh_requested = pyqtSignal()
     bulk_import_requested = pyqtSignal()
+    cancel_discovery_requested = pyqtSignal()
     favorites_changed = pyqtSignal(bool)
     recent_changed = pyqtSignal(bool)
 
@@ -192,7 +193,11 @@ class LibraryToolbar(QWidget):
             self.bulk_import_requested.emit
         )
 
+        self.cancel_discovery_button = QPushButton('Cancel scan')
+        self.cancel_discovery_button.setEnabled(False)
+        self.cancel_discovery_button.clicked.connect(self.cancel_discovery_requested.emit)
         self.refresh_status = QLabel()
+        self.refresh_status.setWordWrap(True)
 
         self.refresh_status.setObjectName(
             "libraryRefreshStatus"
@@ -256,6 +261,8 @@ class LibraryToolbar(QWidget):
         self.secondary_row.addWidget(
             self.bulk_import_button
         )
+
+        self.secondary_row.addWidget(self.cancel_discovery_button)
 
         self.secondary_row.addWidget(
             self.refresh_status,

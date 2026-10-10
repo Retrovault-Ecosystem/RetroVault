@@ -6,7 +6,8 @@ SUPPORTED_ARTWORK_EXTENSIONS = {".png", ".jpg", ".jpeg", ".webp"}
 class ArtworkService:
     """Resolve local Library covers, independently of runtime presentation assets."""
 
-    def __init__(self, directory=None, rvdb_resolver=None):
+    def __init__(self, directory=None, rvdb_resolver=None, control=None):
+        self.control = control
         self.rvdb_resolver = rvdb_resolver
         self.set_directory(directory)
 
@@ -32,6 +33,8 @@ class ArtworkService:
         if self.directory is not None and self.directory.is_dir():
             try:
                 for path in self.directory.rglob("*"):
+                    if self.control is not None:
+                        self.control.check()
                     if path.is_file() and path.suffix.lower() in SUPPORTED_ARTWORK_EXTENSIONS:
                         index.setdefault(path.stem.casefold(), []).append(path)
             except OSError:

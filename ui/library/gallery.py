@@ -87,6 +87,8 @@ class GalleryView(QWidget):
             refresh_completed_handler
         )
 
+        self._browsing_order_changed = False
+        self.discovery_jobs = None
         self._library_refresh_in_progress = False
         self._bulk_import_in_progress = False
 
@@ -317,11 +319,18 @@ class GalleryView(QWidget):
         self.setLayout(main_layout)
         self.display_preferences = LibraryPreferences()
         self.apply_display_preferences(preferences)
+        for signal in (self.toolbar.search_changed, self.toolbar.system_changed,
+                       self.toolbar.sort_changed, self.toolbar.favorites_changed,
+                       self.toolbar.recent_changed):
+            signal.connect(self._mark_browsing_order_changed)
 
 
 
 
     def reload_library(self):
+        if self.discovery_jobs is not None:
+            self.discovery_jobs.request("refresh")
+            return
 
         if self.refresh_handler is None:
             return
@@ -528,6 +537,13 @@ class GalleryView(QWidget):
 
 
     def bulk_import(self):
+        if self.discovery_jobs is not None:
+            if self.discovery_jobs.busy:
+                return
+            directory = QFileDialog.getExistingDirectory(self, 'Bulk Import ROMs')
+            if directory:
+                self.discovery_jobs.request('import', directory)
+            return
 
         if self.bulk_import_handler is None:
             return
@@ -740,6 +756,7 @@ class GalleryView(QWidget):
     def set_games(
         self,
         games,
+        *, preserve_initial_order=False,
     ):
         self._direct_platform_id = None
 
@@ -785,10 +802,10 @@ class GalleryView(QWidget):
                 False
             )
 
-        self.refresh()
+        self.refresh(preserve_order=preserve_initial_order)
 
 
-    def refresh(self):
+    def refresh(self, *, preserve_order=False):
 
         recent_active = (
             self.toolbar.recent_only.isChecked()
@@ -893,7 +910,7 @@ class GalleryView(QWidget):
         )
 
 
-        if not recent_active:
+        if not recent_active and not preserve_order:
 
             if sort == "Name":
 
@@ -1029,6 +1046,7 @@ class GalleryView(QWidget):
         self.grid.set_card_size(preferences.card_size)
         sort_text = {'name': 'Name', 'year': 'Year'}[preferences.normal_sort]
         if self.toolbar.sort.currentText() != sort_text:
+            self._browsing_order_changed = True
             blocked = self.toolbar.sort.blockSignals(True)
             self.toolbar.sort.setCurrentText(sort_text)
             self.toolbar.sort.blockSignals(blocked)
@@ -1052,3 +1070,69 @@ class GalleryView(QWidget):
             widget.horizontalScrollBar().setValue(horizontal)
             widget.verticalScrollBar().setValue(vertical)
         self.display_preferences = preferences
+
+    def bind_discovery_jobs(self, jobs):
+        self.discovery_jobs = jobs
+        jobs.status.connect(self.toolbar.refresh_status.setText)
+        jobs.failed.connect(self._discovery_failed)
+        jobs.busy_changed.connect(self._discovery_busy)
+        jobs.published.connect(self._discovery_published)
+        self.toolbar.cancel_discovery_requested.connect(jobs.cancel)
+
+    def _discovery_busy(self, busy):
+        self.toolbar.bulk_import_button.setEnabled(not busy)
+        self.toolbar.cancel_discovery_button.setEnabled(busy and not self.discovery_jobs.committing)
+        self.toolbar.refresh_button.setEnabled(True)
+
+    def _discovery_failed(self, message):
+        self.toolbar.refresh_status.setText(message)
+        self.toolbar.refresh_status.setToolTip(message)
+
+    def _discovery_published(self, result):
+        selected = self.details.current_game
+        selected_id = game_identity(selected) if selected is not None else None
+        direct_platform = self._direct_platform_id
+        widgets = [self.grid.scroll, self.details_view.list, self.compact_view.list]
+        positions = [(w.horizontalScrollBar().value(), w.verticalScrollBar().value()) for w in widgets]
+        lists = [self.details_view.list, self.compact_view.list]
+        blocked = [w.blockSignals(True) for w in lists]
+        try:
+            preserve_order = (result.get('startup', False) and not self._browsing_order_changed
+                              and self.toolbar.sort.currentText() == 'Name')
+            self.set_games(result['games'], preserve_initial_order=preserve_order)
+            # Canonical platform filtering is not equivalent to a display-name combo.
+            if direct_platform is not None:
+                self._direct_platform_id = direct_platform
+                self.refresh()
+            games_by_id = {game_identity(game): game for game in self.all_games}
+            if selected_id in games_by_id:
+                self.details.show_game(games_by_id[selected_id])
+            elif selected_id is not None:
+                self.details.clear_game()
+            self.details_view.restore_selection(selected_id)
+            self.compact_view.restore_selection(selected_id)
+            for widget, (horizontal, vertical) in zip(widgets, positions):
+                if widget is self.grid.scroll:
+                    self.grid.layout.activate()
+                else:
+                    widget.doItemsLayout()
+                widget.horizontalScrollBar().setValue(horizontal)
+                widget.verticalScrollBar().setValue(vertical)
+            callback = (self.bulk_import_completed_handler if result.get('discovered') is not None
+                        else self.refresh_completed_handler)
+            if callback is not None:
+                callback(result if result.get('discovered') is not None else result['games'])
+            discovered = result.get('discovered')
+            summary = ('Library refreshed.' if discovered is None else
+                       f'Import complete: {discovered.discovered_count} discovered; '
+                       f'{result["added_count"]} added; {result["skipped_count"]} skipped; '
+                       f'{discovered.duplicate_count} duplicate paths.')
+            self.toolbar.refresh_status.setText(summary + result.get('warning', ''))
+        except Exception as exc:
+            self._discovery_failed(f'Library saved, but dependent views could not refresh: {exc}. Retry Refresh.')
+        finally:
+            for widget, previous in zip(lists, blocked):
+                widget.blockSignals(previous)
+
+    def _mark_browsing_order_changed(self, *args):
+        self._browsing_order_changed = True

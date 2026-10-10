@@ -89,7 +89,7 @@ class RomScanner:
             rvdb_platform.id,
         )
 
-    def scan(self, source):
+    def scan(self, source, *, control=None):
 
         games = []
 
@@ -97,11 +97,24 @@ class RomScanner:
             source.path
         )
 
-        for directory, folders, files in os.walk(
-            root
-        ):
+        if control is not None:
+            from services.library.source_validator import SourceValidator
+            problems = SourceValidator().validate(source)
+            if problems:
+                raise ValueError(f'Cannot scan {source.name}: ' + '; '.join(problems))
+            control.check()
+
+        def walk_error(error):
+            raise error
+
+        walk = os.walk(root, onerror=walk_error) if control is not None else os.walk(root)
+        for directory, folders, files in walk:
+            if control is not None:
+                control.report("Directories")
 
             for filename in files:
+                if control is not None:
+                    control.report("Scanning")
 
                 ext = os.path.splitext(
                     filename
@@ -127,7 +140,7 @@ class RomScanner:
 
                     preferred_member = (
                         self.archive_scan_cache.preferred_member(
-                            archive_path, self.archive_runtime
+                            archive_path, self.archive_runtime, **({"control": control} if control is not None else {})
                         )
                     )
 
@@ -252,5 +265,6 @@ class RomScanner:
 
                 )
 
-        self.archive_scan_cache.flush()
+        if control is None:
+            self.archive_scan_cache.flush()
         return games

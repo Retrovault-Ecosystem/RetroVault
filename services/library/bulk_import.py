@@ -50,6 +50,7 @@ class BulkImporter:
         *,
         source_id="bulk-import",
         source_name="Bulk Import",
+        control=None,
     ):
         source_path = (
             Path(path)
@@ -76,7 +77,7 @@ class BulkImporter:
             )
 
         scanned = self.scanner.scan(
-            source
+            source, **({"control": control} if control is not None else {})
         )
 
         games = []
@@ -84,6 +85,8 @@ class BulkImporter:
         duplicate_count = 0
 
         for game in scanned:
+            if control is not None:
+                control.check()
             rom = getattr(
                 game,
                 "rom",

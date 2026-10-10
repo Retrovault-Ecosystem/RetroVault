@@ -12,6 +12,7 @@ class LibraryController:
         bulk_importer=None,
         import_source_store=None,
         library_enabled=True,
+        load_on_start=True,
     ):
 
         self.library = LibraryService(
@@ -33,7 +34,7 @@ class LibraryController:
         )
 
         self.library_enabled = library_enabled
-        if library_enabled:
+        if library_enabled and load_on_start:
             self.library.load()
 
 
@@ -209,3 +210,15 @@ class LibraryController:
 
     def platform_statistics(self, platform_id):
         return self.library.platform_statistics(platform_id)
+
+    def discovery_request(self, kind, directory=None):
+        self._require_library()
+        return self.library.discovery_request(kind, directory)
+
+    @staticmethod
+    def prepare_discovery(request, control):
+        from services.library.discovery import prepare_library
+        return prepare_library(request, control)
+
+    def publish_discovery(self, result):
+        return self.library.publish_discovery(result, self.import_source_store)

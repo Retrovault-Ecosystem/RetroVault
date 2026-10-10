@@ -22,9 +22,9 @@ class LibrarySource:
 class SourceManager:
 
 
-    def __init__(self):
+    def __init__(self, config=None):
 
-        self.config = ConfigLoader().load()
+        self.config = ConfigLoader().load() if config is None else config
 
 
 

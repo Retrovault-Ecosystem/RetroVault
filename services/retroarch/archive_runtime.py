@@ -58,7 +58,7 @@ class ArchiveRuntime:
             )
         )
 
-    def playable_members(self, rom):
+    def playable_members(self, rom, *, control=None):
         source = (
             Path(rom)
             .expanduser()
@@ -78,7 +78,7 @@ class ArchiveRuntime:
             return []
 
         members = self._list_members(
-            source
+            source, **({"control": control} if control is not None else {})
         )
 
         return [
@@ -93,7 +93,7 @@ class ArchiveRuntime:
             )
         ]
 
-    def preferred_member(self, rom):
+    def preferred_member(self, rom, *, control=None):
         source = (
             Path(rom)
             .expanduser()
@@ -101,7 +101,7 @@ class ArchiveRuntime:
         )
 
         playable = self.playable_members(
-            source
+            source, **({"control": control} if control is not None else {})
         )
 
         if not playable:
@@ -238,22 +238,40 @@ class ArchiveRuntime:
             extracted.resolve()
         )
 
-    def _list_members(
-        self,
-        source,
-    ):
-        result = subprocess.run(
-            [
-                self.executable,
-                "l",
-                "-slt",
-                str(source),
-            ],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            text=True,
-            check=False,
-        )
+    def _list_members(self, source, *, control=None):
+        command = [self.executable, "l", "-slt", str(source)]
+        if control is None:
+            result = subprocess.run(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                                    text=True, check=False)
+        else:
+            from time import monotonic
+            control.report('Inspecting archive')
+            # Only this discovery-owned listing child is cancellable. Launch-time
+            # extraction and emulator process ownership are unchanged.
+            process = subprocess.Popen(command, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+            deadline = monotonic() + 30
+            try:
+                while True:
+                    control.check()
+                    if monotonic() >= deadline:
+                        raise TimeoutError(f'Archive inspection timed out: {source.name}')
+                    try:
+                        stdout, stderr = process.communicate(timeout=.1)
+                        break
+                    except subprocess.TimeoutExpired:
+                        continue
+                result = subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+            finally:
+                if process.poll() is None:
+                    process.terminate()
+                    try:
+                        process.communicate(timeout=1)
+                    except subprocess.TimeoutExpired:
+                        process.kill()
+                        process.communicate()
+                for pipe in (process.stdout, process.stderr):
+                    if pipe is not None:
+                        pipe.close()
 
         if result.returncode != 0:
             raise ValueError(

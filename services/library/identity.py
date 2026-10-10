@@ -67,10 +67,12 @@ def _signature(path):
     return [stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns]
 
 
-def _fingerprint(path, signature):
+def _fingerprint(path, signature, control=None):
     digest = hashlib.sha256()
     with path.open("rb") as handle:
         for chunk in iter(lambda: handle.read(1024 * 1024), b""):
+            if control is not None:
+                control.report("Hashing")
             digest.update(chunk)
     if _signature(path) != signature:
         raise OSError(f"File changed while establishing identity: {path}")
@@ -116,13 +118,13 @@ class IdentityRegistry:
                 raise ValueError("Invalid legacy identity mapping")
         return data
 
-    def stage(self, games):
+    def stage(self, games, *, control=None, original=None):
         """Assign IDs to new scan objects; do not write until the caller commits.
 
         A missing source never deletes records. Matching is global for this scan,
         so two new identical copies cannot race to claim one historical ID.
         """
-        original = self.load()
+        original = self.load() if original is None else original
         data = deepcopy(original)
         records = data["files"]
         by_path = {}
@@ -131,6 +133,8 @@ class IdentityRegistry:
         unique, observations = [], {}
         seen = set()
         for game in games:
+            if control is not None:
+                control.check()
             if not getattr(game, "rom", ""):
                 unique.append(game)
                 continue
@@ -148,7 +152,7 @@ class IdentityRegistry:
             platform = str(getattr(game, "rvdb_platform_id", "") or game.platform).casefold()
             candidates = by_path.get(path, [])
             cached = next((r for _, r in candidates if r["signature"] == signature), None)
-            digest = cached["sha256"] if cached else _fingerprint(Path(path), signature)
+            digest = cached["sha256"] if cached else _fingerprint(Path(path), signature, **({"control": control} if control is not None else {}))
             observations[path] = (game, platform, signature, digest)
         reserved, pending = set(), []
         for path, (game, platform, signature, digest) in observations.items():
@@ -165,6 +169,8 @@ class IdentityRegistry:
             by_fingerprint[(record["platform"], record["sha256"])].append((identity, record))
         pending_counts = Counter((observations[p][1], observations[p][3]) for p in pending)
         for path in pending:
+            if control is not None:
+                control.check()
             game, platform, signature, digest = observations[path]
             candidates = by_fingerprint[(platform, digest)]
             identity = None

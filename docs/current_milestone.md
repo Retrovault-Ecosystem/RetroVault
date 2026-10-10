@@ -1,9 +1,11 @@
 # RetroVault Current Milestone
 
 Current roadmap: **RetroVault + RVDB — Usability, Scale and Qualified Expansion (USQE)**.
-**USQE Milestone #1 is complete. Milestone #2 is complete following approval of its implementation report and closure. #3–#12 remain unstarted.**
+**USQE Milestones #1–#3 are complete; #4–#12 remain unstarted.**
 See the [approved USQE roadmap](usability_scale_qualified_expansion_roadmap.md) and [Milestone #1 decision baseline](usqe_milestone1_decisions.md).
 See the [Milestone #2 implementation and review record](usqe_milestone2_customization.md). The three Library browsing preferences use application configuration; gameplay, platform readiness, RVDB and historical records remain unchanged. The user approved the final report and authorized closure commit/push.
+
+See the [Milestone #3 implementation and verification record](usqe_milestone3_responsive_discovery.md). The user approved the implementation report and authorized closure. Verification: 2,298 full-suite tests and 28 focused discovery tests passed.
 
 ## Original 14-milestone roadmap closure (historical, protected)
 

@@ -14,7 +14,7 @@ class LibraryBuilder:
         )
 
 
-    def build(self, sources):
+    def build(self, sources, *, control=None):
 
         games = []
 
@@ -28,7 +28,7 @@ class LibraryBuilder:
 
 
             results = self.scanner.scan(
-                source
+                source, **({"control": control} if control is not None else {})
             )
 
 

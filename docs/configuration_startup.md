@@ -211,3 +211,27 @@ unknown years first. Recently Played retains history order and playlists remain 
 
 These settings have no gameplay/presentation/runtime authority. See the
 [Milestone #2 record](usqe_milestone2_customization.md) for evidence and approved closure.
+
+
+## USQE #3: Background Library discovery
+
+With valid RVDB knowledge and enabled sources, the window opens before Library discovery
+finishes. Refresh and Bulk Import prepare a detached candidate Library in a worker.
+The last published Library remains available for browsing. Progress reports observed
+work, not a guessed completion percentage. Cancel scan discards preparation; another
+Refresh supersedes older preparation. Only the latest requested update may publish.
+
+Publication runs on the application thread and cannot be cancelled once it starts.
+It rejects changed source/artwork settings or identity-registry snapshots. Current
+favorites, selection, filters, view preferences and scroll positions are retained where
+applicable. Initial default Name ordering preserves the established startup behavior.
+Closing waits for the owned discovery worker to stop before normal runtime shutdown.
+
+Persistence retains existing atomic per-file writes and retryable identity migration.
+If a later write or preparation step fails, earlier source/identity writes may already
+be durable; the UI reports this and asks for a retry. It does not promise a cross-file
+rollback. Archive discovery listing has a 30-second timeout and terminates only its
+owned listing process on cancellation. Launch-time archive extraction is unchanged.
+Cancellation is cooperative: a blocking filesystem call or canonicalization phase may
+delay acknowledgement. Final publication and rendering still run on the UI thread.
+See the [Milestone #3 record](usqe_milestone3_responsive_discovery.md) for measured limits.

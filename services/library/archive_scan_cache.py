@@ -26,18 +26,18 @@ class ArchiveScanCache:
         stat = path.stat()
         return [stat.st_dev, stat.st_ino, stat.st_size, stat.st_mtime_ns, stat.st_ctime_ns]
 
-    def preferred_member(self, archive, runtime):
+    def preferred_member(self, archive, runtime, *, control=None):
         path = Path(archive).expanduser().resolve()
         try:
             signature = self._signature(path)
         except OSError:
-            return runtime.preferred_member(archive)
+            return runtime.preferred_member(archive, **({"control": control} if control is not None else {}))
         key = str(path)
         entry = self.entries.get(key)
         if (isinstance(entry, dict) and entry.get("signature") == signature
                 and isinstance(entry.get("member"), str) and entry["member"]):
             return entry["member"]
-        member = runtime.preferred_member(archive)
+        member = runtime.preferred_member(archive, **({"control": control} if control is not None else {}))
         # Missing tools, unreadable archives, or an archive being changed
         # during inspection must be retried, rather than cached as failures.
         try:
