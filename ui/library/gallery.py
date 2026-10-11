@@ -931,19 +931,16 @@ class GalleryView(QWidget):
         self.randomizer.games = games
 
 
-        self.grid.update_games(
-            games
-        )
-
-
-        self.details_view.update_games(
-            games
-        )
-
-
-        self.compact_view.update_games(
-            games
-        )
+        selected = self.details.current_game
+        identity = game_identity(selected) if selected is not None else None
+        self.grid.update_games(games)
+        for view in (self.details_view, self.compact_view):
+            previous = view.list.blockSignals(True)
+            try:
+                view.update_games(games)
+                view.restore_selection(identity)
+            finally:
+                view.list.blockSignals(previous)
 
 
 

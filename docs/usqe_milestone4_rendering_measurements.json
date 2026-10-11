@@ -1,0 +1,626 @@
+{
+  "baseline": [
+    {
+      "count": 100,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 100,
+      "construction": 0.1151158839998061,
+      "filtering": 0.05438667899989014,
+      "event_gap": 0.09941083500007153,
+      "cards": 100,
+      "rss_kib": 77988
+    },
+    {
+      "count": 100,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 100,
+      "construction": 0.08041419199980737,
+      "filtering": 0.05374945699986711,
+      "event_gap": 0.07135083200000736,
+      "cards": 100,
+      "rss_kib": 79688
+    },
+    {
+      "count": 100,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 100,
+      "construction": 0.08109363699986716,
+      "filtering": 0.05484478800008219,
+      "event_gap": 0.07268126300004951,
+      "cards": 100,
+      "rss_kib": 79716
+    },
+    {
+      "count": 2000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 2000,
+      "construction": 0.8495852890000606,
+      "filtering": 0.596616186999654,
+      "event_gap": 0.8360836809997636,
+      "cards": 1000,
+      "rss_kib": 118152
+    },
+    {
+      "count": 2000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 2000,
+      "construction": 0.8588958069999535,
+      "filtering": 0.5754720969998743,
+      "event_gap": 0.8450934229999802,
+      "cards": 1000,
+      "rss_kib": 118092
+    },
+    {
+      "count": 2000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 2000,
+      "construction": 0.8605432350000228,
+      "filtering": 0.5890058119998685,
+      "event_gap": 0.8464666199997737,
+      "cards": 1000,
+      "rss_kib": 118336
+    },
+    {
+      "count": 10000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 10000,
+      "construction": 5.064039098999729,
+      "filtering": 0.6950700299998971,
+      "event_gap": 5.023821463999866,
+      "cards": 1000,
+      "rss_kib": 238936
+    },
+    {
+      "count": 10000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 10000,
+      "construction": 5.097485482000138,
+      "filtering": 0.6864040519999435,
+      "event_gap": 5.0572007729997495,
+      "cards": 1000,
+      "rss_kib": 238688
+    },
+    {
+      "count": 10000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 10000,
+      "construction": 5.132902353999725,
+      "filtering": 0.6888934019998487,
+      "event_gap": 5.091867471000114,
+      "cards": 1000,
+      "rss_kib": 238724
+    }
+  ],
+  "implemented": [
+    {
+      "count": 100,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 100,
+      "construction": 0.052050634999886825,
+      "filtering": 0.016823040999952354,
+      "switching": 0.0029315110000425193,
+      "scrolling": 0.014303230999757943,
+      "event_gap": 0.04213248499991096,
+      "cards": 25,
+      "rss_kib": 78396
+    },
+    {
+      "count": 100,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 100,
+      "construction": 0.05150219600000128,
+      "filtering": 0.02219674899970414,
+      "switching": 0.0029918589998487732,
+      "scrolling": 0.014260417000059533,
+      "event_gap": 0.040532532000270294,
+      "cards": 25,
+      "rss_kib": 78344
+    },
+    {
+      "count": 100,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 100,
+      "construction": 0.04981826299990644,
+      "filtering": 0.016031109999858018,
+      "switching": 0.0027676830000018526,
+      "scrolling": 0.013800159999846073,
+      "event_gap": 0.04081317200007106,
+      "cards": 25,
+      "rss_kib": 78684
+    },
+    {
+      "count": 2000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 2000,
+      "construction": 0.0522808549999354,
+      "filtering": 0.016822361000322417,
+      "switching": 0.0036745810002685175,
+      "scrolling": 0.014015773999744852,
+      "event_gap": 0.043901653999910195,
+      "cards": 25,
+      "rss_kib": 79892
+    },
+    {
+      "count": 2000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 2000,
+      "construction": 0.05403966900030355,
+      "filtering": 0.01677549599980921,
+      "switching": 0.00516936700023507,
+      "scrolling": 0.017969614999856276,
+      "event_gap": 0.044608739000068454,
+      "cards": 25,
+      "rss_kib": 80104
+    },
+    {
+      "count": 2000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 2000,
+      "construction": 0.052816339999935735,
+      "filtering": 0.01707905600005688,
+      "switching": 0.0036667700001089543,
+      "scrolling": 0.014083006999953795,
+      "event_gap": 0.0433994459999667,
+      "cards": 25,
+      "rss_kib": 79780
+    },
+    {
+      "count": 10000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 10000,
+      "construction": 0.06558161100019788,
+      "filtering": 0.017425879999791505,
+      "switching": 0.003193142999862175,
+      "scrolling": 0.014326763000099163,
+      "event_gap": 0.05524637400003485,
+      "cards": 25,
+      "rss_kib": 84636
+    },
+    {
+      "count": 10000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 10000,
+      "construction": 0.06425992100002986,
+      "filtering": 0.01661737800031915,
+      "switching": 0.0031694129997958953,
+      "scrolling": 0.013779230999716674,
+      "event_gap": 0.05604478499981269,
+      "cards": 25,
+      "rss_kib": 84544
+    },
+    {
+      "count": 10000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 10000,
+      "construction": 0.0637798110001313,
+      "filtering": 0.016177322000203276,
+      "switching": 0.0030980020001152297,
+      "scrolling": 0.013472107999859873,
+      "event_gap": 0.0558241129997441,
+      "cards": 25,
+      "rss_kib": 84968
+    },
+    {
+      "count": 50000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 50000,
+      "construction": 0.12459968099983598,
+      "filtering": 0.01957663999974102,
+      "switching": 0.0033037660000445612,
+      "scrolling": 0.013783589000013308,
+      "event_gap": 0.11600073899990093,
+      "cards": 25,
+      "rss_kib": 109640
+    },
+    {
+      "count": 50000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 50000,
+      "construction": 0.12378879700008838,
+      "filtering": 0.019463214999632328,
+      "switching": 0.0033876640000016778,
+      "scrolling": 0.013838148000104411,
+      "event_gap": 0.11525400499976968,
+      "cards": 25,
+      "rss_kib": 109652
+    },
+    {
+      "count": 50000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 50000,
+      "construction": 0.14612910100004228,
+      "filtering": 0.019409359999826847,
+      "switching": 0.003390879000107816,
+      "scrolling": 0.01376859499987404,
+      "event_gap": 0.1372259730001133,
+      "cards": 25,
+      "rss_kib": 109188
+    }
+  ],
+  "artwork": [
+    {
+      "count": 10000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 7500,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 10000,
+      "construction": 0.07315418999996837,
+      "filtering": 0.01813072300001295,
+      "switching": 0.003344203999859019,
+      "scrolling": 0.01438974299981055,
+      "event_gap": 0.06589087799966364,
+      "cards": 25,
+      "rss_kib": 96612
+    },
+    {
+      "count": 10000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 7500,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 10000,
+      "construction": 0.07877738100023635,
+      "filtering": 0.016779841999778,
+      "switching": 0.003283419999661419,
+      "scrolling": 0.01623991299993577,
+      "event_gap": 0.07156175900036033,
+      "cards": 25,
+      "rss_kib": 95808
+    },
+    {
+      "count": 10000,
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 7500,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 10000,
+      "construction": 0.07908274900000833,
+      "filtering": 0.017417425000076037,
+      "switching": 0.0032656919997862133,
+      "scrolling": 0.013906455999858736,
+      "event_gap": 0.07039486000030593,
+      "cards": 25,
+      "rss_kib": 96536
+    }
+  ],
+  "notes": [
+    "Unstyled offscreen in-memory rendering; themed visual inspection is separate.",
+    "Baseline 50000 bounded attempts recorded separately in milestone report.",
+    "Discarded mixed-version exploratory 50000 output; no claimed baseline timing from it."
+  ],
+  "all_match_repeated": [
+    {
+      "count": 50000,
+      "query": "Game",
+      "cycles": 20,
+      "repeated_peak_rss_kib": [
+        111208,
+        111208,
+        111208,
+        111208
+      ],
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 50000,
+      "construction": 0.12000421799984906,
+      "filtering": 0.02612296699999206,
+      "switching": 0.032208508999701735,
+      "scrolling": 0.013041455000347923,
+      "event_gap": 0.11173580400009087,
+      "cards": 25,
+      "rss_kib": 111208
+    },
+    {
+      "count": 50000,
+      "query": "Game",
+      "cycles": 20,
+      "repeated_peak_rss_kib": [
+        111532,
+        111532,
+        111532,
+        111532
+      ],
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 50000,
+      "construction": 0.12124348800034568,
+      "filtering": 0.026382767999621137,
+      "switching": 0.03268282499993802,
+      "scrolling": 0.013192922999678558,
+      "event_gap": 0.1123644780000177,
+      "cards": 25,
+      "rss_kib": 111532
+    },
+    {
+      "count": 50000,
+      "query": "Game",
+      "cycles": 20,
+      "repeated_peak_rss_kib": [
+        111464,
+        111464,
+        111464,
+        111464
+      ],
+      "python": "3.14.4",
+      "qt": "6.11.0",
+      "system": "Linux-7.0.0-38-generic-x86_64-with-glibc2.43",
+      "display": "offscreen",
+      "size": [
+        1400,
+        800
+      ],
+      "artwork": 0,
+      "archives": 0,
+      "physical_files": 0,
+      "families": 50000,
+      "construction": 0.11761768199994549,
+      "filtering": 0.02597838200017577,
+      "switching": 0.03521661300010237,
+      "scrolling": 0.01293956800009255,
+      "event_gap": 0.10980866999989303,
+      "cards": 25,
+      "rss_kib": 111464
+    }
+  ],
+  "baseline_50000": {
+    "attempts": 3,
+    "timeout_seconds": 30,
+    "virtual_memory_limit_kib": 2000000,
+    "exit_codes": [
+      124,
+      124,
+      124
+    ],
+    "result": "timeout; no completed timing"
+  }
+}

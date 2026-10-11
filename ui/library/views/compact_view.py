@@ -1,6 +1,6 @@
+from ui.library.views.game_list import GameListView
 from PyQt6.QtWidgets import (
     QWidget,
-    QListWidget,
     QVBoxLayout,
 )
 
@@ -26,7 +26,7 @@ class CompactView(QWidget):
         self.details = details
 
 
-        self.list = QListWidget()
+        self.list = GameListView(detailed=False)
 
         self.list.setObjectName(
             "LibraryCompactList"
@@ -66,31 +66,7 @@ class CompactView(QWidget):
         )
 
 
-        self.list.clear()
-
-
-        for game in self.games:
-
-            parts = [
-                game.name,
-                game.platform,
-            ]
-
-
-            if game.year:
-
-                parts.append(
-                    str(
-                        game.year
-                    )
-                )
-
-
-            self.list.addItem(
-                "  •  ".join(
-                    parts
-                )
-            )
+        self.list.set_games(self.games)
 
 
     def _select_row(

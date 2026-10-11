@@ -478,14 +478,14 @@ def test_details_view_tracks_search_filter():
         "Adventure"
     )
 
-    assert view.details_view.list.count() == 1
+    assert view.details_view.list.model().rowCount() == 1
 
-    item = view.details_view.list.item(
-        0
+    item = view.details_view.list.model().index(
+        0, 0
     )
 
-    assert "Adventure Island" in item.text()
-    assert "Mega Man 2" not in item.text()
+    assert "Adventure Island" in item.data()
+    assert "Mega Man 2" not in item.data()
 
 
 def test_details_view_tracks_system_filter():
@@ -521,14 +521,14 @@ def test_details_view_tracks_system_filter():
         index
     )
 
-    assert view.details_view.list.count() == 1
+    assert view.details_view.list.model().rowCount() == 1
 
-    item = view.details_view.list.item(
-        0
+    item = view.details_view.list.model().index(
+        0, 0
     )
 
-    assert "Chrono Trigger" in item.text()
-    assert "Adventure Island" not in item.text()
+    assert "Chrono Trigger" in item.data()
+    assert "Adventure Island" not in item.data()
 
 
 def test_selecting_details_row_updates_game_details():
@@ -621,14 +621,14 @@ def test_compact_view_tracks_search_filter():
         "Adventure"
     )
 
-    assert view.compact_view.list.count() == 1
+    assert view.compact_view.list.model().rowCount() == 1
 
-    item = view.compact_view.list.item(
-        0
+    item = view.compact_view.list.model().index(
+        0, 0
     )
 
-    assert "Adventure Island" in item.text()
-    assert "Mega Man 2" not in item.text()
+    assert "Adventure Island" in item.data()
+    assert "Mega Man 2" not in item.data()
 
 
 def test_compact_view_tracks_system_filter():
@@ -664,14 +664,14 @@ def test_compact_view_tracks_system_filter():
         index
     )
 
-    assert view.compact_view.list.count() == 1
+    assert view.compact_view.list.model().rowCount() == 1
 
-    item = view.compact_view.list.item(
-        0
+    item = view.compact_view.list.model().index(
+        0, 0
     )
 
-    assert "Chrono Trigger" in item.text()
-    assert "Adventure Island" not in item.text()
+    assert "Chrono Trigger" in item.data()
+    assert "Adventure Island" not in item.data()
 
 
 def test_selecting_compact_row_updates_game_details():
@@ -1084,11 +1084,11 @@ def test_details_view_tracks_favorites_filter():
 
     view.toolbar.favorites_only.click()
 
-    assert view.details_view.list.count() == 1
+    assert view.details_view.list.model().rowCount() == 1
 
     assert (
         "Adventure Island"
-        in view.details_view.list.item(0).text()
+        in view.details_view.list.model().index(0, 0).data()
     )
 
 
@@ -1113,11 +1113,11 @@ def test_compact_view_tracks_favorites_filter():
 
     view.toolbar.favorites_only.click()
 
-    assert view.compact_view.list.count() == 1
+    assert view.compact_view.list.model().rowCount() == 1
 
     assert (
         "Adventure Island"
-        in view.compact_view.list.item(0).text()
+        in view.compact_view.list.model().index(0, 0).data()
     )
 
 

@@ -1,6 +1,6 @@
+from ui.library.views.game_list import GameListView
 from PyQt6.QtWidgets import (
     QWidget,
-    QListWidget,
     QVBoxLayout,
 )
 
@@ -26,7 +26,7 @@ class DetailsView(QWidget):
         self.details = details
 
 
-        self.list = QListWidget()
+        self.list = GameListView(detailed=True)
 
         self.list.setObjectName(
             "LibraryDetailsList"
@@ -66,19 +66,7 @@ class DetailsView(QWidget):
         )
 
 
-        self.list.clear()
-
-
-        for game in self.games:
-
-            self.list.addItem(
-                (
-                    f"{game.name}\n"
-                    f"System: {game.platform}\n"
-                    f"Year: {game.year}\n"
-                    f"Core: {game.core}"
-                )
-            )
+        self.list.set_games(self.games)
 
 
     def _select_row(
