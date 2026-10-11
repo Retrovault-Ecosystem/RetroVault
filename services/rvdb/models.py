@@ -111,6 +111,27 @@ class RVDBPlatformView:
 
 
 @dataclass(frozen=True, slots=True)
+class RVDBEvidenceView:
+    source: str
+    url: str
+    checked_at: str
+    version: str = ""
+    notes: str = ""
+
+
+@dataclass(frozen=True, slots=True)
+class RVDBCompatibilityView:
+    id: str
+    subject_id: str
+    platform_id: str
+    platform_name: str
+    playability: str
+    notes: str = ""
+    version: str = ""
+    evidence: tuple[RVDBEvidenceView, ...] = ()
+
+
+@dataclass(frozen=True, slots=True)
 class RVDBCoreView:
     """
     Application-facing read model for one emulation core.
@@ -127,6 +148,7 @@ class RVDBCoreView:
     playability: tuple[str, ...]
     evidence_count: int
     frontends: tuple[str, ...]
+    compatibility: tuple[RVDBCompatibilityView, ...] = ()
 
 
 @dataclass(frozen=True, slots=True)

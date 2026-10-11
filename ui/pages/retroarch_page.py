@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from html import escape
+from urllib.parse import urlsplit
+
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (
     QFrame,
+    QTextBrowser,
     QGridLayout,
     QHBoxLayout,
     QLabel,
@@ -115,7 +119,7 @@ class RetroArchPage(QWidget):
         )
 
         cores_title = QLabel(
-            "Available RVDB Cores"
+            "Known RVDB Cores"
         )
         cores_title.setObjectName(
             "RetroArchSectionTitle"
@@ -242,6 +246,12 @@ class RetroArchPage(QWidget):
             value.setTextInteractionFlags(
                 Qt.TextInteractionFlag.TextSelectableByMouse
             )
+
+        self.compatibility_details = QTextBrowser()
+        self.compatibility_details.setObjectName("RetroArchCompatibilityDetails")
+        self.compatibility_details.setOpenExternalLinks(True)
+        self.compatibility_details.setMinimumHeight(280)
+        detail_layout.addWidget(self.compatibility_details)
 
         self.details_grid = QGridLayout()
         self.details_grid.setHorizontalSpacing(
@@ -446,8 +456,7 @@ class RetroArchPage(QWidget):
         )
 
         self.summary_label.setText(
-            f"{view.frontend.name} launches "
-            f"{len(self._cores)} RVDB cores."
+            f"RVDB lists {len(self._cores)} cores for {view.frontend.name}."
         )
 
         self.core_count_label.setText(
@@ -512,6 +521,7 @@ class RetroArchPage(QWidget):
         self,
         core: RVDBCoreView,
     ) -> None:
+        self._show_compatibility(core)
         self.core_name_label.setText(
             self._core_display_name(
                 core.name
@@ -552,7 +562,39 @@ class RetroArchPage(QWidget):
             else "None"
         )
 
+    def _show_compatibility(self, core):
+        sections = ["<p><b>RVDB knowledge — not local readiness</b><br>"
+                    "Known means recorded here. Available means a usable local core resolves. "
+                    "Configured means local requirements are satisfied. Qualified means a stated "
+                    "test scope passed. Supported means RetroVault maintains that workflow. "
+                    "This knowledge browser does not establish those local or product states. "
+                    "Playable is a platform-level claim, not an every-game guarantee.</p>"]
+        for claim in core.compatibility:
+            sections.append(f"<h3>{escape(claim.platform_name)}</h3><p>"
+                            f"Claim: {escape(claim.playability)}<br>"
+                            f"Version: {escape(claim.version or 'Not specified')}<br>"
+                            f"{escape(claim.notes or 'No scope notes supplied.')}<br>"
+                            f"Record: {escape(claim.id)}</p>")
+            for evidence in claim.evidence:
+                url = evidence.url
+                try:
+                    parsed = urlsplit(url)
+                    safe = parsed.scheme in ('http', 'https') and bool(parsed.netloc)
+                except ValueError:
+                    safe = False
+                link = f'<a href="{escape(url, quote=True)}">{escape(url)}</a>' if safe else escape(url)
+                sections.append(f"<p><b>{escape(evidence.source or 'Unnamed source')}</b><br>"
+                                f"{link}<br>Checked: {escape(evidence.checked_at or 'Not supplied')}<br>"
+                                f"Evidence version: {escape(evidence.version or 'Not specified')}<br>"
+                                f"{escape(evidence.notes)}</p>")
+            if not claim.evidence:
+                sections.append('<p>No supporting evidence supplied.</p>')
+        if not core.compatibility:
+            sections.append('<p>No compatibility records. Missing knowledge is not a failure verdict.</p>')
+        self.compatibility_details.setHtml(''.join(sections))
+
     def _clear_details(self) -> None:
+        self.compatibility_details.setPlainText("Select a core to inspect RVDB claims and evidence.")
         self.core_name_label.setText(
             "Select a core"
         )

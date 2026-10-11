@@ -614,6 +614,7 @@ def test_retroarch_view_real_bundle():
         for core in view.cores
     ] == [
         "bsnes",
+        "FCEUmm",
         "Genesis Plus GX",
         "MAME",
         "Mesen",
@@ -791,3 +792,37 @@ def test_reconciled_knowledge_does_not_enable_production_presentation(
     assert core.frontends == ("RetroArch",)
     assert PlatformPresentationPolicyRegistry.state_for(platform_id) is PlatformPresentationPolicyState.UNCONFIGURED
     assert PlatformPresentationPolicyRegistry.compatible_core_identities(platform_id) == (runtime_core,)
+
+
+def test_fceumm_claim_queries_preserve_scope_and_do_not_resolve_runtime(monkeypatch):
+    from services.retroarch.core_resolver import CoreResolver
+    def forbidden(*args, **kwargs):
+        raise AssertionError('knowledge query attempted local resolution')
+    monkeypatch.setattr(CoreResolver, 'selection', forbidden)
+    service = RVDBService.from_bundle(REAL_BUNDLE)
+    claims = service.compatibility_records(core_id='core.fceumm', platform_id='platform.nintendo.nes')
+    assert len(claims) == 1
+    claim = claims[0]
+    assert claim.playability == 'playable' and claim.version == ''
+    assert len(claim.evidence) == 3
+    assert all(e.checked_at == '2026-10-10' for e in claim.evidence)
+    assert 'every' not in claim.version
+    assert 'no specific software version' in claim.notes
+    assert service.compatibility_records(core_id='core.fceumm', platform_id='platform.sega.genesis') == ()
+    assert service.compatibility_records(core_id='core.missing') == ()
+    assert len(service.compatibility_records(platform_id='platform.nintendo.nes')) == 2
+    core = next(c for c in service.retroarch_view().cores if c.id == 'core.fceumm')
+    assert core.compatibility == claims
+
+
+def test_claims_keep_differing_verdicts_and_missing_evidence(tmp_path):
+    nodes = {'core.test': {'id':'core.test','type':'core','name':'Test'},
+             'platform.test': {'id':'platform.test','type':'platform','name':'Platform'}}
+    for number, verdict in enumerate(['playable', 'experimental']):
+        identity=f'compatibility.test.{number}'
+        nodes[identity] = dict(id=identity,type='compatibility',subject='core.test',
+                               platform='platform.test',playability=verdict)
+    path=tmp_path/'bundle.json';path.write_text(json.dumps({'nodes':nodes,'edges':{k:{} for k in nodes}}))
+    claims=RVDBService.from_bundle(path).compatibility_records(core_id='core.test')
+    assert [c.playability for c in claims] == ['playable','experimental']
+    assert all(c.version == '' and c.evidence == () for c in claims)

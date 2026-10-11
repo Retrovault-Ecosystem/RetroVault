@@ -1,8 +1,9 @@
 # RetroVault + RVDB — Usability, Scale and Qualified Expansion (USQE)
 
-Status: approved new 12-milestone roadmap. **USQE #1 is complete as a decision/documentation milestone. USQE #2–#4 are complete; #5–#12 are unstarted.**
+Status: approved new 12-milestone roadmap. **USQE #1 is complete as a decision/documentation milestone. USQE #2–#4 are complete; #5 complete; #6–#12 are unstarted.**
 This is a separate roadmap, not Milestone #15. The original 14-milestone roadmap remains permanently closed and protected. No feature implementation is authorized by this document alone.
 
+See the [Milestone #5 implementation record](usqe_milestone5_compatibility.md).
 See the [Milestone #4 implementation report](usqe_milestone4_library_scale.md) for rendering measurements and review status.
 ## Protected starting checkpoints
 
@@ -25,7 +26,7 @@ Use existing services, data, profiles and qualification runners. No speculative 
 
 ## Approved sequence and phases
 
-Numbers below belong only to USQE. #1 is complete; [#2 implementation and review](usqe_milestone2_customization.md) are approved and complete. #3 is [approved and complete](usqe_milestone3_responsive_discovery.md); #4 is approved and complete; #5–#12 remain **unstarted**.
+Numbers below belong only to USQE. #1 is complete; [#2 implementation and review](usqe_milestone2_customization.md) are approved and complete. #3 is [approved and complete](usqe_milestone3_responsive_discovery.md); #4 is approved and complete; #5 complete; #6–#12 remain **unstarted**.
 
 | Phase | # | Milestone | Objective and prerequisite boundary |
 | --- | --- | --- | --- |

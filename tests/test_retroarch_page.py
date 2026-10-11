@@ -125,7 +125,7 @@ def test_retroarch_page_lists_frontend_cores(
     )
 
     assert page.summary_label.text() == (
-        "RetroArch launches 2 RVDB cores."
+        "RVDB lists 2 cores for RetroArch."
     )
 
 
@@ -224,7 +224,7 @@ def test_retroarch_page_real_rvdb_contract(
 
     app.processEvents()
 
-    assert page.core_list.count() == 6
+    assert page.core_list.count() == 7
 
     names = {
         page.core_list.item(
@@ -237,6 +237,7 @@ def test_retroarch_page_real_rvdb_contract(
 
     assert names == {
         "Bsnes",
+        "FCEUmm",
         "Genesis Plus GX",
         "MAME",
         "Mesen",
@@ -366,3 +367,24 @@ def test_retroarch_details_are_side_by_side(
         0,
         1,
     )
+
+
+def test_claim_explanations_escape_markup_and_reject_unsafe_links(app, service):
+    from services.rvdb.models import RVDBCoreView, RVDBCompatibilityView, RVDBEvidenceView
+    page=RetroArchPage(service)
+    claim=RVDBCompatibilityView('claim.test','core.test','platform.test','<img src=x>',
+        'experimental', notes='<script>bad</script>', evidence=(
+            RVDBEvidenceView('<b>source</b>','javascript:alert(1)',''),
+            RVDBEvidenceView('Official','https://example.org/evidence','2026-10-10')))
+    page._show_core(RVDBCoreView('core.test','Test',(),(),2,(),(claim,)))
+    text=page.compatibility_details.toPlainText();html=page.compatibility_details.toHtml()
+    assert '<img src=x>' in text and '<script>bad</script>' in text
+    assert 'Version: Not specified' in text and 'Checked: Not supplied' in text
+    assert 'not local readiness' in text
+    assert 'href="javascript:' not in html and '<img src="x"' not in html
+    assert 'href="https://example.org/evidence"' in html
+    page._show_core(RVDBCoreView('core.test','Test',(),(),0,()))
+    assert 'No compatibility records' in page.compatibility_details.toPlainText()
+    page._clear_details()
+    assert 'Select a core' in page.compatibility_details.toPlainText()
+    page.close()

@@ -6,6 +6,8 @@ from typing import Any, Iterable, Mapping
 from services.rvdb.consumer import RVDBConsumer
 from services.rvdb.models import (
     RVDBCoreView,
+    RVDBCompatibilityView,
+    RVDBEvidenceView,
     RVDBEntityRef,
     RVDBGameSummary,
     RVDBPlatformMetadata,
@@ -501,6 +503,40 @@ class RVDBService:
             frontends=frontends,
         )
 
+    def compatibility_records(self, *, core_id=None, platform_id=None):
+        """Knowledge-only claims, optionally intersected by core and platform.
+
+        No local binary/configuration/qualification lookup belongs in this query.
+        Missing scope remains unspecified; claims are never collapsed into a verdict.
+        """
+        result = []
+        for record in self._consumer.nodes.values():
+            if record.get("type") != "compatibility":
+                continue
+            if core_id is not None and record.get("subject") != core_id:
+                continue
+            if platform_id is not None and record.get("platform") != platform_id:
+                continue
+            target = str(record.get("platform") or "")
+            platform = self._consumer.get_entity(target) or {}
+            evidence = record.get("evidence") or []
+            if not isinstance(evidence, (list, tuple)):
+                evidence = []
+            result.append(RVDBCompatibilityView(
+                id=str(record.get("id") or ""),
+                subject_id=str(record.get("subject") or ""),
+                platform_id=target,
+                platform_name=str(platform.get("name") or target),
+                playability=str(record.get("playability") or "unknown"),
+                notes=str(record.get("notes") or ""),
+                version=str(record.get("version") or ""),
+                evidence=tuple(RVDBEvidenceView(
+                    source=str(item.get("source") or ""), url=str(item.get("url") or ""),
+                    checked_at=str(item.get("checked_at") or ""),
+                    version=str(item.get("version") or ""), notes=str(item.get("notes") or ""))
+                    for item in evidence if isinstance(item, dict))))
+        return tuple(sorted(result, key=lambda item: (item.platform_name.casefold(), item.id)))
+
     def retroarch_view(
         self,
         frontend_id: str = "frontend.retroarch",
@@ -659,6 +695,7 @@ class RVDBService:
             cores.append(
                 RVDBCoreView(
                     id=core_id,
+                    compatibility=self.compatibility_records(core_id=core_id),
                     name=str(
                         core.get(
                             "name",
