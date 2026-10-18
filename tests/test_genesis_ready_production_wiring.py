@@ -91,7 +91,6 @@ def test_genesis_core_cannot_borrow_other_platform_policy():
         "platform.nintendo.nes",
         "platform.nintendo.snes",
         "platform.sega.game.gear",
-        "platform.sega.master.system",
         "platform.sega.sg1000",
     ):
         try:

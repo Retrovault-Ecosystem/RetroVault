@@ -54,6 +54,24 @@
       "reference": "retro-vault://shaders/genesis/classic/RetroVault_Genesis_Classic_CRT.slangp",
       "author": "RetroVault",
       "attribution": "Original RetroVault CRT shader."
+    },
+    {
+      "id": "rvv.overlay.master-system.classic",
+      "display_name": "Sega Master System \u2014 RetroVault Classic",
+      "asset_type": "overlay",
+      "source": "rvv_native",
+      "reference": "retro-vault://overlays/retrovault/master-system/classic/RetroVault_Master_System_Classic.cfg",
+      "author": "RetroVault",
+      "attribution": "RetroVault composition. Platform names and trademarks belong to their respective owners."
+    },
+    {
+      "id": "rvv.shader.master-system.classic.crt",
+      "display_name": "Sega Master System \u2014 RetroVault Classic CRT",
+      "asset_type": "shader",
+      "source": "rvv_native",
+      "reference": "retro-vault://shaders/master-system/classic/RetroVault_Master_System_Classic_CRT.slangp",
+      "author": "RetroVault",
+      "attribution": "RetroVault composition. Platform names and trademarks belong to their respective owners."
     }
   ]
 }

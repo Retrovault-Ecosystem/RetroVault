@@ -21,7 +21,7 @@ class SavePolicy:
 
     def _manifest(self, local_file_id, core, rom):
         rom = Path(rom)
-        if rom.suffix.lower() not in ('.nes', '.sfc', '.smc', '.md', '.gen', '.bin'):
+        if rom.suffix.lower() not in ('.nes', '.sfc', '.smc', '.md', '.gen', '.bin', '.sms'):
             raise ValueError('This save-isolation slice requires a loose cartridge file.')
         if any(char in str(rom) for char in '\n\r"'):
             raise ValueError('Unsupported character in save content path.')

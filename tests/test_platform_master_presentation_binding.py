@@ -68,11 +68,12 @@ def test_binding_does_not_change_production_readiness():
         "platform.nintendo.nes",
         "platform.nintendo.snes",
         "platform.sega.genesis",
+        "platform.sega.master.system",
     }
 
     assert len(
         registry.unconfigured_platform_ids()
-    ) == 23
+    ) == 22
 
 
 @pytest.mark.parametrize(

@@ -1,0 +1,23 @@
+{
+  "source": "design/master-system-model1/Master_System_Model1_concept_v1.png",
+  "source_sha256": "77913c51be3cff52f6bfb25d650d3bff9e0fc551f59b6e3120242a86f841cf61",
+  "output": "design/master-system-model1/Master_System_Model1_runtime_cutout.png",
+  "output_sha256": "86d5984926f292c5f1d029d5f2c022e39d3b8cb5c26aae28ca804c79f6536248",
+  "native_canvas": [
+    1672,
+    941
+  ],
+  "aperture_exclusive_bounds": [
+    274,
+    72,
+    1398,
+    736
+  ],
+  "outside_aperture_pixels_identical": true,
+  "all_rgb_pixels_identical": true,
+  "aperture_alpha_range": [
+    0,
+    0
+  ],
+  "production_geometry_qualified": false
+}

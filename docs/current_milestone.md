@@ -1,7 +1,8 @@
 # RetroVault Current Milestone
 
 Current roadmap: **RetroVault + RVDB — Usability, Scale and Qualified Expansion (USQE)**.
-**USQE Milestones #1–#8 are complete; #9–#12 remain unstarted.**
+**USQE Milestones #1–#9 are complete; #10–#12 remain unstarted.**
+See the [Milestone #9 expansion record](usqe_milestone9_platform_expansion.md). Master System is qualified for the recorded two-fixture, Genesis Plus GX, 1920×1080 keyboard scope; SG-1000 is excluded.
 See the [approved USQE roadmap](usability_scale_qualified_expansion_roadmap.md) and [Milestone #1 decision baseline](usqe_milestone1_decisions.md).
 See the [Milestone #8 presentation-family record](usqe_milestone8_presentation_families.md). All three bounded live cases are accepted; final regression: **2,448 passed**. The user authorized publication of the accumulated #6–#8 work.
 See the [Milestone #7 saves and recovery record](usqe_milestone7_saves.md). All required save/reload categories and the save-management screen are accepted. Final suite: **2,402 passed**. Included in the user-authorized #6–#8 publication checkpoint.

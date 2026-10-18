@@ -28,6 +28,10 @@ class CanonicalProductionPackageAssets:
 
 class CanonicalProductionPackageResolver:
     _ASSETS = {
+        "platform.sega.master.system": CanonicalProductionPackageAssets(
+            overlay="retrovault/master-system/classic/RetroVault_Master_System_Classic.cfg",
+            shader="retrovault/master-system/classic/RetroVault_Master_System_Classic_CRT.slangp",
+        ),
         "platform.nintendo.nes": CanonicalProductionPackageAssets(
             overlay=(
                 "retrovault/nes/classic/RetroVault_NES_Classic.cfg"

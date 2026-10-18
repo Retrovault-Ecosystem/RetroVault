@@ -1,0 +1,6 @@
+shaders = "1"
+shader0 = "../../shaders/retrovault/master-system/classic/RetroVault_Master_System_Classic_CRT.slang"
+filter_linear0 = "false"
+wrap_mode0 = "clamp_to_border"
+mipmap_input0 = "false"
+alias0 = "RetroVaultMasterSystemCRT"

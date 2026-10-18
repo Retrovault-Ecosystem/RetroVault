@@ -35,7 +35,7 @@ def save_context(game, config, policy=None):
     if not identity:
         raise ValueError('Save management requires a registered physical edition.')
     rom = Path(game.rom).expanduser().absolute()
-    if rom.suffix.lower() not in ('.nes', '.sfc', '.smc', '.md', '.gen', '.bin') or not rom.is_file():
+    if rom.suffix.lower() not in ('.nes', '.sfc', '.smc', '.md', '.gen', '.bin', '.sms') or not rom.is_file():
         raise ValueError('Save management currently requires an existing loose cartridge file.')
     backend = selected_backend(config, getattr(game, 'rvdb_platform_id', ''))
     if backend == SNES9X:

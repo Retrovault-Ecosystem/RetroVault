@@ -61,7 +61,7 @@ def prepare(rom, root, backend, native='', *, platform='snes', state_only=False)
     primary = PrimaryConfigRuntime().discover_source(config.get('retroarch', {}).get('primary_config') or None)
     if primary is None:
         raise ValueError('Primary RetroArch configuration is required for isolated qualification.')
-    extensions = {'snes': ('.sfc', '.smc'), 'genesis': ('.md', '.gen'), 'nes': ('.nes',)}
+    extensions = {'master-system': ('.sms',), 'snes': ('.sfc', '.smc'), 'genesis': ('.md', '.gen'), 'nes': ('.nes',)}
     if platform not in extensions or original.suffix.lower() not in extensions[platform]:
         raise ValueError('Use an approved loose fixture matching the selected platform.')
     if backend == 'snes9x' and platform != 'snes':
@@ -188,7 +188,7 @@ if __name__ == '__main__':
     parser.add_argument('--rom')
     parser.add_argument('--backend', choices=('retroarch', 'snes9x'), default='retroarch')
     parser.add_argument('--native', default='')
-    parser.add_argument('--platform', choices=('snes', 'genesis', 'nes'), default='snes')
+    parser.add_argument('--platform', choices=('snes', 'genesis', 'nes', 'master-system'), default='snes')
     parser.add_argument('--state-only', action='store_true', help='Explicitly exclude in-game save qualification.')
     parser.add_argument('--phase', choices=('create', 'reload'))
     parser.add_argument('--seconds', type=int, default=900)

@@ -57,6 +57,7 @@ class EmulatorDouble:
 
 
 CASES = {
+    'master-system': ('genesis_plus_gx', ['sms'], ['core.genesis.plus.gx']),
     'nes': ('fceumm', ['nes'], ['core.mesen']),
     'snes': ('snes9x', ['sfc', 'smc'], ['core.bsnes', 'core.snes9x']),
     'genesis': ('genesis_plus_gx', ['md', 'gen'], ['core.genesis.plus.gx']),
@@ -64,8 +65,8 @@ CASES = {
 
 
 @pytest.fixture(params=[('nes', 'nes'), ('snes', 'sfc'), ('snes', 'smc'),
-                        ('genesis', 'md'), ('genesis', 'gen')],
-                ids=['nes', 'snes-sfc', 'snes-smc', 'genesis-md', 'genesis-gen'])
+                        ('genesis', 'md'), ('genesis', 'gen'), ('master-system', 'sms')],
+                ids=['nes', 'snes-sfc', 'snes-smc', 'genesis-md', 'genesis-gen', 'master-system-sms'])
 def environment(tmp_path, monkeypatch, request):
     import config.paths
     original_profile = tmp_path / 'user-profile'
@@ -312,15 +313,15 @@ def test_mixed_platform_library_keeps_identity_state_and_packages_separate(envir
     source.mkdir()
     roms = {}
     # Same title and bytes must not collapse distinct physical/platform identities.
-    for slug, extension in [('nes', 'nes'), ('snes', 'sfc'), ('genesis', 'md')]:
+    for slug, extension in [('nes', 'nes'), ('snes', 'sfc'), ('genesis', 'md'), ('master-system', 'sms')]:
         roms[slug] = source / ('Shared Game (USA).' + extension)
         roms[slug].write_bytes(b'identical synthetic content')
     with qualification.pipeline_environment(env.root):
         ConfigWriter().write(settings)
         ImportSourceStore().persist_directory(source)
         library, chosen, _ = qualification.pipeline_library(env.bundle, roms[env.platform], env.platform)
-        assert len(library.get_games()) == 3
-        assert len({game.local_file_id for game in library.get_games()}) == 3
+        assert len(library.get_games()) == 4
+        assert len({game.local_file_id for game in library.get_games()}) == 4
         library.set_favorite(chosen, True)
         library.create_collection('Selected platform')
         library.add_to_collection('Selected platform', chosen)
@@ -388,6 +389,12 @@ def test_crt_tuning_reaches_launch_and_fresh_restart(environment, monkeypatch):
     monkeypatch.setattr(EmulatorDouble,'launch',launch)
     report=qualification._qualify_pipeline(environment.rom,environment.root,1,
         platform=environment.platform,visual_tuning={'brightness':1.25})
+    if environment.platform == 'master-system':
+        assert not report['pipeline_passed']
+        assert 'CRT adjustments require a supported production platform' in report['error']
+        assert not captured
+        assert report['stages']['preservation']['passed']
+        return
     assert report['pipeline_passed'],report
     assert captured==[{'brightness':1.25}]
     assert report['restart']['snapshot']['visual_tuning']=={'brightness':1.25}

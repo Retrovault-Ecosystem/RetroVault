@@ -26,6 +26,7 @@ from services.retroarch.primary_config_runtime import PrimaryConfigRuntime
 from services.retroarch.content_display_aspect_probe import ContentLoadedDisplayAspectProbe
 
 PLATFORMS = {
+    'master-system': 'platform.sega.master.system',
     'nes': 'platform.nintendo.nes',
     'snes': 'platform.nintendo.snes',
     'genesis': 'platform.sega.genesis',
@@ -267,6 +268,7 @@ def _qualify(platform, rom, output, seconds, *, via_controller=False):
 # These are qualification cases, not core/readiness/format policies. Those remain
 # owned by RVDB and the production services. Asset references come from the catalog.
 PIPELINE_CASES = {
+    'master-system': ('Master System', 'rvv.overlay.master-system.classic'),
     'nes': ('NES', 'rvv.overlay.nes.classic'),
     'snes': ('SNES', 'rvv.overlay.snes.classic'),
     'genesis': ('Genesis', 'rvv.overlay.genesis.classic'),

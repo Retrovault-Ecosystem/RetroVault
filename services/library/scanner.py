@@ -13,6 +13,8 @@ from services.library.rvdb_resolver import (
 
 SUPPORTED_EXTENSIONS = {
 
+    ".sms": "Sega Master System",
+
     ".nes": "Nintendo Entertainment System",
 
     ".sfc": "Super Nintendo",

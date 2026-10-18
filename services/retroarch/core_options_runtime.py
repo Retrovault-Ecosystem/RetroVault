@@ -41,7 +41,7 @@ class CoreOptionsRuntimeConfig:
         core_identity: dict(
             policy.core_options
         )
-        for policy in (
+        for policy in reversed(
             PlatformPresentationPolicyRegistry.all()
         )
         for core_identity in policy.core_identities

@@ -1,0 +1,53 @@
+{
+  "schema_version": 1,
+  "platform_id": "platform.sega.master.system",
+  "core_identity": "genesis_plus_gx",
+  "master_presentation_class": "classic_4_3",
+  "fit_policy": "contain",
+  "source_display_aspect_authority": "libretro_core",
+  "physical_geometry_authority": "platform_package",
+  "canvas": {
+    "width": 1920,
+    "height": 1080
+  },
+  "aperture": {
+    "x": 315,
+    "y": 83,
+    "width": 1290,
+    "height": 761
+  },
+  "production_assets": {
+    "artwork": "RetroVault_Master_System_Classic.png",
+    "crt_preset": "RetroVault_Master_System_Classic_CRT.slangp"
+  },
+  "artwork_mapping": {
+    "native_canvas": [
+      1672,
+      941
+    ],
+    "transparent_bounds_exclusive": [
+      274,
+      72,
+      1398,
+      736
+    ],
+    "method": "fullscreen normalized overlay; inward pixel rounding on 1920x1080 output"
+  },
+  "sha256": {
+    "overlay_png": "86d5984926f292c5f1d029d5f2c022e39d3b8cb5c26aae28ca804c79f6536248"
+  },
+  "qualification": {
+    "status": "qualified",
+    "display": [
+      1920,
+      1080
+    ],
+    "scope": "loose Master System cartridges; startup aspect selection; no live aspect switching",
+    "evidence": "docs/usqe_milestone9_platform_expansion.md",
+    "fixtures": [
+      "Golden Axe Warrior (USA, Europe, Brazil) (En)",
+      "Road Rash (Europe, Brazil) (En)"
+    ],
+    "date": "2026-10-18"
+  }
+}

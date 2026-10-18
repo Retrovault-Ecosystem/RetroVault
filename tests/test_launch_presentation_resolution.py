@@ -303,6 +303,6 @@ def test_shared_genesis_core_does_not_grant_genesis_production_package(tmp_path,
         intent_resolver=intent(settings, PresentationResolver(default=request)))
     decision = resolver.describe(game(platform, core='genesis_plus_gx'))
     assert not decision.available
-    assert 'not configured' in decision.error
+    assert ('does not exist' if platform == 'platform.sega.master.system' else 'not configured') in decision.error
     assert decision.selected == PresentationProfile()
     assert decision.requested == request

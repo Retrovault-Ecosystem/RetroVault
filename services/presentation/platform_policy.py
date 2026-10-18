@@ -272,7 +272,7 @@ class PlatformPresentationPolicyRegistry:
         "platform.sega.dreamcast": PlatformPresentationPolicyState.UNCONFIGURED,
         "platform.sega.game.gear": PlatformPresentationPolicyState.UNCONFIGURED,
         "platform.sega.genesis": PlatformPresentationPolicyState.READY,
-        "platform.sega.master.system": PlatformPresentationPolicyState.UNCONFIGURED,
+        "platform.sega.master.system": PlatformPresentationPolicyState.READY,
         "platform.sega.saturn": PlatformPresentationPolicyState.UNCONFIGURED,
         "platform.sega.sc3000": PlatformPresentationPolicyState.UNCONFIGURED,
         "platform.sega.sg1000": PlatformPresentationPolicyState.UNCONFIGURED,
@@ -365,6 +365,12 @@ class PlatformPresentationPolicyRegistry:
             master_presentation_class=(
                 MasterPresentationClass.CLASSIC_4_3
             ),
+        ),
+        PlatformPresentationPolicy(
+            platform_id="platform.sega.master.system",
+            core_identities=("genesis_plus_gx",),
+            core_options={"genesis_plus_gx_overscan": "disabled"},
+            master_presentation_class=MasterPresentationClass.CLASSIC_4_3,
         ),
     )
 
@@ -623,9 +629,9 @@ class PlatformPresentationPolicyRegistry:
             explicit_core_identity
         )
 
-        # Once both an explicit platform and a recognized core policy
-        # exist, they must identify the same platform. This closes the
-        # cross-platform borrowing defect.
+        # A shared core can have distinct platform policies. The explicit
+        # platform owns presentation; core membership must match that policy.
+        # Legacy core-only lookup retains its original first-match behavior.
         if core_policy is not None:
             if platform_policy is None:
                 raise ValueError(
@@ -633,7 +639,7 @@ class PlatformPresentationPolicyRegistry:
                     "core presentation policy."
                 )
 
-            if platform_policy is not core_policy:
+            if explicit_core_identity not in platform_policy.core_identities:
                 raise ValueError(
                     "Platform/core presentation policy mismatch."
                 )

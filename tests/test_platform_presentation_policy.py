@@ -21,6 +21,7 @@ def test_registry_contains_explicit_nes_and_snes_platforms():
         "platform.nintendo.nes",
         "platform.nintendo.snes",
         "platform.sega.genesis",
+        "platform.sega.master.system",
     }
 
     assert (
@@ -326,6 +327,7 @@ def test_validated_nes_snes_and_qualified_genesis_are_ready():
         "platform.nintendo.nes",
         "platform.nintendo.snes",
         "platform.sega.genesis",
+        "platform.sega.master.system",
     }
 
 
@@ -339,7 +341,7 @@ def test_remaining_canonical_platforms_are_explicitly_unconfigured():
         .unconfigured_platform_ids()
     )
 
-    assert len(unconfigured) == 23
+    assert len(unconfigured) == 22
 
     assert (
         "platform.sega.genesis"
@@ -716,7 +718,6 @@ def test_sega_shared_genesis_plus_gx_core_policy_remains_unconfigured():
 
     targets = (
         "platform.sega.game.gear",
-        "platform.sega.master.system",
         "platform.sega.sg1000",
     )
 
