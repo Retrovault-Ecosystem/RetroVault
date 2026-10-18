@@ -7,6 +7,37 @@ from services.retroarch.primary_config_runtime import (
 )
 
 
+def test_managed_controls_replace_only_transient_copy(tmp_path):
+    from config.controller_preferences import defaults, DEFAULT_KEYS
+    from services.input.mappings import retroarch_values
+    source = tmp_path / 'original.cfg'
+    original = ('video_driver = "glcore"\ninput_player1_a = "z" # old mapping\n'
+                'input_exit_emulator = "escape"\nvideo_shader_enable = "true"\n')
+    source.write_text(original)
+    preferences = defaults()
+    preferences['retroarch'] = dict(mode='managed', players=[dict(
+        kind='keyboard', device={}, bindings=dict(DEFAULT_KEYS))])
+    runtime = PrimaryConfigRuntime(directory=tmp_path / 'owned')
+    path = Path(runtime.create(source, video_driver='glcore',
+                               input_values=retroarch_values({'controllers': preferences})))
+    text = path.read_text()
+    assert 'input_player1_a = "x"' in text
+    assert 'input_exit_emulator = "escape"' in text
+    assert 'video_shader_enable = "true"' in text
+    assert source.read_text() == original
+    runtime.cleanup()
+    assert not path.exists()
+
+
+def test_ambiguous_managed_control_is_rejected_before_output(tmp_path):
+    source = tmp_path / 'original.cfg'
+    source.write_text('video_driver = "glcore"\ninput_player1_a = "x"\ninput_player1_a = "z"\n')
+    runtime = PrimaryConfigRuntime(directory=tmp_path / 'owned')
+    with pytest.raises(ValueError, match='Duplicate'):
+        runtime.create(source, input_values={'input_player1_a': 'c'})
+    assert not (tmp_path / 'owned').exists()
+
+
 def _source(
     tmp_path,
     *,

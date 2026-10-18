@@ -111,3 +111,11 @@ def test_display_aspect_contract_contains_no_content_identity():
     assert forbidden.isdisjoint(
         names
     )
+
+
+@pytest.mark.parametrize('value', [float('nan'), float('inf'), -float('inf')])
+@pytest.mark.parametrize('axis', ['width', 'height'])
+def test_display_aspect_rejects_nonfinite_values(value, axis):
+    values = {'width': 4, 'height': 3, axis: value}
+    with pytest.raises(ValueError, match='finite'):
+        CoreDisplayAspect(**values)

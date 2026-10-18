@@ -15,6 +15,9 @@ def validate_config(data):
             raise ValueError(f'{field} must be an absolute path or begin with ~.')
 
     mapping(data, 'Configuration')
+    if 'controllers' in data:
+        from .controller_preferences import validate_preferences
+        validate_preferences(data['controllers'])
     if 'retroarch' in data:
         section = mapping(data['retroarch'], 'retroarch')
         for key in ('executable', 'primary_config'):

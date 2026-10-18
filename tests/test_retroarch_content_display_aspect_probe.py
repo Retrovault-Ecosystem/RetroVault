@@ -418,3 +418,53 @@ def test_reap_fails_closed_if_owned_group_survives_sigkill(
             ExitedProcess(),
             process_group=7003,
         )
+
+
+@pytest.mark.parametrize('late_aspect', [None, 1.306])
+def test_probe_observes_full_window_after_initial_geometry(
+    tmp_path, monkeypatch, late_aspect,
+):
+    """A quiet interval before the first frame does not establish final geometry."""
+    process = FakeProcess()
+    clock = {'now': 0.0}
+    captured = {}
+
+    def popen(command, **kwargs):
+        captured['log'] = Path(command[command.index('--log-file') + 1])
+        captured['log'].write_text('[INFO] [Core] Geometry: 256x192, Aspect: 1.524\n')
+        return process
+
+    def sleep(seconds):
+        clock['now'] += seconds
+        if late_aspect is not None and clock['now'] >= 0.45 and not captured.get('updated'):
+            with captured['log'].open('a') as handle:
+                handle.write(f'[INFO] [Environ] SET_GEOMETRY: 320x224, Aspect: {late_aspect}\n')
+            captured['updated'] = True
+
+    _isolate_process_group(monkeypatch)
+    probe = ContentLoadedDisplayAspectProbe(
+        directory=tmp_path, timeout=1.0, settle_time=0.20, poll_interval=0.01,
+        monotonic_fn=lambda: clock['now'], sleep_fn=sleep, popen_factory=popen,
+    )
+    aspect = probe.acquire(command='retroarch', core='/core.so', content='/game.rom')
+    assert aspect.ratio == pytest.approx(late_aspect or 1.524)
+    assert 1.0 <= clock['now'] <= 1.02
+    assert process.returncode == 0
+    assert not list(tmp_path.iterdir())
+
+
+def test_probe_full_window_without_geometry_times_out_and_cleans_up(tmp_path, monkeypatch):
+    process = FakeProcess()
+    clock = {'now': 0.0}
+    _isolate_process_group(monkeypatch)
+    probe = ContentLoadedDisplayAspectProbe(
+        directory=tmp_path, timeout=0.5, poll_interval=0.01,
+        monotonic_fn=lambda: clock['now'],
+        sleep_fn=lambda seconds: clock.__setitem__('now', clock['now'] + seconds),
+        popen_factory=lambda *args, **kwargs: process,
+    )
+    with pytest.raises(ValueError, match='timed out.*valid libretro geometry'):
+        probe.acquire(command='retroarch', core='/core.so', content='/game.rom')
+    assert 0.5 <= clock['now'] <= 0.52
+    assert process.returncode == 0
+    assert not list(tmp_path.iterdir())

@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+import math
 
 
 @dataclass(frozen=True)
@@ -25,10 +26,11 @@ class CoreDisplayAspect:
                     value,
                     (int, float),
                 )
+                or not math.isfinite(value)
                 or value <= 0
             ):
                 raise ValueError(
-                    f"{name} must be a positive number."
+                    f"{name} must be a positive finite number."
                 )
 
     @property

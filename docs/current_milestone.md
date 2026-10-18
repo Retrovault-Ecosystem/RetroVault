@@ -1,8 +1,14 @@
 # RetroVault Current Milestone
 
 Current roadmap: **RetroVault + RVDB — Usability, Scale and Qualified Expansion (USQE)**.
-**USQE Milestones #1–#4 are complete; #5 complete; #6–#12 remain unstarted.**
+**USQE Milestones #1–#8 are complete; #9–#12 remain unstarted.**
 See the [approved USQE roadmap](usability_scale_qualified_expansion_roadmap.md) and [Milestone #1 decision baseline](usqe_milestone1_decisions.md).
+See the [Milestone #8 presentation-family record](usqe_milestone8_presentation_families.md). All three bounded live cases are accepted; final regression: **2,448 passed**. The user authorized publication of the accumulated #6–#8 work.
+See the [Milestone #7 saves and recovery record](usqe_milestone7_saves.md). All required save/reload categories and the save-management screen are accepted. Final suite: **2,402 passed**. Included in the user-authorized #6–#8 publication checkpoint.
+See the [Milestone #6 controller record](usqe_milestone6_controllers.md).
+The user approved Milestone #6 closure after accepting all four keyboard routes.
+Verification: **2,357 tests passed**, with live cleanup and preservation checks.
+Physical gamepad qualification remains deferred within the approved scope.
 See the [Milestone #5 implementation record](usqe_milestone5_compatibility.md).
 See the [Milestone #4 implementation report](usqe_milestone4_library_scale.md) for rendering measurements and review status.
 See the [Milestone #2 implementation and review record](usqe_milestone2_customization.md). The three Library browsing preferences use application configuration; gameplay, platform readiness, RVDB and historical records remain unchanged. The user approved the final report and authorized closure commit/push.

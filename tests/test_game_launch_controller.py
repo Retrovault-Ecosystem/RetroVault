@@ -188,3 +188,12 @@ def test_real_lifecycle_cancellation_and_retry(tmp_path, initial):
     assert runtime.state is HardwareRuntimeState.RUNNING
     calls['played'].assert_called_once()
     assert not generated.exists()
+
+
+def test_save_routing_receives_selected_physical_edition(tmp_path):
+    controller, game, calls, _ = setup_controller(tmp_path)
+    assert controller.launch(game, **calls)
+    profile = controller.launcher.launch.call_args.args[0]
+    assert profile.local_file_id == 'local-file:edition'
+    assert profile.source_rom == '/roms/edition.nes'
+    assert game.local_file_id == 'local-file:preferred'

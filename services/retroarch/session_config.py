@@ -67,6 +67,7 @@ class RetroArchSessionConfig:
         core_options_path=None,
         *,
         shader_enabled=False,
+        save_values=None,
     ):
         self.directory.mkdir(
             parents=True,
@@ -74,6 +75,19 @@ class RetroArchSessionConfig:
         )
 
         payload = self.BASELINE
+
+        if save_values:
+            allowed = {'savefile_directory', 'savestate_directory',
+                       'savefiles_in_content_dir', 'savestates_in_content_dir',
+                       'sort_savefiles_enable', 'sort_savestates_enable',
+                       'sort_savefiles_by_content_enable', 'sort_savestates_by_content_enable'}
+            if set(save_values) - allowed:
+                raise ValueError('Unsupported save configuration directive.')
+            for key, value in save_values.items():
+                if not isinstance(value, str) or any(char in value for char in '\n\r'):
+                    raise ValueError('Save configuration values cannot contain newlines.')
+                escaped_value = value.replace('\\', '\\\\').replace('"', '\\"')
+                payload += f'{key} = "{escaped_value}"\n'
 
         # --set-shader selects a preset but does not enable the shader
         # pipeline. Keep inherited presets cleared, then opt in only when

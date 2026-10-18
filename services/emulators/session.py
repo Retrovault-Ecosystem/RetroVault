@@ -1,5 +1,6 @@
 """One process-session owner across registered emulator adapters."""
 from threading import RLock
+from contextlib import contextmanager
 
 from .snes9x import Snes9xLauncher
 
@@ -21,6 +22,14 @@ class EmulatorSession:
 
     def process_running(self):
         return any(adapter.process_running() for adapter in (self.retroarch, self.snes9x))
+
+    @contextmanager
+    def idle_file_access(self):
+        """Exclude launches while explicitly backing up or restoring save files."""
+        with self._lock:
+            if self.process_running():
+                raise ValueError('Quit the owned emulator before accessing save files.')
+            yield
 
     def _launch(self, adapter, request):
         with self._lock:

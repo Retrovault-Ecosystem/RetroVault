@@ -1,5 +1,6 @@
 from config.paths import runtime_directory
 import atexit
+import math
 import os
 import tempfile
 from pathlib import Path
@@ -64,10 +65,11 @@ class ContainRuntimeConfig:
                 value,
                 (int, float),
             )
+            or not math.isfinite(value)
             or value <= 0
         ):
             raise ValueError(
-                f"{name} must be a positive number."
+                f"{name} must be a positive finite number."
             )
 
         return value

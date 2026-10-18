@@ -28,8 +28,9 @@ class ContentLoadedDisplayAspectProbe:
       * initial [Core] Geometry
       * later RETRO_ENVIRONMENT_SET_GEOMETRY
 
-    The latest valid runtime geometry observed during a bounded settle
-    window is authoritative.
+    The latest valid runtime geometry observed during the full bounded
+    timeout window is authoritative. A quiet interval after initial geometry
+    does not prove that the core has run its first frame.
 
     This class never derives presentation geometry from ROM names,
     titles, archive-member names, game state, or raster lookup tables.
@@ -61,6 +62,8 @@ class ContentLoadedDisplayAspectProbe:
         self._active_process = None
         self._session_directory = None
         self.timeout = float(timeout)
+        # Retain the constructor argument for existing callers. It no longer
+        # shortens acquisition: first-frame geometry may arrive after silence.
         self.settle_time = float(settle_time)
         self.poll_interval = float(poll_interval)
 
@@ -267,7 +270,6 @@ class ContentLoadedDisplayAspectProbe:
 
         process = None
         aspect = None
-        first_aspect_time = None
 
         try:
             process = self._popen(
@@ -290,29 +292,10 @@ class ContentLoadedDisplayAspectProbe:
                 observed = observer.poll()
 
                 if observed is not None:
-                    if (
-                        aspect is None
-                        or abs(
-                            observed.ratio
-                            - aspect.ratio
-                        ) > 1e-12
-                    ):
-                        aspect = observed
-                        first_aspect_time = now
+                    aspect = observed
 
-                    elif first_aspect_time is None:
-                        first_aspect_time = now
-
-                if (
-                    aspect is not None
-                    and first_aspect_time is not None
-                    and (
-                        now
-                        - first_aspect_time
-                    ) >= self.settle_time
-                ):
-                    return aspect
-
+                # Observe the full bounded window: initial core geometry may
+                # precede content geometry by more than a short quiet interval.
                 if process.poll() is not None:
                     observer.poll()
 

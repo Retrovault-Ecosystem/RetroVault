@@ -1001,6 +1001,9 @@ class SettingsPage(QWidget):
         standalone_layout.addRow(self.standalone_status)
         layout.addWidget(standalone_group)
         layout.addWidget(self._build_library_preferences())
+        from ui.widgets.controller_settings import ControllerSettings
+        self.controller_settings = ControllerSettings(self.settings_service)
+        layout.addWidget(self.controller_settings)
 
         layout.addStretch(
             1

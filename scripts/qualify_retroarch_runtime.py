@@ -62,17 +62,24 @@ def capture_presentation(command, output):
     effective = {}
     keys = {'input_overlay', 'input_overlay_enable', 'auto_overrides_enable',
             'input_overlay_enable_autopreferred', 'custom_viewport_x',
-            'custom_viewport_y', 'custom_viewport_width', 'custom_viewport_height'}
+            'custom_viewport_y', 'custom_viewport_width', 'custom_viewport_height',
+            'video_rotation', 'video_allow_rotate', 'video_viewport_bias_x',
+            'video_viewport_bias_y', 'aspect_ratio_index', 'video_force_aspect',
+            'video_scale_integer', 'video_fullscreen', 'video_fullscreen_x',
+            'video_fullscreen_y', 'video_driver', 'video_shader_enable'}
     for path in paths:
         for line in path.read_text().splitlines():
             key, separator, value = line.partition('=')
             if separator and key.strip() in keys:
                 effective[key.strip()] = value.strip().strip('"')
     record = {'effective_settings': effective,
+              'ordered_configs': [{'path': str(path), 'sha256': digest(path),
+                                   'text': path.read_text()} for path in paths],
               'evidence_type': 'launch_configuration_and_asset_not_screenshot'}
     if '--set-shader' in command:
         shader = Path(command[command.index('--set-shader') + 1])
         record['shader_preset'] = shader.read_text()
+        record['shader_sha256'] = digest(shader)
     if effective.get('input_overlay_enable') != 'true':
         return record
     overlay = Path(effective['input_overlay']).expanduser()
@@ -114,7 +121,9 @@ def isolated_config(text, root):
     return text
 
 
-def qualify(platform, rom, output, seconds, *, via_controller=False, pipeline=False, visual_tuning=None):
+def qualify(platform, rom, output, seconds, *, via_controller=False, pipeline=False, visual_tuning=None, managed_keyboard=False):
+    if managed_keyboard and not pipeline:
+        raise ValueError('Managed keyboard qualification requires the isolated pipeline.')
     if pipeline:
         if visual_tuning is not None:
             from services.presentation.visual_tuning import validate_values
@@ -127,7 +136,8 @@ def qualify(platform, rom, output, seconds, *, via_controller=False, pipeline=Fa
         blocked = lock_path.with_suffix('.blocked')
         if blocked.exists():
             raise RuntimeError('Previous qualification retained process ownership; inspect ' + str(blocked))
-        report = (_qualify_pipeline(rom, output, seconds, platform=platform, visual_tuning=visual_tuning) if pipeline else
+        controller_args = {'managed_keyboard': True} if managed_keyboard else {}
+        report = (_qualify_pipeline(rom, output, seconds, platform=platform, visual_tuning=visual_tuning, **controller_args) if pipeline else
                   _qualify(platform, rom, output, seconds, via_controller=via_controller))
         if report['owned_group_remaining']:
             blocked.write_text(json.dumps(report, indent=2) + '\n')
@@ -363,7 +373,7 @@ def pipeline_restart(root, bundle, rom, platform="nes"):
     return json.loads(result.stdout)
 
 
-def _qualify_pipeline(rom, output, seconds, *, platform="nes", visual_tuning=None):
+def _qualify_pipeline(rom, output, seconds, *, platform="nes", visual_tuning=None, managed_keyboard=False):
     from copy import deepcopy
     from config import ConfigWriter
     from config.paths import RVDB_BUNDLE, config_home
@@ -422,6 +432,12 @@ def _qualify_pipeline(rom, output, seconds, *, platform="nes", visual_tuning=Non
                            + ' "$@" 2>>' + shlex.quote(str(root / 'wrapper.stderr')) + '\n')
         wrapper.chmod(0o700)
         qualified = deepcopy(config)
+        if managed_keyboard:
+            from config.controller_preferences import defaults, DEFAULT_KEYS
+            qualified['controllers'] = defaults()
+            qualified['controllers']['retroarch'] = dict(mode='managed', players=[dict(
+                kind='keyboard', device={}, bindings=dict(DEFAULT_KEYS))])
+            report['controller_preferences'] = qualified['controllers']
         qualified['library'] = {'sources': []}
         qualified['retroarch']['primary_config'] = str(isolated)
         # Keep configured installed resources; all writable application state is isolated.
@@ -483,6 +499,18 @@ def _qualify_pipeline(rom, output, seconds, *, platform="nes", visual_tuning=Non
                 if not report['launch'].get('success'):
                     raise ValueError(report['launch'].get('error', 'Launch failed'))
                 report['presentation'] = capture_presentation(report['launch']['command'], root)
+                if managed_keyboard:
+                    from services.input.mappings import retroarch_values
+                    command = report['launch']['command']
+                    primary = Path(command[command.index('--config') + 1]).read_text()
+                    # Independent backend spelling check: comparing only with
+                    # our translator previously certified its invalid "return".
+                    if not re.search(r'^input_player1_start\s*=\s*"enter"\s*$', primary, re.MULTILINE):
+                        raise ValueError('Managed Start key is not a valid RetroArch Enter binding.')
+                    expected = retroarch_values(qualified)
+                    if any(f'{key} = "{value}"' not in primary for key, value in expected.items()):
+                        raise ValueError('Managed keyboard directives missing from actual launch configuration.')
+                    report['managed_keyboard_directives_verified'] = True
                 start = time.monotonic()
                 while time.monotonic() - start < seconds and launcher.process_running():
                     time.sleep(0.1)
@@ -563,6 +591,7 @@ def main():
     parser.add_argument('--seconds', type=float, default=10)
     parser.add_argument('--via-controller', action='store_true', help='Exercise the shared UI launch workflow.')
     parser.add_argument('--pipeline', action='store_true', help='Qualify a complete NES, SNES or Genesis Library/persistence/restart path.')
+    parser.add_argument('--managed-keyboard', action='store_true', help='Use isolated Milestone 6 keyboard preferences; requires --pipeline.')
     parser.add_argument('--visual-tuning-json', type=json.loads, help='Isolated pipeline CRT adjustments as JSON.')
     parser.add_argument('--restart-profile', help=argparse.SUPPRESS)
     parser.add_argument('--bundle', help=argparse.SUPPRESS)
@@ -576,7 +605,7 @@ def main():
         return 0
     if not args.platform or not args.output:
         parser.error('--platform and --output are required')
-    report = qualify(args.platform, args.rom, args.output, args.seconds, via_controller=args.via_controller, pipeline=args.pipeline, visual_tuning=args.visual_tuning_json)
+    report = qualify(args.platform, args.rom, args.output, args.seconds, via_controller=args.via_controller, pipeline=args.pipeline, visual_tuning=args.visual_tuning_json, managed_keyboard=args.managed_keyboard)
     print(json.dumps(report, indent=2))
     if args.pipeline:
         return 0 if report.get('pipeline_passed') else 1

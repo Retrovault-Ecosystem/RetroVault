@@ -1,8 +1,11 @@
 # RetroVault
 
 Current roadmap: **USQE — Usability, Scale and Qualified Expansion**.
-**Milestones #1–#4 complete; #5 complete; #6–#12 unstarted.** See [USQE roadmap](docs/usability_scale_qualified_expansion_roadmap.md) and [decision baseline](docs/usqe_milestone1_decisions.md).
+**Milestones #1–#8 complete; #9–#12 unstarted.** See [USQE roadmap](docs/usability_scale_qualified_expansion_roadmap.md) and [decision baseline](docs/usqe_milestone1_decisions.md).
 See the [Milestone #2 implementation record](docs/usqe_milestone2_customization.md) for reversible Library browsing preferences and verification.
+See the [Milestone #8 presentation-family record](docs/usqe_milestone8_presentation_families.md). The bounded NES/SNES/Genesis live batch is accepted; final suite: **2,448 passed**.
+See the [Milestone #7 save/recovery closure record](docs/usqe_milestone7_saves.md). The user authorized publication with the tested Milestone #6–#8 checkpoint.
+See the [Milestone #6 controller record](docs/usqe_milestone6_controllers.md).
 See the [Milestone #5 implementation record](docs/usqe_milestone5_compatibility.md).
 See the [Milestone #4 implementation report](docs/usqe_milestone4_library_scale.md) for rendering measurements and review status.
 See the [Milestone #3 review record](docs/usqe_milestone3_responsive_discovery.md) for background Library discovery, cancellation and verification.

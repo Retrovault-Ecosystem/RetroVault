@@ -368,3 +368,9 @@ def test_contain_runtime_accepts_core_display_aspect_object(
     assert values[
         "custom_viewport_height"
     ] == "762"
+
+
+@pytest.mark.parametrize('value', [float('nan'), float('inf'), -float('inf')])
+def test_runtime_rejects_nonfinite_geometry_input(value):
+    with pytest.raises(ValueError, match='finite'):
+        ContainRuntimeConfig._positive_number(value, name='aspect')

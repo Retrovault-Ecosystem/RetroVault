@@ -217,6 +217,14 @@ def test_complete_pipeline_rejects_unqualified_platform_without_writes(tmp_path)
     assert not output.exists()
 
 
+def test_keyboard_qualification_requires_isolated_pipeline(tmp_path):
+    from scripts.qualify_retroarch_runtime import qualify
+    output = tmp_path / 'report'
+    with pytest.raises(ValueError, match='isolated pipeline'):
+        qualify('nes', '/roms/game.nes', output, 1, managed_keyboard=True)
+    assert not output.exists()
+
+
 def test_pipeline_refuses_existing_output_directory(tmp_path):
     from scripts.qualify_retroarch_runtime import _qualify_pipeline
     sentinel = tmp_path / 'keep'
@@ -234,3 +242,20 @@ def test_pipeline_cli_returns_failure_even_if_emulator_ran(monkeypatch, capsys):
         'pipeline_passed': False, 'alive_at_deadline': True, 'error': 'Restart failed'})
     assert runner.main() == 1
     assert 'Restart failed' in capsys.readouterr().out
+
+
+def test_presentation_capture_preserves_order_hashes_and_geometry_authority(tmp_path):
+    from scripts.qualify_retroarch_runtime import capture_presentation, digest
+    primary = tmp_path / 'primary.cfg'
+    session = tmp_path / 'session.cfg'
+    contain = tmp_path / 'contain.cfg'
+    primary.write_text('input_overlay_enable = "false"\ncustom_viewport_width = "1"\n')
+    session.write_text('custom_viewport_width = "999"\nvideo_rotation = "0"\n')
+    contain.write_text('custom_viewport_width = "1044"\nvideo_viewport_bias_x = "0.000000"\n')
+    command = ['retroarch', '--config', str(primary), '--appendconfig', str(session)+'|'+str(contain)]
+    result = capture_presentation(command, tmp_path)
+    assert result['effective_settings']['custom_viewport_width'] == '1044'
+    assert result['effective_settings']['video_viewport_bias_x'] == '0.000000'
+    assert [r['sha256'] for r in result['ordered_configs']] == [digest(p) for p in (primary,session,contain)]
+    assert result['ordered_configs'][2]['text'] == contain.read_text()
+    assert result['evidence_type'] == 'launch_configuration_and_asset_not_screenshot'

@@ -4,9 +4,11 @@ import hashlib
 import os
 from pathlib import Path
 import signal
+import shutil
 import subprocess
 import sys
 import time
+import tempfile
 
 from config.paths import RVDB_BUNDLE, config_home, data_home, runtime_directory
 from services.rvdb import RVDBService, RVDBError
@@ -24,6 +26,7 @@ class Snes9xLauncher:
         self._process = None
         self._group = None
         self.last_result = {}
+        self._input_profile = None
 
     @property
     def active_process(self):
@@ -37,6 +40,12 @@ class Snes9xLauncher:
         if not self.process_running():
             self._process = None
             self._group = None
+            self._cleanup_input_profile()
+
+    def _cleanup_input_profile(self):
+        if self._input_profile is not None:
+            shutil.rmtree(self._input_profile)
+            self._input_profile = None
 
     def validate(self, request):
         if sys.platform != 'linux':
@@ -58,13 +67,20 @@ class Snes9xLauncher:
         return executable_path(request.executable), rom
 
     def prepare(self, request, rom):
+        from services.input.mappings import snes9x_sections
+        if self.process_running():
+            raise ValueError('Cannot replace controls while a Snes9x session is running.')
+        self._cleanup_input_profile()
+        input_config = ({'controllers': request.controller_preferences}
+                        if request.controller_preferences is not None else {})
+        input_sections = snes9x_sections(input_config)
         # Physical editions with identical basenames must not share native saves.
         identity = request.local_file_id or str(rom)
         key = hashlib.sha256(identity.encode('utf-8')).hexdigest()
         profile = config_home() / 'retrovault/emulators/snes9x' / key
         saves = data_home() / 'retrovault/emulators/snes9x' / key
         cache = runtime_directory('snes9x') / key
-        for root in (profile / 'snes9x', saves, cache):
+        for root in ((saves, cache) if input_sections else (profile / 'snes9x', saves, cache)):
             root.mkdir(parents=True, exist_ok=True)
         config_path = profile / 'snes9x/snes9x.conf'
         config = configparser.ConfigParser(interpolation=None, inline_comment_prefixes=('#',), strict=False)
@@ -102,11 +118,33 @@ class Snes9xLauncher:
                 config.add_section(section)
             for key, value in entries.items():
                 config.set(section, key, value)
+        if input_sections:
+            keyboard = {value for section, entries in input_sections.items()
+                        if section.startswith('Joypad ') for value in entries.values()
+                        if value.startswith('Keyboard ')}
+            for shortcut, binding in config['Shortcuts'].items():
+                if binding in keyboard:
+                    raise ValueError(f'Controller binding conflicts with preserved shortcut {shortcut}. '
+                                     'Choose another gameplay key.')
+            # The permanent per-edition native profile is an input, never the
+            # destination of an opt-in managed mapping.
+            for section, entries in input_sections.items():
+                if not config.has_section(section):
+                    config.add_section(section)
+                for key, value in entries.items():
+                    config.set(section, key, value)
+            self._input_profile = Path(tempfile.mkdtemp(prefix='controls-', dir=cache))
+            profile = self._input_profile
+            config_path = profile / 'snes9x/snes9x.conf'
         temporary = config_path.with_suffix('.tmp')
         try:
+            config_path.parent.mkdir(parents=True, exist_ok=True)
             with temporary.open('w', encoding='utf-8') as handle:
                 config.write(handle)
             os.replace(temporary, config_path)
+        except (OSError, ValueError):
+            self._cleanup_input_profile()
+            raise
         finally:
             temporary.unlink(missing_ok=True)
         env = dict(os.environ, XDG_CONFIG_HOME=str(profile), XDG_DATA_HOME=str(saves),
@@ -144,10 +182,13 @@ class Snes9xLauncher:
         except (OSError, RuntimeError):
             if self._process is not None:
                 self.stop()
+            else:
+                self._cleanup_input_profile()
             raise
 
     def stop(self):
         if self._process is None:
+            self._cleanup_input_profile()
             return False
         process, group = self._process, self._group
         if type(group) is not int or group <= 1 or group == os.getpgrp():

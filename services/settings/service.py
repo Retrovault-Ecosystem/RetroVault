@@ -145,3 +145,19 @@ class SettingsService:
             effective = _merge_config(config, overrides)
             refresh_error = str(exc)
         return SettingsSaveResult(effective, False, False, refresh_error)
+
+    def save_controller_preferences(self, values):
+        """Persist explicit intent, without requiring a connected controller."""
+        from config.controller_preferences import validate_preferences
+        from config.loader import _merge_config
+        preferences = validate_preferences(values)
+        config = self.config_loader.load()
+        overrides = {'controllers': preferences}
+        self.config_writer.update(overrides)
+        refresh_error = ''
+        try:
+            effective = self.config_loader.load()
+        except (OSError, ValueError) as exc:
+            effective = _merge_config(config, overrides)
+            refresh_error = str(exc)
+        return SettingsSaveResult(effective, False, False, refresh_error)

@@ -393,6 +393,10 @@ class RetroArchLauncher:
         try:
             configured_primary = profile.config or launch_config.get("retroarch", {}).get("primary_config", "")
             primary_source = {"source": configured_primary} if configured_primary else {}
+            from services.input.mappings import retroarch_values
+            controller_values = retroarch_values(launch_config)
+            if controller_values:
+                primary_source['input_values'] = controller_values
             primary_config = (
                 self.primary_config_runtime.create(
                     **primary_source,
@@ -447,8 +451,14 @@ class RetroArchLauncher:
                 )
             )
 
+            from services.saves.policy import SavePolicy
+            save_values = SavePolicy().settings(
+                getattr(profile, 'local_file_id', ''), profile.core,
+                getattr(profile, 'source_rom', '') or profile.rom)
+            session_kwargs = {'save_values': save_values} if save_values else {}
             session_config = (
                 self.session_config.create(
+                    **session_kwargs,
                     core_options_path=(
                         core_options_config
                     ),

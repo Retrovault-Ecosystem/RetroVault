@@ -175,6 +175,7 @@ class PrimaryConfigRuntime:
         *,
         video_driver=None,
         overlay=None,
+        input_values=None,
     ):
         driver = (
             self.qualified_video_driver()
@@ -182,7 +183,7 @@ class PrimaryConfigRuntime:
             else str(video_driver).strip()
         )
 
-        if not driver and not source and not overlay:
+        if not driver and not source and not overlay and not input_values:
             return None
 
         source_path = self.discover_source(
@@ -293,6 +294,10 @@ class PrimaryConfigRuntime:
                         text += "\n"
 
                     text += directive + "\n"
+
+        if input_values:
+            from services.input.retroarch_config import apply_controls
+            text = apply_controls(text, input_values)
 
         self.directory.mkdir(
             parents=True,

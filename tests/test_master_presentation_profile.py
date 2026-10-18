@@ -483,3 +483,13 @@ def test_shared_widescreen_contain_profile_still_preserves_each_content_aspect()
     classic = profile.contain_aspect(4, 3)
     assert (wide.x, wide.y, wide.width, wide.height) == (0, 0, 1920, 1080)
     assert (classic.x, classic.y, classic.width, classic.height) == (240, 0, 1440, 1080)
+
+
+@pytest.mark.parametrize('value', [float('nan'), float('inf'), -float('inf')])
+@pytest.mark.parametrize('axis', ['width', 'height'])
+def test_contain_rejects_nonfinite_aspect_at_boundary(value, axis):
+    profile = MasterPresentationProfileRegistry.require(MasterPresentationClass.CLASSIC_4_3)
+    args = {'display_aspect_width': 4, 'display_aspect_height': 3}
+    args['display_aspect_' + axis] = value
+    with pytest.raises(ValueError, match='finite'):
+        profile.contain_aspect(**args)

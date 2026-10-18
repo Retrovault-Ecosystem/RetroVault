@@ -71,6 +71,84 @@ def test_native_arguments_profile_and_stop_preserve_saves(native, tmp_path):
     assert not (tmp_path / 'forbidden').exists()
 
 
+def test_managed_controls_are_transient_and_stop_preserves_native_profile(native):
+    from config.controller_preferences import defaults, DEFAULT_KEYS
+    adapter, request = native
+    _, _, permanent, saves = adapter.prepare(request, Path(request.rom))
+    before = permanent.read_bytes()
+    values = defaults()
+    values['snes9x'] = dict(mode='managed', players=[dict(
+        kind='keyboard', device={}, bindings={**DEFAULT_KEYS, 'a': 'c'})])
+    result = adapter.launch(replace(request, controller_preferences=values))
+    assert result['success']
+    transient = Path(result['config'])
+    assert transient != permanent
+    assert permanent.read_bytes() == before
+    assert result['saves'] == str(saves)
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.read(transient)
+    assert parser['Joypad 0']['A'] == 'Keyboard c'
+    assert parser['Joypad 5']['A'] == 'Unset'
+    assert parser['Shortcuts']['QuickLoad000'] == 'Keyboard F1'
+    adapter.stop()
+    assert not transient.parent.parent.exists()
+    assert permanent.read_bytes() == before
+    assert not adapter.stop()
+
+
+def test_managed_controls_cleanup_when_process_creation_fails(native, monkeypatch):
+    from config.controller_preferences import defaults, DEFAULT_KEYS
+    adapter, request = native
+    values = defaults()
+    values['snes9x'] = dict(mode='managed', players=[dict(
+        kind='keyboard', device={}, bindings=dict(DEFAULT_KEYS))])
+    def fail(*args, **kwargs):
+        raise OSError('process creation blocked')
+    monkeypatch.setattr('services.emulators.snes9x.subprocess.Popen', fail)
+    with pytest.raises(OSError, match='blocked'):
+        adapter.launch(replace(request, controller_preferences=values))
+    assert adapter._input_profile is None
+    assert not list(Path(os.environ['XDG_CACHE_HOME']).rglob('controls-*'))
+
+
+def test_managed_controls_preserve_conflicting_native_shortcut(native):
+    from config.controller_preferences import defaults, DEFAULT_KEYS
+    adapter, request = native
+    _, _, permanent, _ = adapter.prepare(request, Path(request.rom))
+    parser = configparser.ConfigParser(interpolation=None)
+    parser.optionxform = str
+    parser.read(permanent)
+    parser['Shortcuts']['GTK_pause'] = 'Keyboard c'
+    with permanent.open('w') as handle:
+        parser.write(handle)
+    before = permanent.read_bytes()
+    values = defaults()
+    values['snes9x'] = dict(mode='managed', players=[dict(
+        kind='keyboard', device={}, bindings={**DEFAULT_KEYS, 'a': 'c'})])
+    with pytest.raises(ValueError, match='preserved shortcut'):
+        adapter.launch(replace(request, controller_preferences=values))
+    assert permanent.read_bytes() == before
+    assert adapter._input_profile is None
+
+
+def test_managed_profile_write_failure_removes_only_owned_temporary_files(native, monkeypatch):
+    from config.controller_preferences import defaults, DEFAULT_KEYS
+    adapter, request = native
+    _, _, permanent, _ = adapter.prepare(request, Path(request.rom))
+    before = permanent.read_bytes()
+    values = defaults()
+    values['snes9x'] = dict(mode='managed', players=[dict(
+        kind='keyboard', device={}, bindings=dict(DEFAULT_KEYS))])
+    def fail(*args):
+        raise OSError('replacement blocked')
+    monkeypatch.setattr('services.emulators.snes9x.os.replace', fail)
+    with pytest.raises(OSError, match='replacement blocked'):
+        adapter.launch(replace(request, controller_preferences=values))
+    assert permanent.read_bytes() == before
+    assert adapter._input_profile is None
+    assert not list(Path(os.environ['XDG_CACHE_HOME']).rglob('controls-*'))
+
+
 @pytest.mark.parametrize('change', [dict(platform_id='SNES'), dict(rom='/missing/file.sfc'),
                                     dict(rom='/missing/file.7z'), dict(executable='/missing/tool')])
 def test_native_validation_fails_before_profile_writes(native, change, tmp_path):

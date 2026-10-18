@@ -128,6 +128,17 @@ def run(env):
     return qualification._qualify_pipeline(env.rom, env.root, 1, platform=env.platform)
 
 
+def test_keyboard_qualification_rejects_process_without_actual_managed_controls(environment):
+    env = environment
+    before = env.user_config.read_bytes()
+    report = qualification._qualify_pipeline(env.rom, env.root, 1,
+                                             platform=env.platform, managed_keyboard=True)
+    assert not report['pipeline_passed']
+    assert 'Managed Start key is not a valid RetroArch Enter binding' in report['error']
+    assert env.user_config.read_bytes() == before
+    assert not report['owned_group_remaining']
+
+
 def test_real_scan_persistence_and_fresh_process_restart(environment):
     env = environment
     original = env.user_config.read_bytes()

@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from enum import Enum
+import math
 
 
 class MasterPresentationClass(str, Enum):
@@ -192,10 +193,11 @@ class MasterPresentationProfile:
                     value,
                     (int, float),
                 )
+                or not math.isfinite(value)
                 or value <= 0
             ):
                 raise ValueError(
-                    f"{name} must be a positive number."
+                    f"{name} must be a positive finite number."
                 )
 
         scale = min(

@@ -486,6 +486,9 @@ class GameLaunchController:
 
         profile = LaunchProfile(
 
+            local_file_id=getattr(launch_game, 'local_file_id', '') or '',
+            source_rom=launch_game.rom,
+
             game=launch_game.name,
 
             rom=(
@@ -571,6 +574,7 @@ class GameLaunchController:
         self._complete_launch(launch_game, launch_result, 'RetroArch')
 
     def _launch_standalone(self, game, config):
+        from config.controller_preferences import from_config
         if not callable(getattr(self.launcher, 'launch_standalone', None)):
             raise ValueError('Standalone session adapter is unavailable.')
         if self.process_lifecycle is not None:
@@ -578,7 +582,8 @@ class GameLaunchController:
         request = StandaloneRequest(
             game=game.name, rom=game.rom, platform_id=game.rvdb_platform_id,
             local_file_id=getattr(game, 'local_file_id', ''),
-            executable=config.get('emulation', {}).get('snes9x_executable', ''))
+            executable=config.get('emulation', {}).get('snes9x_executable', ''),
+            controller_preferences=from_config(config))
         result = self.launcher.launch_standalone(request)
         self._complete_launch(game, result, 'Snes9x standalone')
 

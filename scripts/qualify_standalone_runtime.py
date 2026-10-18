@@ -51,6 +51,17 @@ def launch_profile(root, rom, seconds, *, restart=False):
         report['launch'] = dict(controller.last_result)
         if not report['launch'].get('success'):
             raise ValueError(str(report['launch']))
+        report['launched_profile_sha256'] = digest(report['launch']['config'])
+        managed_keyboard = config.get('controllers', {}).get('snes9x', {}).get('mode') == 'managed'
+        if managed_keyboard:
+            import configparser
+            from services.input.mappings import snes9x_sections
+            actual = configparser.ConfigParser(interpolation=None)
+            actual.read(report['launch']['config'])
+            for section, entries in snes9x_sections(config).items():
+                if any(actual[section].get(key) != value for key, value in entries.items()):
+                    raise ValueError('Managed keyboard directives missing from actual native profile.')
+            report['managed_keyboard_directives_verified'] = True
         start = time.monotonic()
         while time.monotonic() - start < seconds and session.process_running():
             lifecycle.poll()
@@ -63,6 +74,10 @@ def launch_profile(root, rom, seconds, *, restart=False):
         else:
             controller.stop()
         report['stopped'] = not session.process_running()
+        if managed_keyboard:
+            report['temporary_controls_removed'] = not Path(report['launch']['config']).exists()
+            if not report['temporary_controls_removed']:
+                raise ValueError('Managed native controls survived session cleanup.')
         if not report['stopped']:
             raise ValueError('Native session failed to stop.')
         report['recent'] = library.recent()
@@ -79,7 +94,7 @@ def launch_profile(root, rom, seconds, *, restart=False):
         controller.cleanup_inputs()
 
 
-def qualify(executable, original, output, seconds):
+def qualify(executable, original, output, seconds, *, managed_keyboard=False):
     if not 1 <= seconds <= 30:
         raise ValueError('Observation duration must be 1–30 seconds.')
     root = Path(output).resolve()
@@ -107,11 +122,18 @@ def qualify(executable, original, output, seconds):
         rom = source / original.name
         shutil.copyfile(original, rom)
         with pipeline_environment(root):
-            ConfigWriter().write({'library': {'sources': []},
-                                  'emulation': {'snes_backend': 'snes9x', 'snes9x_executable': str(executable)}})
+            qualified = {'library': {'sources': []},
+                         'emulation': {'snes_backend': 'snes9x', 'snes9x_executable': str(executable)}}
+            if managed_keyboard:
+                from config.controller_preferences import defaults, DEFAULT_KEYS
+                qualified['controllers'] = defaults()
+                qualified['controllers']['snes9x'] = dict(mode='managed', players=[dict(
+                    kind='keyboard', device={}, bindings=dict(DEFAULT_KEYS))])
+                report['controller_preferences'] = qualified['controllers']
+            ConfigWriter().write(qualified)
             ImportSourceStore().persist_directory(source, source_id='standalone-snes', source_name='Standalone SNES')
             report['first_run'] = launch_profile(root, rom, seconds)
-            report['profile_sha256_before_restart'] = digest(report['first_run']['launch']['config'])
+            report['profile_sha256_before_restart'] = report['first_run']['launched_profile_sha256']
             env = dict(os.environ, PYTHONPATH=str(Path(__file__).resolve().parents[1]))
             result = subprocess.run([sys.executable, '-B', '-m', 'scripts.qualify_standalone_runtime',
                                      '--restart', str(root), '--rom', str(rom)], env=env, cwd=root,
@@ -149,6 +171,7 @@ def main():
     parser.add_argument('--output')
     parser.add_argument('--seconds', type=float, default=30)
     parser.add_argument('--restart')
+    parser.add_argument('--managed-keyboard', action='store_true')
     args = parser.parse_args()
     if args.restart:
         root = Path(args.restart).resolve()
@@ -158,7 +181,7 @@ def main():
         return 0
     if not args.executable or not args.output:
         parser.error('--executable and --output are required')
-    result = qualify(args.executable, args.rom, args.output, args.seconds)
+    result = qualify(args.executable, args.rom, args.output, args.seconds, managed_keyboard=args.managed_keyboard)
     print(json.dumps(result, indent=2))
     return 0 if result['success'] else 1
 

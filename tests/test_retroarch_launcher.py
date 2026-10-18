@@ -1166,6 +1166,8 @@ def test_launch_injects_core_visible_area_policy_before_process(
     profile = Mock()
     profile.core = "/cores/fceumm_libretro.so"
     profile.rom = "/games/example.nes"
+    profile.local_file_id = ""
+    profile.source_rom = ""
     profile.source = ""
     profile.config = ""
     profile.overlay = ""

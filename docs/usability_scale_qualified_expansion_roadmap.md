@@ -1,8 +1,11 @@
 # RetroVault + RVDB — Usability, Scale and Qualified Expansion (USQE)
 
-Status: approved new 12-milestone roadmap. **USQE #1 is complete as a decision/documentation milestone. USQE #2–#4 are complete; #5 complete; #6–#12 are unstarted.**
+Status: approved new 12-milestone roadmap. **USQE #1 is complete as a decision/documentation milestone. USQE #2–#8 are complete; #9–#12 are unstarted.**
 This is a separate roadmap, not Milestone #15. The original 14-milestone roadmap remains permanently closed and protected. No feature implementation is authorized by this document alone.
 
+See the [Milestone #8 presentation-family record](usqe_milestone8_presentation_families.md).
+See the [Milestone #7 save/recovery closure record](usqe_milestone7_saves.md).
+See the [Milestone #6 controller record](usqe_milestone6_controllers.md).
 See the [Milestone #5 implementation record](usqe_milestone5_compatibility.md).
 See the [Milestone #4 implementation report](usqe_milestone4_library_scale.md) for rendering measurements and review status.
 ## Protected starting checkpoints
@@ -26,7 +29,7 @@ Use existing services, data, profiles and qualification runners. No speculative 
 
 ## Approved sequence and phases
 
-Numbers below belong only to USQE. #1 is complete; [#2 implementation and review](usqe_milestone2_customization.md) are approved and complete. #3 is [approved and complete](usqe_milestone3_responsive_discovery.md); #4 is approved and complete; #5 complete; #6–#12 remain **unstarted**.
+Numbers below belong only to USQE. #1 is complete; [#2 implementation and review](usqe_milestone2_customization.md) are approved and complete. #3 is [approved and complete](usqe_milestone3_responsive_discovery.md); #4 is approved and complete; #5 complete; #6 is approved and complete within its bounded keyboard scope, with physical gamepad qualification deferred; #7 is **complete**, with required save/reload and UI acceptance recorded; #8 is **complete** within its bounded presentation-family scope; #9–#12 remain **unstarted**.
 
 | Phase | # | Milestone | Objective and prerequisite boundary |
 | --- | --- | --- | --- |

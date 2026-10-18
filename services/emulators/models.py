@@ -39,3 +39,4 @@ class StandaloneRequest:
     platform_id: str
     local_file_id: str
     executable: str
+    controller_preferences: dict | None = None

@@ -407,6 +407,10 @@ class GameDetails(QWidget):
             self.stop_button
         )
 
+        self.save_button = QPushButton('Saves and recovery…')
+        self.save_button.clicked.connect(self.manage_saves)
+        main.addWidget(self.save_button)
+
 
         self._launch_session_active = False
 
@@ -1039,6 +1043,19 @@ class GameDetails(QWidget):
         )
         self._refresh_launch_button()
 
+
+    def manage_saves(self):
+        if self.current_game is None:
+            return
+        try:
+            variant = self._select_game_edition()
+            if variant is None:
+                return
+            game = self._launch_target_from_variant(variant)
+            from ui.library.widgets.save_manager import SaveManager
+            SaveManager(game, self.launch_controller.config_loader, self.launcher, self).exec()
+        except (OSError, ValueError) as exc:
+            QMessageBox.warning(self, 'Save management unavailable', str(exc))
 
     def _select_game_edition(
         self,

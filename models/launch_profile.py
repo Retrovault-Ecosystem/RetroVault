@@ -36,3 +36,6 @@ class LaunchProfile:
 
     # Semantic, package-validated adjustments; never raw geometry parameters.
     visual_tuning: tuple[tuple[str, float | None], ...] = ()
+
+    local_file_id: str = ""
+    source_rom: str = ""
