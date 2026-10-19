@@ -259,3 +259,34 @@ def test_presentation_capture_preserves_order_hashes_and_geometry_authority(tmp_
     assert [r['sha256'] for r in result['ordered_configs']] == [digest(p) for p in (primary,session,contain)]
     assert result['ordered_configs'][2]['text'] == contain.read_text()
     assert result['evidence_type'] == 'launch_configuration_and_asset_not_screenshot'
+
+
+def test_repeated_owned_child_sidecars_clean_only_after_stop(tmp_path):
+    from pathlib import Path
+    from services.retroarch.primary_config_runtime import PrimaryConfigRuntime
+    source = tmp_path / 'source.cfg'
+    source.write_text('video_driver = "glcore"\n')
+    runtime = PrimaryConfigRuntime(directory=tmp_path / 'runtime')
+    launcher = RetroArchLauncher()
+    launcher.primary_config_runtime = runtime
+    for _ in range(3):
+        primary = Path(runtime.create(source, video_driver='glcore'))
+        process = subprocess.Popen([sys.executable, '-u', '-c',
+            'import pathlib,sys,time; pathlib.Path(sys.argv[1]).write_text("desktop preferences"); print("ready",flush=True); time.sleep(60)',
+            str(primary.parent / 'retroarch_qt.cfg')], start_new_session=True, stdout=subprocess.PIPE, text=True)
+        launcher._active_process = process
+        launcher._active_group = process.pid
+        launcher._active_primary_config = str(primary)
+        try:
+            assert process.stdout.readline().strip() == 'ready'
+            launcher._cleanup_active_transients()
+            assert primary.exists()
+            assert launcher.cleanup_errors
+            assert launcher.stop()
+            assert process.poll() is not None
+            assert not primary.parent.exists()
+            assert not list(runtime.directory.iterdir())
+        finally:
+            launcher.shutdown()
+            process.stdout.close()
+    assert source.read_text() == 'video_driver = "glcore"\n'

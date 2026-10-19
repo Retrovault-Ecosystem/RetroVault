@@ -122,7 +122,19 @@ def isolated_config(text, root):
     return text
 
 
-def qualify(platform, rom, output, seconds, *, via_controller=False, pipeline=False, visual_tuning=None, managed_keyboard=False):
+def validate_observation_duration(seconds, *, sustained=False):
+    """Keep smoke defaults; sustained evidence uses the approved ten-minute window."""
+    import math
+    if (isinstance(seconds, bool) or not isinstance(seconds, (int, float))
+            or not math.isfinite(seconds)
+            or (seconds != 600 if sustained else not 1 <= seconds <= 30)):
+        raise ValueError('Use exactly 600 seconds for sustained qualification; otherwise 1–30 seconds.')
+
+
+def qualify(platform, rom, output, seconds, *, via_controller=False, pipeline=False, visual_tuning=None, managed_keyboard=False, sustained=False):
+    validate_observation_duration(seconds, sustained=sustained)
+    if sustained and not pipeline:
+        raise ValueError('Sustained qualification requires the isolated pipeline.')
     if managed_keyboard and not pipeline:
         raise ValueError('Managed keyboard qualification requires the isolated pipeline.')
     if pipeline:
@@ -138,6 +150,8 @@ def qualify(platform, rom, output, seconds, *, via_controller=False, pipeline=Fa
         if blocked.exists():
             raise RuntimeError('Previous qualification retained process ownership; inspect ' + str(blocked))
         controller_args = {'managed_keyboard': True} if managed_keyboard else {}
+        if sustained:
+            controller_args['sustained'] = True
         report = (_qualify_pipeline(rom, output, seconds, platform=platform, visual_tuning=visual_tuning, **controller_args) if pipeline else
                   _qualify(platform, rom, output, seconds, via_controller=via_controller))
         if report['owned_group_remaining']:
@@ -375,7 +389,7 @@ def pipeline_restart(root, bundle, rom, platform="nes"):
     return json.loads(result.stdout)
 
 
-def _qualify_pipeline(rom, output, seconds, *, platform="nes", visual_tuning=None, managed_keyboard=False):
+def _qualify_pipeline(rom, output, seconds, *, platform="nes", visual_tuning=None, managed_keyboard=False, sustained=False):
     from copy import deepcopy
     from config import ConfigWriter
     from config.paths import RVDB_BUNDLE, config_home
@@ -388,13 +402,13 @@ def _qualify_pipeline(rom, output, seconds, *, platform="nes", visual_tuning=Non
     from services.presentation.hardware_state import HardwareIndicatorPolicy
 
     case = pipeline_case(platform)
-    if not 1 <= seconds <= 30:
-        raise ValueError('Duration must be between 1 and 30 seconds.')
+    validate_observation_duration(seconds, sustained=sustained)
     root = Path(output).resolve()
     root.mkdir(parents=True, exist_ok=False)
     original = Path(rom).expanduser().resolve()
     report = {'workflow': case['label'] + ' complete platform pipeline', 'platform': case['platform_id'],
               'original_rom': str(original), 'requested_seconds': seconds,
+              'observation_mode': 'sustained' if sustained else 'smoke',
               'visual_acceptance': 'pending', 'stages': {}, 'warnings': [],
               'owned_group_remaining': False, 'remaining_transients': [], 'cleanup_errors': []}
     protected = {}
@@ -591,6 +605,7 @@ def main():
     parser.add_argument('--rom', required=True)
     parser.add_argument('--output')
     parser.add_argument('--seconds', type=float, default=10)
+    parser.add_argument('--sustained', action='store_true', help='Explicit approved 600-second isolated pipeline observation.')
     parser.add_argument('--via-controller', action='store_true', help='Exercise the shared UI launch workflow.')
     parser.add_argument('--pipeline', action='store_true', help='Qualify a complete NES, SNES or Genesis Library/persistence/restart path.')
     parser.add_argument('--managed-keyboard', action='store_true', help='Use isolated Milestone 6 keyboard preferences; requires --pipeline.')
@@ -607,7 +622,7 @@ def main():
         return 0
     if not args.platform or not args.output:
         parser.error('--platform and --output are required')
-    report = qualify(args.platform, args.rom, args.output, args.seconds, via_controller=args.via_controller, pipeline=args.pipeline, visual_tuning=args.visual_tuning_json, managed_keyboard=args.managed_keyboard)
+    report = qualify(args.platform, args.rom, args.output, args.seconds, via_controller=args.via_controller, pipeline=args.pipeline, visual_tuning=args.visual_tuning_json, managed_keyboard=args.managed_keyboard, sustained=args.sustained)
     print(json.dumps(report, indent=2))
     if args.pipeline:
         return 0 if report.get('pipeline_passed') else 1

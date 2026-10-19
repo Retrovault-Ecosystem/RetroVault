@@ -434,3 +434,64 @@ def test_tabbed_driver_is_updated_and_includes_fail_before_writing(tmp_path):
     with pytest.raises(ValueError, match='includes are unsupported'):
         runtime.create(source=source, video_driver='glcore')
     assert not list(runtime.directory.iterdir())
+
+
+def test_owned_primary_directory_removes_sidecars_without_touching_other_files(tmp_path):
+    source = _source(tmp_path)
+    runtime = PrimaryConfigRuntime(directory=tmp_path / 'cache')
+    first = Path(runtime.create(source, video_driver='glcore'))
+    second = Path(runtime.create(source, video_driver='glcore'))
+    assert first.parent != second.parent
+    sidecar = first.parent / 'retroarch_qt.cfg'
+    sidecar.write_text('desktop preferences')
+    unrelated = runtime.directory / 'historical.cfg'
+    unrelated.write_text('preserve')
+    runtime.cleanup()
+    assert not first.parent.exists()
+    assert not second.parent.exists()
+    assert unrelated.read_text() == 'preserve'
+    assert source.exists()
+    runtime.cleanup()
+
+
+def test_owned_primary_directory_cleanup_failure_can_retry(tmp_path, monkeypatch):
+    import shutil
+    source = _source(tmp_path)
+    runtime = PrimaryConfigRuntime(directory=tmp_path / 'cache')
+    primary = Path(runtime.create(source, video_driver='glcore'))
+    (primary.parent / 'retroarch_qt.cfg').write_text('preferences')
+    original = shutil.rmtree
+    def fail(*args, **kwargs):
+        raise PermissionError('controlled cleanup failure')
+    monkeypatch.setattr(shutil, 'rmtree', fail)
+    with pytest.raises(OSError, match='cleanup pending'):
+        runtime.cleanup()
+    monkeypatch.setattr(shutil, 'rmtree', original)
+    runtime.cleanup()
+    assert not primary.parent.exists()
+
+
+def test_failed_primary_creation_still_owns_empty_directory(tmp_path, monkeypatch):
+    import tempfile
+    source = _source(tmp_path)
+    runtime = PrimaryConfigRuntime(directory=tmp_path / 'cache')
+    def fail(*args, **kwargs):
+        raise OSError('controlled create failure')
+    monkeypatch.setattr(tempfile, 'NamedTemporaryFile', fail)
+    with pytest.raises(OSError, match='create failure'):
+        runtime.create(source, video_driver='glcore')
+    assert list(runtime.directory.iterdir())
+    runtime.cleanup()
+    assert not list(runtime.directory.iterdir())
+
+
+def test_primary_sidecar_symlink_does_not_delete_external_target(tmp_path):
+    source = _source(tmp_path)
+    runtime = PrimaryConfigRuntime(directory=tmp_path / 'cache')
+    primary = Path(runtime.create(source, video_driver='glcore'))
+    outside = tmp_path / 'unrelated'
+    outside.mkdir()
+    (outside / 'keep').write_text('preserve')
+    (primary.parent / 'sidecar').symlink_to(outside, target_is_directory=True)
+    runtime.cleanup()
+    assert (outside / 'keep').read_text() == 'preserve'

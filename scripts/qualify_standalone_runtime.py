@@ -22,7 +22,7 @@ from services.presentation.process_lifecycle import ProcessLifecycleAdapter
 from services.presentation.hardware_runtime import HardwareRuntimeOrchestrator
 from services.presentation.hardware_state import HardwareIndicatorPolicy
 from services.retroarch.launcher import RetroArchLauncher
-from scripts.qualify_retroarch_runtime import digest, pipeline_environment, pipeline_library
+from scripts.qualify_retroarch_runtime import digest, pipeline_environment, pipeline_library, validate_observation_duration
 
 
 def forbidden(*args):
@@ -94,9 +94,8 @@ def launch_profile(root, rom, seconds, *, restart=False):
         controller.cleanup_inputs()
 
 
-def qualify(executable, original, output, seconds, *, managed_keyboard=False):
-    if not 1 <= seconds <= 30:
-        raise ValueError('Observation duration must be 1–30 seconds.')
+def qualify(executable, original, output, seconds, *, managed_keyboard=False, sustained=False):
+    validate_observation_duration(seconds, sustained=sustained)
     root = Path(output).resolve()
     original = Path(original).expanduser().resolve()
     executable = Path(executable).expanduser().resolve()
@@ -114,7 +113,8 @@ def qualify(executable, original, output, seconds, *, managed_keyboard=False):
         protected[str(primary)] = digest(primary)
     report = {'backend': 'snes9x', 'platform': SNES, 'executable': str(executable),
               'executable_sha256': digest(executable), 'requested_seconds': seconds,
-              'user_acceptance': 'pending', 'protected_before': protected, 'success': False}
+              'user_acceptance': 'pending', 'protected_before': protected, 'success': False,
+              'observation_mode': 'sustained' if sustained else 'smoke'}
     try:
         shutil.copyfile(RVDB_BUNDLE, root / 'rvdb.bundle.json')
         source = root / 'roms'
@@ -170,6 +170,7 @@ def main():
     parser.add_argument('--rom', required=True)
     parser.add_argument('--output')
     parser.add_argument('--seconds', type=float, default=30)
+    parser.add_argument('--sustained', action='store_true', help='Explicit approved 600-second observation.')
     parser.add_argument('--restart')
     parser.add_argument('--managed-keyboard', action='store_true')
     args = parser.parse_args()
@@ -181,7 +182,7 @@ def main():
         return 0
     if not args.executable or not args.output:
         parser.error('--executable and --output are required')
-    result = qualify(args.executable, args.rom, args.output, args.seconds, managed_keyboard=args.managed_keyboard)
+    result = qualify(args.executable, args.rom, args.output, args.seconds, managed_keyboard=args.managed_keyboard, sustained=args.sustained)
     print(json.dumps(result, indent=2))
     return 0 if result['success'] else 1
 

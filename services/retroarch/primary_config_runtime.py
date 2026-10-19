@@ -2,6 +2,7 @@ from config.paths import runtime_directory, config_home
 import os
 import re
 import tempfile
+import shutil
 from pathlib import Path
 
 
@@ -85,6 +86,7 @@ class PrimaryConfigRuntime:
         ).expanduser()
 
         self._created = []
+        self._owned_directories = []
 
     @staticmethod
     def qualified_video_driver():
@@ -304,12 +306,16 @@ class PrimaryConfigRuntime:
             exist_ok=True,
         )
 
+        # Own the directory before writing: RetroArch may create sibling
+        # desktop preferences, and failed writes must remain recoverable.
+        owned_directory = Path(tempfile.mkdtemp(prefix="primary-session-", dir=self.directory))
+        self._owned_directories.append(owned_directory)
         handle = tempfile.NamedTemporaryFile(
             mode="w",
             encoding="utf-8",
             prefix="primary-",
             suffix=".cfg",
-            dir=self.directory,
+            dir=owned_directory,
             delete=False,
         )
 
@@ -334,6 +340,15 @@ class PrimaryConfigRuntime:
                 candidate.unlink(missing_ok=True)
             except OSError:
                 remaining.append(candidate)
-        self._created = remaining
-        if remaining:
-            raise OSError("Primary configuration cleanup pending: " + ", ".join(map(str, remaining)))
+        pending_directories = []
+        for directory in self._owned_directories:
+            try:
+                shutil.rmtree(directory)
+            except FileNotFoundError:
+                pass
+            except OSError:
+                pending_directories.append(directory)
+        self._owned_directories = pending_directories
+        self._created = [candidate for candidate in remaining if candidate.exists()]
+        if self._created or pending_directories:
+            raise OSError("Primary configuration cleanup pending: " + ", ".join(map(str, self._created + pending_directories)))
