@@ -3,6 +3,7 @@
 Current roadmap: **USQE — Usability, Scale and Qualified Expansion**.
 **Milestones #1–#9 complete; #10 complete; #11 complete; #12 complete.** See [USQE roadmap](docs/usability_scale_qualified_expansion_roadmap.md) and [decision baseline](docs/usqe_milestone1_decisions.md).
 See the [Milestone #10 qualification record](docs/usqe_milestone10_sustained_sessions.md): five ten-minute sessions and fresh recovery checks accepted; **2,489 RetroVault / 407 RVDB tests passed**.
+All twelve USQE milestones are complete within their approved scopes. See the [final audit and explicit deferrals](docs/usqe_final_roadmap_audit.md).
 See the [Milestone #12 Linux distribution record](docs/usqe_milestone12_linux_distribution.md): **2,516 RetroVault / 407 RVDB tests passed**; bounded Ubuntu user-local installation accepted.
 See the [Milestone #11 delivery report](docs/usqe_milestone11_delivery.md): **2,509 RetroVault / 407 RVDB tests passed**; closure approved.
 See the [Milestone #9 expansion record](docs/usqe_milestone9_platform_expansion.md): Master System qualified within its recorded scope; **2,473 RetroVault / 407 RVDB tests passed**.

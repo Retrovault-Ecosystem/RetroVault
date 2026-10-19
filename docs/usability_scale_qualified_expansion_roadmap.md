@@ -3,6 +3,7 @@
 Status: approved new 12-milestone roadmap. **USQE #1 is complete as a decision/documentation milestone. USQE #2–#9 are complete; #10 is complete; #11 is complete; #12 is complete.**
 This is a separate roadmap, not Milestone #15. The original 14-milestone roadmap remains permanently closed and protected. No feature implementation is authorized by this document alone.
 
+All twelve USQE milestones are complete within their approved scopes. See the [final audit and explicit deferrals](usqe_final_roadmap_audit.md).
 See the [Milestone #12 Linux distribution record](usqe_milestone12_linux_distribution.md): **2,516 RetroVault / 407 RVDB tests passed**; bounded Ubuntu user-local installation accepted.
 See the [Milestone #11 delivery report](usqe_milestone11_delivery.md): **2,509 RetroVault / 407 RVDB tests passed**; closure approved.
 See the [Milestone #8 presentation-family record](usqe_milestone8_presentation_families.md).
