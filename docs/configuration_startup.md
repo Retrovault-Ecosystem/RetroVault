@@ -30,16 +30,49 @@ The RVDB runtime bundle remains explicitly delivered, Git-ignored application da
 Obtain a bundle from the RVDB producer's validated build, then install that exact file:
 
 ```sh
-.venv/bin/python -m scripts.install_rvdb_bundle /absolute/path/to/rvdb.bundle.json
+.venv/bin/python -m scripts.install_rvdb_bundle /absolute/path/to/rvdb.bundle.json \
+  --expected-sha256 APPROVED_SHA256 --producer-commit APPROVED_FULL_COMMIT
 .venv/bin/python -B -m scripts.check_startup
 .venv/bin/python app.py
 ```
 
-The installer validates staged bytes with RVDBService before atomic replacement and
-prints their SHA-256. Validation/copy/replace failure preserves an existing bundle.
-It neither downloads data nor rebuilds RVDB, and runtime startup never searches a
-sibling repository. Producer schema/build validation remains RVDB's responsibility;
-the consumer installation validates the portable bundle contract.
+The installer requires an independently approved SHA-256 and full producer commit
+from `https://github.com/Retrovault-Ecosystem/RVDB`. Obtain these through the trusted
+producer review/build process, not merely from a file accompanying an unknown
+candidate. The commit is recorded provenance, not a signature or an online Git
+verification. Producer schema/reference validation remains RVDB's responsibility;
+consumer validation checks the existing portable contract without redefining it.
+
+Before atomic activation, the installer writes `<bundle>.rollback.json` containing
+the exact previous validated bytes/checksum and intended candidate provenance.
+This is an intent checkpoint, not proof activation completed. It retains one
+rollback point; repeated installation of identical bytes does not overwrite it.
+A persistent `<bundle>.delivery.lock` coordinates explicit delivery commands.
+A failed stage or replacement leaves the active bytes intact. Staged files are
+cleaned on handled errors; abrupt process termination may leave an inert staging
+file, which is never selected at startup. No general cache reclamation is performed.
+File contents are flushed and synced before replacement; this is not a guarantee
+against every filesystem/power-loss failure. Keep independent release backups.
+
+Rollback is explicit and needs no source file or network:
+
+```sh
+.venv/bin/python -m scripts.install_rvdb_bundle --rollback
+```
+
+Use `--destination /absolute/path/to/bundle.json` consistently for an alternate
+installation. Rollback revalidates retained bytes, refuses corrupt checkpoints,
+and refuses to replace an unrelated valid active bundle. A missing or malformed
+active bundle can be recovered. First installation has no previous bundle to
+restore. A malformed existing active bundle prevents a new install from silently
+replacing the rollback point; recover through its existing checkpoint first.
+The local checkpoint is integrity-checked, not protected against an attacker who
+can rewrite it and its checksum. Destination/checkpoint symlinks are rejected.
+
+Run updates with RetroVault closed and restart afterward. No automatic reload,
+download, user-store migration, readiness promotion or sibling-repository runtime
+search is introduced. Without an update, offline startup continues with the
+installed bundle. Missing/invalid bundle startup retains its existing diagnostics.
 
 Launch from another directory with the absolute paths to the environment and app:
 

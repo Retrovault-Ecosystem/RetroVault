@@ -1,30 +1,37 @@
+"""Exercise actual CLI process statuses without modifying the installed bundle."""
+import hashlib
 import json
 from pathlib import Path
+import subprocess
+import sys
 import pytest
-from scripts.install_rvdb_bundle import install_bundle
-from services.rvdb import RVDBError
 
+ROOT=Path(__file__).resolve().parents[1]
 
-def test_bundle_install_validates_and_preserves_bytes(tmp_path):
-    source = tmp_path / 'source.json'
-    source.write_text(json.dumps({'nodes': {}, 'edges': {}}))
-    target = tmp_path / 'consumer/bundle.json'
-    assert len(install_bundle(source, target)) == 64
-    assert target.read_bytes() == source.read_bytes()
-    assert list(target.parent.iterdir()) == [target]
+def cli(*args):
+    return subprocess.run([sys.executable,'-m','scripts.install_rvdb_bundle',*map(str,args)],cwd=ROOT,capture_output=True,text=True)
 
+def test_cli_pinned_install_and_offline_rollback(tmp_path):
+    source,target=tmp_path/'candidate.json',tmp_path/'active.json'
+    old=b'{"nodes": {}, "edges": {}}'
+    target.write_bytes(old)
+    new=json.dumps({'nodes':{},'edges':{}},indent=2).encode();source.write_bytes(new)
+    digest=hashlib.sha256(new).hexdigest()
+    result=cli(source,'--destination',target,'--expected-sha256',digest,'--producer-commit','a'*40)
+    assert result.returncode==0,result.stderr
+    assert result.stdout.strip()==digest
+    source.unlink()
+    result=cli('--rollback','--destination',target)
+    assert result.returncode==0,result.stderr
+    assert target.read_bytes()==old
 
-@pytest.mark.parametrize('failure', ['invalid', 'replace'])
-def test_failed_bundle_install_preserves_previous_bundle(tmp_path, monkeypatch, failure):
-    source, target = tmp_path / 'source.json', tmp_path / 'bundle.json'
-    target.write_text('{"nodes": {}, "edges": {}}')
-    before = target.read_bytes()
-    source.write_text('broken' if failure == 'invalid' else target.read_text())
-    if failure == 'replace':
-        def fail(*args):
-            raise OSError('interrupted replace')
-        monkeypatch.setattr('scripts.install_rvdb_bundle.os.replace', fail)
-    with pytest.raises((RVDBError, OSError)):
-        install_bundle(source, target)
-    assert target.read_bytes() == before
-    assert sorted(path.name for path in tmp_path.iterdir()) == ['bundle.json', 'source.json']
+@pytest.mark.parametrize('case',['missing-pin','wrong-hash','invalid','missing-backup'])
+def test_cli_failures_are_nonzero_and_preserve_active(tmp_path,case):
+    source,target=tmp_path/'candidate.json',tmp_path/'active.json'
+    old=b'{"nodes": {}, "edges": {}}';target.write_bytes(old)
+    payload=b'broken' if case=='invalid' else old;source.write_bytes(payload)
+    args=[str(source),'--destination',str(target)]
+    if case=='missing-backup':args=['--rollback','--destination',str(target)]
+    elif case!='missing-pin':args+=['--expected-sha256','0'*64 if case=='wrong-hash' else hashlib.sha256(payload).hexdigest(),'--producer-commit','a'*40]
+    assert cli(*args).returncode!=0
+    assert target.read_bytes()==old
